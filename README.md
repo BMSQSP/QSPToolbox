@@ -23,7 +23,7 @@ This toolbox was developed to support Quantitative Systems Pharmacology work.
 If this is useful for you, and you publish resulting work, please cite your usage of this tool.  
 The most relevant paper is currently:
 
-## Cheng Y, et al. (2017) QSP Toolbox: Computational Implementation of Integrated 
+Cheng Y, et al. (2017) QSP Toolbox: Computational Implementation of Integrated 
 Workflow Components for Deploying Multi-Scale Mechanistic Models.  AAPS J 19(4), 1002-1016.
 
 ## How to contribute:
