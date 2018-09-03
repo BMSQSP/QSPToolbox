@@ -29,7 +29,7 @@ Workflow Components for Deploying Multi-Scale Mechanistic Models.  AAPS J 19(4),
 ## How to contribute:
 -We are evaluating allowing others to contribute to the development on a case-by-case basis.  
 -We will likely require a Contributor License Agreement with the intent all resulting work will be equally available for others.  
--Please contact us.
+-Please contact us to contribute, or with related inquiries.  The current contact is brian(dot)schmidt{at}bms<dot>com.
 
 ## Other notes for our development efforts:
 -The current fully public version corresponds to rev799 from the in-house development repository.
