@@ -38,6 +38,7 @@ end
 myMnSDTable = myVPop.mnSDTable;
 myBinTable = myVPop.binTable;
 myDistTable = myVPop.distTable;
+myDistTable2D = myVPop.distTable2D;
 myBRTable = myVPop.brTableRECIST;
 myRTable = myVPop.rTableRECIST;
 
@@ -48,6 +49,7 @@ gofMean = myVPop.gofMn;
 gofSD = myVPop.gofSD;
 gofBin = myVPop.gofBin;
 gofDist = myVPop.gofDist;
+gofDist2D = myVPop.gofDist2D;
 gofBR = myVPop.gofBR;
 gofR = myVPop.gofR;
 
@@ -61,6 +63,9 @@ if ~isempty(myBinTable)
 end
 if ~isempty(myDistTable)
     myObjective = myObjective - 2*(sum(myDistTable{:,'weight'} .* log10(gofDist+epsilon)));
+end
+if ~isempty(myDistTable2D)
+    myObjective = myObjective - 2*(sum(myDistTable2D{:,'weight'} .* log10(gofDist2D+epsilon)));
 end
 if ~isempty(myBRTable)
     myObjective = myObjective - 2*(sum(myBRTable{:,'weight'} .* log10(gofBR+epsilon)));

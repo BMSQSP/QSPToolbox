@@ -1,11 +1,16 @@
 function interventionSubElements = extractInterventionTypeElements(intervention, type)
-% Get information from an intervention
+% Get the identities of model VARIANTs or DOSEs used by an intervention.
+%
 % ARGUMENTS
-% intervention: an intervention structure
-% elements of type to return: e.g. 'VARIANT', 'DOSE'
+%  intervention:            an intervention structure
+%  type:                    a string indicating the type of model components
+%                             to return from the intervention definition:
+%                             i.e. 'VARIANT' or 'DOSE'
 %
 % RETURNS
-% interventionSubElements: a cell array with the selection
+%  interventionSubElements: a cell array of strings containing the names
+%                            of the indicated model components.
+%                            Order is maintained.
 %
 interventionSubElements = cell(0,1);
 [nModifiers, nCols] = size(intervention.('definition'));

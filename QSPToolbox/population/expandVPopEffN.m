@@ -188,9 +188,18 @@ if continueFlag
 					pws_addition=sum(ones(1,nVP_diff)*1/nVP_nobin);
 					newVPop.pws=[oldVPop.pws*(1-pws_addition), ones(1,nVP_diff)*1/nVP_nobin];  	
                 end
-                % We randomize here optionally
-                newVPop = restartMapel(newVPop, myExpandVPopEffNOptions.expandRandomStart);
-                
+                % We randomize here with magnitude myExpandVPopEffNOptions.expandRandomStart
+				% If the magnitude is set to infinity, we just fully randomize before "restarting"
+				if isinf(myExpandVPopEffNOptions.expandRandomStart)
+					if isa(newVPop, 'VPopRECISTnoBin')
+						newVPop = newVPop.startPWs(myWorksheet,true);
+					else
+						newVPop = newVPop.startProbs(true)
+					end	
+					newVPop = restartMapel(newVPop, 0);
+				else
+					newVPop = restartMapel(newVPop, myExpandVPopEffNOptions.expandRandomStart);
+				end
             else
 				% For consistency, on the first iteration
                 % if a VPop isn't provided we will use the
@@ -198,7 +207,7 @@ if continueFlag
 				% value to decide randomization status.
 				curMapelOptions = myMapelOptions;
 				if (myTestCounter == 1) 
-					curMapelOptions.randomStart = myExpandVPopEffNOptions.expandRandomStart
+					curMapelOptions.randomStart = myExpandVPopEffNOptions.expandRandomStart;
 				end
                 newVPop = mapel(myWorksheet, curMapelOptions);
             end
@@ -263,7 +272,7 @@ if continueFlag
             if (mod(myTestCounter,nTries) == 0) && (nVPopsFound > 0) && ~((newVPop.gof > minPVal) && (1/sum(newVPop.pws.^2) >= curEffN))
                 if expandCohortSize > 0
                     wsIterCounter = wsIterCounter + 1;
-                    [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize);
+                    [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, myExpandVPopEffNOptions.gaussianStd);
                     saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]); 
                     if verbose
                         disp(['Unable to find an acceptable VPop with initial worksheet in ',num2str(nTries),' VPop fit restarts, added ', num2str(length(newPassNames)), ' VPs to the worksheet in ',mfilename,' to start worksheet iteration ',num2str(wsIterCounter),'.'])
@@ -281,7 +290,7 @@ if continueFlag
             if expandCohortSize > 0
                 % Get ready to expand VPs
                 wsIterCounter = wsIterCounter+1;
-                [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize);
+                [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, myExpandVPopEffNOptions.gaussianStd);
                 % Save the new worksheet that will be used.
                 saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);   
                 if verbose

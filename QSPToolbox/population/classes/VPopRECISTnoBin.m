@@ -88,6 +88,7 @@ classdef VPopRECISTnoBin
 %                       generation.  Only applies to "pso" and "ga".  This 
 %                       is the population size to use in the optimization 
 %                       runs. Default is 1000.
+%  objectiveLimit:		stopping condition for optimization
 %  intSeed:             A non-negative integer seed to initialize the 
 %                       random number generator.  Set to -1 to avoid
 %                       changing the state of the random number generator.
@@ -132,6 +133,7 @@ properties
     optimizeTimeLimit
     optimizeType
     optimizePopSize
+	objectiveLimit	
     intSeed  
     tol
     nIters
@@ -252,7 +254,15 @@ methods
           else
             error('Invalid optimizePopSize value')
           end
-      end            
+      end          
+
+      function obj = set.objectiveLimit(obj,myObjectiveLimit)
+          if ((isnumeric(myObjectiveLimit) == true))
+              obj.objectiveLimit = myObjectiveLimit;
+          else
+            error('Invalid objectiveLimit value')
+          end
+      end 	 	  
       
       function obj = set.intSeed(obj,myIntSeed)
           if ((mod(myIntSeed,1) == 0) && (myIntSeed>=-1))
@@ -350,6 +360,8 @@ methods
                   value = obj.optimizeType;  
               case 'optimizePopSize'
                   value = obj.optimizePopSize;
+              case 'objectiveLimit'
+                  value = obj.objectiveLimit;				  
               case 'intSeed'
                   value = obj.intSeed;             
               case 'tol'
@@ -446,7 +458,6 @@ methods
            brInfoNames = {'expVarID','interventionID','elementID','elementType','time'};
            rInfoNames = brInfoNames;
            myDataSource = cell2table(cell(0,5), 'VariableNames', rowInfoNames);
-           myDataSource = '';
            if ~isempty(myMnSdData)
                myDataSource = [myDataSource; myMnSdData(:,rowInfoNames)];
                mnsdDataFlag = true;
@@ -1150,7 +1161,8 @@ methods
           obj.exactFlag = true; 		  
           obj.optimizeTimeLimit = 10*60;
           obj.optimizeType = 'pso';    
-          obj.optimizePopSize = 1000;      
+          obj.optimizePopSize = 1000;   
+		  obj.objectiveLimit = -Inf;
           obj.intSeed = -1;
           obj.tol = 1E-3;
           obj.nIters = 10000;

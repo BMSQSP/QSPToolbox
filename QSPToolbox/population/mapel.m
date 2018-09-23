@@ -50,6 +50,7 @@ if continueFlag
     myVPop.optimizeTimeLimit = myMapelOptions.optimizeTimeLimit;
     myVPop.optimizeType = myMapelOptions.optimizeType;        
     myVPop.optimizePopSize = myMapelOptions.optimizePopSize;
+	myVPop.objectiveLimit = myMapelOptions.objectiveLimit; 	
     myVPop.intSeed = myMapelOptions.intSeed;
     myVPop.nIters = myMapelOptions.nIters;
     myVPop.tol = myMapelOptions.tol;

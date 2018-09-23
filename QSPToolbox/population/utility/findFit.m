@@ -65,6 +65,7 @@ if sum(ismember({'simplex'},optimizeType)) > 0
     optimOptions.UseParallel = false;
     optimOptions.TolFun = myVPop.tol;
     optimOptions.TolX = myVPop.tol;
+	optimOptions.ObjectiveLimit = myVPop.objectiveLimit;
 	if ~isa(myVPop,'VPopRECISTnoBin')
 		[optTransProbVect,fVal,exitFlag,output] = fminsearch(anonymousFunction,transProbVect,optimOptions);
 	else
@@ -77,6 +78,7 @@ elseif sum(ismember({'pso'},optimizeType)) > 0
     optimOptions.TolFun = myVPop.tol;
     optimOptions.UseParallel = true;                
     optimOptions.SwarmSize = myVPop.optimizePopSize;  
+	optimOptions.ObjectiveLimit = myVPop.objectiveLimit;	
 	if ~isa(myVPop,'VPopRECISTnoBin')
 		optimOptions.InitialSwarm = transProbVect;
 		[optTransProbVect,fVal,exitFlag,output] = particleswarm(anonymousFunction,nTransProbs,ones(1,nTransProbs)*-pi/2,ones(1,nTransProbs)*pi/2,optimOptions);
@@ -91,6 +93,7 @@ else
     optimOptions.TolFun = myVPop.tol;
     optimOptions.UseParallel = true;    
     optimOptions.PopulationSize = myVPop.optimizePopSize;
+	optimOptions.ObjectiveLimit = myVPop.objectiveLimit;	
 	if ~isa(myVPop,'VPopRECISTnoBin')
 		optimOptions.PopInitRange = cat(1,ones(1,nTransProbs)*-pi/2,ones(1,nTransProbs)*pi/2);
 		optimOptions.InitialPopulation = transProbVect;
@@ -101,7 +104,7 @@ else
 		optimOptions.PopInitRange = cat(1,ones(1,nTransPWs)*-pi/2,ones(1,nTransPWs)*pi/2);
 		optimOptions.InitialPopulation = myPWTrans;
 		optimOptions.MutationFcn = {@mutationuniform, 1.5/nTransPWs};	
-		[optTransProbVect,fVal,exitFlag,output] = ga(anonymousFunction,nTransPWs,[],[],[],[],ones(1,nTransPWs)*-pi/2,ones(1,nTransPWs)*pi/2,[],optimOptions);
+		[optTransPWsVect,fVal,exitFlag,output] = ga(anonymousFunction,nTransPWs,[],[],[],[],ones(1,nTransPWs)*-pi/2,ones(1,nTransPWs)*pi/2,[],optimOptions);
 
 	end	
 end

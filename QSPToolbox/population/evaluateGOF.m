@@ -137,6 +137,8 @@ if continueFlag
 		predInd = myDistTable2D.('predIndices');
         expN = myDistTable2D.('expN');
         predN = myDistTable2D.('predN');
+		expSample = myDistTable2D.('expSample');
+		predSample = myDistTable2D.('predSample');
 		combineQuadrants = myDistTable2D.('combinedQuadrants');
         for rowCounter = 1 : nStatRows 
 			expW = 1./(expN(rowCounter)*ones(1,expN(rowCounter)));
@@ -144,8 +146,18 @@ if continueFlag
 			quadrantCounts1c = combineQuadrants{rowCounter,1};
 			quadrantCounts1s = combineQuadrants{rowCounter,2};
 			quadrantCounts2c = combineQuadrants{rowCounter,3};
-			quadrantCounts2s = combineQuadrants{rowCounter,4};
-			ksPval = weightedKS2D(quadrantCounts1c, quadrantCounts1s, quadrantCounts2c, quadrantCounts2s, expW, predW{rowCounter}, expN(rowCounter), predN(rowCounter));
+			quadrantCounts2s = combineQuadrants{rowCounter,4};	
+            sample1KeepN = expN(rowCounter);
+            [~,sample2KeepN] = size(predSample{rowCounter});            
+            if ~myVPop.exactFlag
+                % We'll reduce the size to speed up calculations in this
+                % case.  When trying different parameters, 10 x the effN
+                % gave very good estimates of P (within 10%) of the full matrix
+                % value.  But 2 x was substantially faster if a 50% error in the 
+                % returned p value is acceptable.
+                sample2KeepN = min(max(min(sample2KeepN,2*ceil(predN(rowCounter))),3),sample2KeepN);
+            end
+			ksPval = weightedKS2D(expSample{rowCounter}, predSample{rowCounter}, quadrantCounts1c, quadrantCounts1s, quadrantCounts2c, quadrantCounts2s, expW, predW{rowCounter}, sample1KeepN, sample2KeepN);
             ksPvals2D(rowCounter) = ksPval;
         end		
         % Write these pvals to the VPop before returning it.

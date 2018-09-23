@@ -57,6 +57,7 @@ classdef mapelOptions
 % optimizePopSize:   (Optional) only applies to "pso" and "ga".  This is
 %                    the population size to use in the optimization runs.
 %                    Default is 1000.
+% objectiveLimit:    stopping condition for optimization
 % intSeed:           (Optional) Random seed, set to -1 to avoid re-seeding
 %                    the random number generator.  Default is -1.
 % minEffN:           (Optional) Distinct from useEffN, this is an additional
@@ -81,6 +82,7 @@ classdef mapelOptions
       optimizeTimeLimit
       optimizeType
       optimizePopSize 
+	  objectiveLimit	  
       intSeed
       minEffN
    end
@@ -190,6 +192,14 @@ classdef mapelOptions
             error('Invalid optimizePopSize value')
           end
       end     
+	  
+      function obj = set.objectiveLimit(obj,myObjectiveLimit)
+          if ((isnumeric(myObjectiveLimit) == true))
+              obj.objectiveLimit = myObjectiveLimit;
+          else
+            error('Invalid objectiveLimit value')
+          end
+      end 	  	  
       
       function obj = set.intSeed(obj,myIntSeed)
           if ((mod(myIntSeed,1) == 0) && (myIntSeed>=-1))
@@ -241,6 +251,8 @@ classdef mapelOptions
                   value = obj.optimizeType;  
               case 'optimizePopSize'
                   value = obj.optimizePopSize;
+              case 'objectiveLimit'
+                  value = obj.objectiveLimit;					  
               case 'intSeed'
                   value = obj.intSeed;   
               case 'minEffN'
@@ -272,6 +284,7 @@ classdef mapelOptions
           obj.optimizeTimeLimit = 10*60;
           obj.optimizeType = 'pso';
           obj.optimizePopSize = 1000;
+		  obj.objectiveLimit = -Inf;		  
           obj.intSeed = -1;   
           obj.minEffN = 0;          
       end

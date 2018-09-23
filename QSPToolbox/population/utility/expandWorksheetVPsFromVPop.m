@@ -1,4 +1,4 @@
-function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPopTest(myWorksheet,newVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize)
+function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPopTest(myWorksheet,newVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, gaussianStd)
 % This function expands a worksheet given a VPop.  It selected out VPs to expand around,
 % samples for new VPs, scores the "children" based on available data, and adds
 % the best children to the worksheet.
@@ -20,6 +20,10 @@ function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPopTest(myWorkshee
 %                       TODO: update this to take a cell array of
 %                       standard outputs of evaluateResponseType
 %  expandCohortSize:   size of the cohort to generate for testing
+%  gaussianStd:        standard deviation for the guassian sampled parameters.
+%                       note this is applied across all axes in the transformed
+%                       units (i.e. within bounds normalized 0-1).
+%                      
 %                      
 %                      
 % RETURNS:
@@ -81,14 +85,26 @@ if continueFlag
 	% For V794 try lowering the min maxNewPerOld even more to just 1
 	% maxNewPerOld = 1;	
 	% For V795 we go back to to strategy of V793 (2 children per parent max)
-	maxNewPerOld = 2;
+	% maxNewPerOld = 2;
+	% V801 we have higher newPerOld
+    % if isa(newVPop,'VPopRECIST') || isa(newVPop,'VPopRECISTnoBin')
+    %   maxNewPerOld = 3;
+    % else
+    %   maxNewPerOld = 2;
+    % end    
+    % For V802 we revert (2 children per parent max).  This actually looks
+    % like it was working well.
+	% maxNewPerOld = 2;
+    % For V811 we revert (3 children per parent max).  This 
+    % is to allow for inclusion of 2D evaluations.
+	maxNewPerOld = 3;	
 	
     % We'll allow more if it looks like we want to allow many new VPs per seed.
     maxNewPerOld = max(maxNewPerOld,ceil(maxNewPerIterChecked/length(highVPindices)));
 
     myVaryAxesOptions = varyAxesOptions;
     myVaryAxesOptions.varyMethod = 'gaussian';
-    myVaryAxesOptions.gaussianStd = 0.05;
+    myVaryAxesOptions.gaussianStd = gaussianStd;
     myVaryAxesOptions.varyAxisIDs = getAxisDefIDs(myWorksheet);
     myVaryAxesOptions.intSeed = wsIterCounter;
 
@@ -180,13 +196,18 @@ if continueFlag
     end
     testVPop = testVPop.getSimData(jitteredWorksheet);
     testVPop.pws = ones(1,length(curVPIDs))./length(curVPIDs);
-    testVPop = testVPop.addDistTableSimVals();    
+    testVPop = testVPop.addDistTableSimVals();  
+	flagCheck2D = false;
+	if ~isa(testVPop,'VPop')
+        testVPop = testVPop.addDistTable2DSimVals();
+		flagCheck2D = true;
+    end
     testVPop = testVPop.addPredTableVals();    
 
     [nTestOutcomes,~] = size(newVPop.simData.rowInfo);
     ExpandIncreaseSimDataRows = nan(0,1);
     ExpandDecreaseSimDataRows = nan(0,1);
-
+	
     simTimeCol = find(ismember(testVPop.simData.rowInfoNames,'time'));
     interventionIDCol = find(ismember(testVPop.simData.rowInfoNames,'interventionID'));
     elementIDCol = find(ismember(testVPop.simData.rowInfoNames,'elementID'));
@@ -330,19 +351,69 @@ if continueFlag
 			%newVPScoresR = max(addScore.^2,[],1);
         end
     end
-    
-	% V792
-    % if isa(newVPop,'VPopRECIST') || isa(newVPop,'VPopRECISTnoBin')
-        % newVPScores = [newVPScores;newVPScoresR;newVPScoresWBI;newScoresWBIMax];
-    % else
-        % newVPScores = [newVPScores;newVPScoresWBI;newScoresWBIMax];
-    % end
 	
-	% For V793, try restricting the new per old more,
-	% reorder the "priority" of the children based on their
-	% different scores
+	if flagCheck2D
+		[n2DComparisons, ~] = size(newVPop.distTable2D);
+		if (n2DComparisons > 0)
+			addScore = zeros(n2DComparisons,length(newVPIDs));
+            % As a precaution, restart any existing parallel 
+            % pools 
+%             if ~isempty(gcp('nocreate'))
+%                 delete(gcp);
+%             end
+%             parpool;            
+            for rowCounter = 1 : n2DComparisons
+                expSample = testVPop.distTable2D{rowCounter,'expSample'}{1};
+                simSample = testVPop.distTable2D{rowCounter,'predSample'}{1};
+				simPWs = testVPop.distTable2D{rowCounter,'predProbs'}{1};
+				% We need to get the predIndices, i.e. the indices that are kept from
+				% the original simulation results after applying mechanistic dropouts.
+				predIndices = testVPop.distTable2D{rowCounter,'predIndices'}{1};
+				[PDFexp, PDFsim, combinedPoints] = align2DPDFs(expSample, simSample, simPWs);
+				% We evaluate values from new VPs that haven't dropped out.  i.e.
+				% that lie in the intersection of newIndices and predIndices
+				newPredIndices = intersect(newIndices,predIndices,'sorted');
+				% Get the indices for the dropout filtered sample to get the test values
+				newPredIndicesFinal = find(ismember(predIndices,newPredIndices));
+				
+				% simSample is following filtering for dropouts
+				testValues = simSample(:,newPredIndicesFinal);
+				
+				pdfDiff = (PDFexp-PDFsim).*(PDFexp>PDFsim);
+				% We want the indices 
+				newValInd =nan(1,0);
+				scInd =nan(1,0);
+				for testCounter = 1 : length(testValues)
+					curInd = find(ismember(combinedPoints',(testValues(:,testCounter))','rows'));
+					if length(curInd) > 0
+						% This is the position in combined points
+						scInd = [scInd, curInd(1)];
+						% This is the original index in the new VPs that have not dropped out
+						newValInd = [newValInd, testCounter];
+					end
+				end
+				% Need a map from new VPs that have not dropped out back into new VP position
+				newIndicesNotDropout = find(ismember(newIndices,newPredIndicesFinal));
+				
+				% We need to map back to the new VPs and correct
+                % for positions for ones that drop out
+				addScore(rowCounter,newIndicesNotDropout(newValInd)) = pdfDiff(scInd);
+            end
+%             % Clean up the worker pool
+%             delete(gcp)            
+			newVPScores2D = sum(addScore.^2,1);
+		else
+			flagCheck2D = false
+		end
+	end
+    
+	
     if isa(newVPop,'VPopRECIST') || isa(newVPop,'VPopRECISTnoBin')
-        newVPScores = [newVPScoresWBI;newVPScoresR;newScoresWBIMax;newVPScores];
+		if ~flagCheck2D
+			newVPScores = [newVPScoresWBI;newVPScoresR;newScoresWBIMax;newVPScores];
+		else
+			newVPScores = [newVPScoresWBI;newVPScoresR;newVPScores2D;newScoresWBIMax;newVPScores];
+		end
     else
         newVPScores = [newVPScoresWBI;newScoresWBIMax;newVPScores];
     end	

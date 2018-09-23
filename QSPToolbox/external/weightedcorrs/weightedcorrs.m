@@ -483,11 +483,12 @@ function R = weightedcorrs(Y, w)
 %
 
 % Check input
-ctrl = isvector(w) & isreal(w) & ~any(isnan(w)) & ~any(isinf(w)) & all(w > 0);
+% Modifed to allow for zeros
+ctrl = isvector(w) & isreal(w) & ~any(isnan(w)) & ~any(isinf(w)) & all(w >= 0);
 if ctrl
   w = w(:) / sum(w);                                                          % w is column vector
 else
-  error('Check w: it needs be a vector of real positive numbers with no infinite or nan values!')
+  error('Check w: it needs be a vector of real non-negative numbers with no infinite or nan values!')
 end
 ctrl = isreal(Y) & ~any(isnan(Y)) & ~any(isinf(Y)) & (size(size(Y), 2) == 2);
 if ~ctrl

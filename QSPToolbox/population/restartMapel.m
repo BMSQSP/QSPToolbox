@@ -74,6 +74,7 @@ if continueFlag
     myMapelOptions.exactFlag = myVPop.exactFlag;    
     myMapelOptions.minEffN = myVPop.minEffN;
     myMapelOptions.optimizePopSize = myVPop.optimizePopSize;  
+	myMapelOptions.objectiveLimit = myVPop.objectiveLimit; 
     myMapelOptions.optimizeTimeLimit = myVPop.optimizeTimeLimit;    
     myMapelOptions.randomStart = myRandomStart;
     myMapelOptions.intSeed = myVPop.intSeed;

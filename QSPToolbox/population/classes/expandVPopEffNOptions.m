@@ -43,8 +43,12 @@ classdef expandVPopEffNOptions
 %                      Otherwise the transformed initial bin
 %                      probabilities are perturbed 
 %                      with random (normally distributed) noise that has
-%                      normalized standard deviation of the specified value.  
+%                      normalized standard deviation of the specified value. 
+%					   Set to Inf for a fully random initial start. 
 %                       Default = 0; 
+%  gaussianStd:        Degree of normalized gaussian noise to add to children of
+%                       highest weighted VPs in each iteration when resampling. 
+%                       Default = 0.05;
 %  verbose:            (Optional) report progress to screen
 %                       Default = true;
 % 
@@ -61,6 +65,7 @@ classdef expandVPopEffNOptions
 		nRetries
 		restartPVal
 		expandRandomStart
+		gaussianStd
 		verbose
    end
 
@@ -281,7 +286,27 @@ classdef expandVPopEffNOptions
           if failFlag
               error(['Invalid expandRandomStart specified for ',mfilename,'. A number >= 0 should be specified.'])
           end
-      end  	     	  
+      end  	  
+
+      function obj = set.gaussianStd(obj,myGaussianStd)
+          failFlag = false;
+          if isnumeric(myGaussianStd) 
+              if isequal(size(myGaussianStd),[1 1])
+                  if (myGaussianStd >= 0)
+                      obj.gaussianStd = myGaussianStd;
+                  else
+                      failFlag = true;
+                  end
+              else
+                  failFlag = true;
+              end
+          else
+              failFlag = true;
+          end
+          if failFlag
+              error(['Invalid gaussianStd specified for ',mfilename,'. A number >= 0 should be specified.'])
+          end
+      end     	  
 	  
 	  function obj = set.verbose(obj,myVerbose)
           if islogical(myVerbose)
@@ -316,6 +341,8 @@ classdef expandVPopEffNOptions
                   value = obj.restartPVal;	
               case 'expandRandomStart'
                   value = obj.expandRandomStart;
+              case 'gaussianStd'
+                  value = obj.gaussianStd;				  
               case 'verbose'
                   value = obj.verbose;				  
               otherwise
@@ -339,6 +366,7 @@ classdef expandVPopEffNOptions
           obj.nRetries = 30;
 		  obj.restartPVal = 1E-4;
 		  obj.expandRandomStart = 0;
+		  obj.gaussianStd = 0.05;
 		  obj.verbose = true;		  
       end
    end
