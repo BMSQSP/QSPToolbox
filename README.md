@@ -6,7 +6,7 @@ Quantitative Systems Pharmacology Toolbox
 This toolbox was developed to support Quantitative Systems Pharmacology work.
 
 ## Current system requirements:
--MATLAB 2017a (other releases not fully supported)
+-MATLAB 2017a (other releases not fully supported)  
  MATLAB Toolboxes:
   -SimBiology
   -Optimization
