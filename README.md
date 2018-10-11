@@ -8,11 +8,11 @@ This toolbox was developed to support Quantitative Systems Pharmacology work.
 ## Current system requirements:
 -MATLAB 2017a (other releases not fully supported)  
  MATLAB Toolboxes:
-  -SimBiology
-  -Optimization
-  -Global Optimization
-  -Parallel Computing
-  -Statistics and Machine Learning
+  -SimBiology  
+  -Optimization  
+  -Global Optimization  
+  -Parallel Computing  
+  -Statistics and Machine Learning  
 
 ## Tutorials and documentation:
 -There are several tutorials located in the examples folder.  
