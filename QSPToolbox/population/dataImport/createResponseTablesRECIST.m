@@ -1,4 +1,4 @@
-function [myBRTableRECIST, myRTableRECIST] = createResponseTablesRECIST(myWorksheet,myExpDataIDs,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar,timeVar,startTime,myInterventionIDs)
+function [myBRTableRECIST, myRTableRECIST] = createResponseTablesRECIST(myWorksheet,myExpDataIDs,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar,timeVar,startTime,myInterventionIDs, prefixStopPairs)
 % This function takes experimental data embedded in a worksheet and
 % converts it to a bin table with BRSCORE data, so even
 % when patients drop off therapy their best scores are
@@ -11,20 +11,47 @@ function [myBRTableRECIST, myRTableRECIST] = createResponseTablesRECIST(myWorksh
 %  PatientIDVar:      variable with the patient IDs
 %  TRTVar:            a binary variable indicating whether a patient is on
 %                     treatment
-%  BRSCOREVar:        best overall response to date.
-%  RSCOREVar:         current response.
-%  timeVar
-%  startTime
-%  myInterventionIDs  a cell array, 1 x n time points and variables
+%  BRSCOREVar:        variable with best overall response to date.
+%  RSCOREVar:         variable with current response.
+%  timeVar:           variable with time information
+%  startTime:         time in the data when treatment starts
+%  myInterventionIDs: a cell array, 1 x n time points and variables
+%  prefixStopPairs:   a cell array of cell arrays, i.e.:
+%                     {{prefix1, time1},{prefix2, time2} ...}
+%                     containing VP prefix and trial stop time.
+%                     This is included to correct for trials that
+%                      end early.  With USUBJID conventions, the prefix
+%                      generally matches a trial, i.e. CAXXXYYYY.
 %  
-%
 % RETURNS
-% myBRTableRECIST
-% myRTableRECIST
+%  myBRTableRECIST
+%  myRTableRECIST
+%
 
+continueFlag = false;
+if nargin > 10
+    warning(['Too many input arguments to ',mfilename, '. Arguments should be: myWorksheet,myExpDataIDs,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar,timeVar,startTime,myInterventionIDs, optionally prefixStopPairs.'])
+    continueFlag = false;
+elseif nargin > 9
+    continueFlag = true;
+elseif nargin > 8
+    prefixStopPairs = cell(1,0);
+    continueFlag = true; 
+else
+    warning(['Too few input arguments to ',mfilename, '. Arguments should be: myWorksheet,myExpDataIDs,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar,timeVar,startTime,myInterventionIDs, optionally prefixStopPairs.'])
+    continueFlag = false;
+end
 
-% TODO: Add proofing of inputs
-continueFlag = true;
+% TODO: Could add more proofing to createResponseTablesRECIST
+nStopTrials = length(prefixStopPairs);
+prefixes = cell(1,nStopTrials);
+stopTimes = nan(1,nStopTrials);
+if nStopTrials > 0
+    for prefixCounter = 1 : nStopTrials
+        prefixes{prefixCounter} = prefixStopPairs{prefixCounter}{1};
+        stopTimes(prefixCounter) = prefixStopPairs{prefixCounter}{2};
+    end
+end
 
 tableVariableNamesFixed = {'time', 'expVarID', 'interventionID','elementID','elementType', 'expDataID', 'expTimeVarID','PatientIDVar','TRTVar','BRSCOREVar','RSCOREVar'};
 tableVariableNames = [tableVariableNamesFixed,{'weight','expN','expCR','expPR','expSD','expPD','predN','predCR','predPR','predSD','predPD'}];
@@ -34,6 +61,8 @@ myRTableRECIST = cell2table(cell(0,length(tableVariableNames)));
 myRTableRECIST.Properties.VariableNames = tableVariableNames;
 
 if continueFlag
+
+
     
     allExpDataIDs = getExpDataIDs(myWorksheet);
 
@@ -96,13 +125,25 @@ if continueFlag
             patientID = curPatientIDs{patientCounter};
             curRows = find(ismember(selectData{:,PatientIDVar},patientID));
             curData = selectData(curRows,:);
-            lastBRSCORE = '';
+            lastBRSCORE = '.';
             for timeCounter = 1 : length(allTimes)
                 curTime = allTimes(timeCounter);
                 if sum(ismember(curData{:,timeVar},curTime)) > 0
                     curRow = find((ismember(curData{:,timeVar},curTime)));
                     lastBRSCORE = curData{curRow,BRSCOREVar};
                     lastBRSCORE = lastBRSCORE{1};
+                end
+                % We need to add a check in case the trial has stopped
+                passCheck = true;
+                if length(prefixes) > 0
+                    for prefixCounter = 1:length(prefixes)
+                        if startsWith(patientID,prefixes{prefixCounter},'IgnoreCase',true) && (curTime > stopTimes(prefixCounter))
+                            passCheck = false;
+                        end
+                    end
+                end
+                if ~passCheck
+                    lastBRSCORE = '.';
                 end
                 fullCell{timeCounter,patientCounter} = lastBRSCORE;
             end
@@ -141,9 +182,12 @@ if continueFlag
             curRows = find(ismember(selectData{:,PatientIDVar},patientID));
             curData = selectData(curRows,:);
             lastRSCORE = '';
+            % Last time we have for the current VP
             lastTime = max(curData{:,timeVar});
             for timeCounter = 1 : length(allTimes)
                 curTime = allTimes(timeCounter);
+                % Update the last RSCORE if we have
+                % a measure for the current time for the current VP
                 if sum(ismember(curData{:,timeVar},curTime)) > 0
                     curRow = find((ismember(curData{:,timeVar},curTime)));
                     lastRSCORE = curData{curRow,RSCOREVar};
@@ -152,9 +196,27 @@ if continueFlag
                 if curTime <= lastTime
                     fullCell{timeCounter,patientCounter} = lastRSCORE;
                 else
+                    % Check to see if the last event should be carried
+                    % forward.
                     if ismember(lastRSCORE,{'CR','PD'})
-                        fullCell{timeCounter,patientCounter} = lastRSCORE;
+                        % In this case we carry CR, PD forward unless
+                        % we've specified the trial has ended via the prefix.
+                        passCheck = true;
+                        if length(prefixes) > 0
+                            for prefixCounter = 1:length(prefixes)
+                                if startsWith(patientID,prefixes{prefixCounter},'IgnoreCase',true) && (curTime > stopTimes(prefixCounter))
+                                    passCheck = false;
+                                end
+                            end
+                        end
+                        if passCheck
+                            fullCell{timeCounter,patientCounter} = lastRSCORE;
+                        else
+                            fullCell{timeCounter,patientCounter} = '.';
+                        end
                     else
+                        % In the case there was a dropout without hitting
+                        % CR/PD treat subsequent values as missing
                         fullCell{timeCounter,patientCounter} = '.';
                     end
                 end

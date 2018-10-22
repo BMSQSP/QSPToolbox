@@ -26,9 +26,16 @@ bw2 = (max(combinedPoints(2,:),[],2)-min(combinedPoints(2,:),[],2))/10;
 % Get the experimental density onto the model sampled points, with
 % smoothing
 data1pdf = ksdensity(data1',combinedPoints','Bandwidth',[bw1;bw2]);
-f = scatteredInterpolant(combinedPoints(1,:)', combinedPoints(2,:)', data1pdf, 'linear');
-% Don't bother warning if the evaluation is OK.
+f = scatteredInterpolant(combinedPoints(1,:)', combinedPoints(2,:)', data1pdf, 'nearest');
+
+% Unfortunately, we have to integrate over discontinuous surfaces (see
+% below)
+% and it's very likely there will be some residual error.  We may want
+% to revisit this in future MATLAB releases.
 warning('off','MATLAB:integral2:maxFunEvalsPass');
+% We may want to turn this back on with improved performance of
+% the 2D integration
+warning('off','MATLAB:integral2:maxFunEvalsFail');
 int = integral2(@(x,y) f(x,y), min(combinedPoints(1,:)), max(combinedPoints(1,:)), min(combinedPoints(2,:)), max(combinedPoints(2,:)),'method','auto','AbsTol',1e-6,'RelTol',1e-3);
 % Normalize the 2D PDF
 data1pdf = data1pdf/int;
@@ -38,9 +45,14 @@ data1pdf = data1pdf/int;
 rng(0);
 data2pdf = datasample(data2', 1E4, 'Weights',data2PWs');
 data2pdf = ksdensity(data2pdf,combinedPoints','Bandwidth',[bw1;bw2]);
-f = scatteredInterpolant(combinedPoints(1,:)', combinedPoints(2,:)', data2pdf, 'linear');
+% We have to use 'nearest', which is discontinuous but
+% the only practical option.  Otherwise, MATLAB may calculate a
+% negative interpolant with the available options, which does not 
+% make sense for a pdf surface
+f = scatteredInterpolant(combinedPoints(1,:)', combinedPoints(2,:)', data2pdf, 'nearest');
 int = integral2(@(x,y) f(x,y), min(combinedPoints(1,:)), max(combinedPoints(1,:)), min(combinedPoints(2,:)), max(combinedPoints(2,:)),'method','auto','AbsTol',1e-6,'RelTol',1e-3);
 data2pdf = data2pdf/int;
 warning('on','MATLAB:integral2:maxFunEvalsPass');
-    
+warning('on','MATLAB:integral2:maxFunEvalsFail');
+
 end

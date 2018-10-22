@@ -174,6 +174,36 @@ if continueFlag
 					newVPop=newVPop.assignCoeffs(myWorksheet);
 					[~,nVP_nobin]=size(newVPop.coeffsTable);
 					nVP_diff=nVP_nobin-length(oldVPop.pws);
+					if nVP_diff > 0
+						newIndices = [length(oldVPop.pws)+1 : nVP_nobin];
+						allVPIDs = getVPIDs(myWorksheet);
+						parentIndices = nan(1,nVP_diff);
+						for index = 1 : nVP_diff
+							curVPID = allVPIDs{newIndices(index)};
+							parentID = strsplit(curVPID,['_']);
+							nIndices = length(parentID);
+							parentID = parentID(1:nIndices-2);
+							parentID = strjoin(parentID,'_');
+							parentIndices(index) = find(ismember(allVPIDs,parentID));
+							% This will error out if the parent index is > 1.
+							% That should not happen!
+						end
+						uniqueIndices = unique(parentIndices);
+						newPWs = nan(1,nVP_diff);
+                        oldPWs = oldVPop.pws;
+						for parentCounter = 1 : length(uniqueIndices)
+							parentIndex = uniqueIndices(parentCounter);
+							totalWeight = oldVPop.pws(parentIndex);
+							childrenIndices = find(ismember(parentIndices,parentIndex));
+							nChildren = length(childrenIndices);
+							oldPWs(parentIndex) = totalWeight/(nChildren+1);
+							newPWs(childrenIndices) = totalWeight/(nChildren+1);
+						end
+						newVPop.pws=[oldPWs, newPWs];
+					else
+						pws_addition=sum(ones(1,nVP_diff)*1/nVP_nobin);
+						newVPop.pws=[oldVPop.pws*(1-pws_addition), ones(1,nVP_diff)*1/nVP_nobin];  	
+					end
 					% **method 1: set addtional vps has 0 pws
 	%                 newVPop.pws=[oldVPop.pws,zeros(1,nVP_diff)]; % maybe not so good?
 					% ** end of method 1
@@ -185,8 +215,7 @@ if continueFlag
 					% ++ end of method 2
 					% method 3: assign 1/nVP_nobin as the weights of new VPs
 					% and rescale all others
-					pws_addition=sum(ones(1,nVP_diff)*1/nVP_nobin);
-					newVPop.pws=[oldVPop.pws*(1-pws_addition), ones(1,nVP_diff)*1/nVP_nobin];  	
+					% method 4: distribute the parent weight to the children
                 end
                 % We randomize here with magnitude myExpandVPopEffNOptions.expandRandomStart
 				% If the magnitude is set to infinity, we just fully randomize before "restarting"
@@ -272,7 +301,7 @@ if continueFlag
             if (mod(myTestCounter,nTries) == 0) && (nVPopsFound > 0) && ~((newVPop.gof > minPVal) && (1/sum(newVPop.pws.^2) >= curEffN))
                 if expandCohortSize > 0
                     wsIterCounter = wsIterCounter + 1;
-                    [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, myExpandVPopEffNOptions.gaussianStd);
+                    [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, myExpandVPopEffNOptions.gaussianStd, myExpandVPopEffNOptions.maxNewPerOld);
                     saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]); 
                     if verbose
                         disp(['Unable to find an acceptable VPop with initial worksheet in ',num2str(nTries),' VPop fit restarts, added ', num2str(length(newPassNames)), ' VPs to the worksheet in ',mfilename,' to start worksheet iteration ',num2str(wsIterCounter),'.'])
@@ -290,7 +319,7 @@ if continueFlag
             if expandCohortSize > 0
                 % Get ready to expand VPs
                 wsIterCounter = wsIterCounter+1;
-                [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, myExpandVPopEffNOptions.gaussianStd);
+                [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, myExpandVPopEffNOptions.gaussianStd, myExpandVPopEffNOptions.maxNewPerOld);
                 % Save the new worksheet that will be used.
                 saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);   
                 if verbose

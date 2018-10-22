@@ -35,7 +35,7 @@ if flagContinue
         flagContinue = false;
         warning(['Invalid plotOptions object for ',mfilename,', exiting.'])
     end        
-    if ~ismember(class(myVPop), {'VPop','VPopRECIST'})
+    if ~ismember(class(myVPop), {'VPop','VPopRECIST','VPopRECISTnoBin'})
         flagContinue = false;
         warning(['Invalid VPop for ',mfilename,'.'])
     end             

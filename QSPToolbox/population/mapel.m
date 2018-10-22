@@ -96,20 +96,34 @@ if continueFlag
         if ~isa(myWorksheet,'VPop') && ~isa(myWorksheet,'VPopRECIST')
             myVPop = myVPop.assignIndices(myWorksheet, myMapelOptions);
             myVPop = myVPop.getSimData(myWorksheet);
+			myVPop = myVPop.assignCoeffs(myWorksheet);
+            if myVPop.spreadOut > 0
+                myVPop.coeffsDist = single(pdist2(myVPop.coeffsTable',myVPop.coeffsTable'));
+            end
         else
             myVPop.simData = myWorksheet.simData;
             myVPop.indexTable = myWorksheet.indexTable;
             myVPop.binEdges = myWorksheet.binEdges;
             myVPop.binMidPoints = myWorksheet.binMidPoints;
+			myVPop.coeffsTable = myWorksheet.coeffsTable;
+            if myVPop.spreadOut > 0
+                myVPop.coeffsDist = single(pdist2(myVPop.coeffsTable',myVPop.coeffsTable'));
+            end
         end
     else %'VPopRECISTnoBin')
         if ~isa(myWorksheet,'VPopRECISTnoBin')
             myVPop = myVPop.getSimData(myWorksheet);
             myVPop = myVPop.assignCoeffs(myWorksheet);
+            if myVPop.spreadOut > 0
+                myVPop.coeffsDist = single(pdist2(myVPop.coeffsTable',myVPop.coeffsTable'));
+            end
         else
             myVPop.simData = myWorksheet.simData;
-            myVPop.coeffsTable = myWorksheet.coeffsTable;
             % PWs will still be taken from the mapelOptionsNoBins
+            myVPop.coeffsTable = myWorksheet.coeffsTable;
+            if myVPop.spreadOut > 0
+                myVPop.coeffsDist = single(pdist2(myVPop.coeffsTable',myVPop.coeffsTable'));
+            end
         end
     end
     												

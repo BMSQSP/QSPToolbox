@@ -1,11 +1,13 @@
-function copiedWorksheet = copyWorksheet(myWorksheet, vpIDs, flagCopyResults)
+function copiedWorksheet = copyWorksheet(myWorksheet, vpIDs, flagCopyResults, flagCheckVPIDs)
 % Make a copy of a worksheet; if VPs are specified, they will be selected.
 %
 % ARGUMENTS
-% myWorksheet: a worksheet
-% vpIDs: a cell array, 1XnVP, of string identifiers
-% flagCopyResults: whether to copy the results from the current worksheet.
-%  Included as a potential memory saver.
+% myWorksheet:     A worksheet
+% vpIDs:           A cell array, 1XnVP, of string identifiers
+% flagCopyResults: Whether to copy the results from the current worksheet.
+%                   Included as a potential memory saver.
+% flagCheckVPIDs:  Whether to check the VPIDs.  Default is true, but
+%                   requires more time especially with large worksheets
 %
 % RETURNS
 % copiedWorksheet
@@ -15,57 +17,51 @@ function copiedWorksheet = copyWorksheet(myWorksheet, vpIDs, flagCopyResults)
 flagContinue = false;
 copiedWorksheet = createWorksheet();
 
-if nargin > 3
-    warning([mfilename,' requires input argument: myWorksheet, and optionally vpIDs, flagCopyResults.  Too many arguments provided.'])
+if nargin > 4
+    warning([mfilename,' requires input argument: myWorksheet, and optionally vpIDs, flagCopyResults, flagCheckVPIDs.  Too many arguments provided.'])
 elseif nargin == 0 
-    warning([mfilename,' requires input argument: myWorksheet, and optionally vpIDs, flagCopyResults.  Insufficient arguments provided.'])
+    warning([mfilename,' requires input argument: myWorksheet, and optionally vpIDs, flagCopyResults, flagCheckVPIDs.  Insufficient arguments provided.'])
 elseif nargin == 1 
     vpIDs = getVPIDs(myWorksheet);
     flagCopyResults = true;
+	% If we're not given VPIDs we won't check them!
+	flagCheckVPIDs = false;
     flagContinue = true;
 elseif nargin == 2 
     flagCopyResults = true;
+	flagCheckVPIDs = true;
     flagContinue = true;
 elseif nargin == 3 
-    flagContinue = true;           
+    flagContinue = true; 
+	flagCheckVPIDs = true;	
+elseif nargin == 4 
+    flagContinue = true;     
 end
-
-% Check the IDs
-% The provided vpIDs may not contain the same members as the worksheet.
-% % We ignore order to save time.
-% if flagContinue
-%     vpIDsWorksheet = getVPIDs(myWorksheet);
-%     vpWorksheetIndices=find(ismember(vpIDsWorksheet, vpIDs));
-%     if (length(vpWorksheetIndices) ~= length(vpIDs))
-%         warning(['Degenerate VP IDs or not all required VP IDs in worksheet provided to ',mfilename,'.']);
-%         flagContinue = false;
-%     end
-%     if length(unique(vpIDsWorksheet(vpWorksheetIndices))) ~= length(vpWorksheetIndices)
-%         warning(['Degenerate VP IDs provided to ',mfilename,'.']);
-%         flagContinue = false;
-%     end        
-% end
-
 
 if flagContinue
     vpIDsWorksheet = getVPIDs(myWorksheet);
-    remainingOriginalIndices = (1 : length(vpIDsWorksheet))';
-    vpOriginalWorksheetIndices = nan(1,length(vpIDs));
-    for vpCounter = 1 : length(vpIDs)
-        vpID = vpIDs{vpCounter};
-        oldIndex=find(ismember(vpIDsWorksheet, vpID));
-        if length(oldIndex) > 1
-            warning(['Degenerate VP IDs in worksheet provided to ',mfilename,'.'])
-            flagContinue = false;
-        elseif length(oldIndex) < 1
-            warning(['Missing VP IDs in worksheet provided to ',mfilename,'.'])
-            flagContinue = false;
-        else
-            vpOriginalWorksheetIndices(1,vpCounter)=remainingOriginalIndices(oldIndex(1));
-            remainingOriginalIndices(oldIndex(1)) = [];
-            vpIDsWorksheet(oldIndex(1))=[];
-        end
-    end
+	if flagCheckVPIDs
+		% The provided vpIDs may not contain the same members as the worksheet.
+		remainingOriginalIndices = (1 : length(vpIDsWorksheet))';
+		vpOriginalWorksheetIndices = nan(1,length(vpIDs));
+		for vpCounter = 1 : length(vpIDs)
+			vpID = vpIDs{vpCounter};
+			oldIndex=find(ismember(vpIDsWorksheet, vpID));
+			if length(oldIndex) > 1
+				warning(['Degenerate VP IDs in worksheet provided to ',mfilename,'.'])
+				flagContinue = false;
+			elseif length(oldIndex) < 1
+				warning(['Missing VP IDs in worksheet provided to ',mfilename,'.'])
+				flagContinue = false;
+			else
+				vpOriginalWorksheetIndices(1,vpCounter)=remainingOriginalIndices(oldIndex(1));
+				remainingOriginalIndices(oldIndex(1)) = [];
+				vpIDsWorksheet(oldIndex(1))=[];
+			end
+		end
+	else
+		vpOriginalWorksheetIndices = find(ismember(vpIDsWorksheet,vpIDs));
+	end	
 end
     
 % Copy the worksheet fields over

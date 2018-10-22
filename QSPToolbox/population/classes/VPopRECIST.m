@@ -12,6 +12,10 @@ classdef VPopRECIST
 % this VP would generally be off trial.
 %
 % PROPERTIES:
+%  coeffsTable:  (Don't manipulate) A nAxis X nVP matrix with VP the
+%                coefficients
+%  coeffsDist:   (Don't manipulate) A nVP X vVP matrix with VP the
+%                distance for the coefficients
 %  indexTable:   (Don't manipulate) A nAxis X nVP table that indicates in which 
 %                axis bin each VP falls into.  This is usually populated at 
 %                the beginning of the MAPEL algorithm by the assignIndices
@@ -25,6 +29,7 @@ classdef VPopRECIST
 %                to calculate the individual prevalence weights.
 %  pws:          (Don't manipulate) A 1xnVP vector of prevalence weights,
 %                which are calculated based on the assignPWs.
+%  coefficients: a nAxisxnVP matrix of VP parameter coefficients.
 %  expData:      (Don't manipulate) A table of experimental data used to
 %                guide optimization.  It is usually taken from the
 %                mapelOptions.
@@ -112,6 +117,8 @@ classdef VPopRECIST
 %                    on therapy
 
 properties
+	coeffsTable
+	coeffsDist
     indexTable
     binEdges
     binMidPoints
@@ -153,6 +160,12 @@ properties
 end
 
 methods
+      function obj = set.coeffsTable(obj,myCoeffsTable)
+          obj.coeffsTable = myCoeffsTable;
+      end
+      function obj = set.coeffsDist(obj,myCoeffsDist)
+          obj.coeffsDist = myCoeffsDist;
+      end	  	  
       function obj = set.indexTable(obj,myIndexTable)
           obj.indexTable = myIndexTable;
       end
@@ -346,6 +359,10 @@ methods
       
       function value = get(obj,propName)
           switch propName
+              case 'coeffsTable'
+                  value = obj.coeffsTable;		
+			  case 'coeffsDist'
+                  value = obj.coeffsDist;	
               case 'indexTable'
                   value = obj.indexTable;
               case 'binEdges'
@@ -420,6 +437,11 @@ methods
                   error(['Error: ',propName ,' is not a valid ',mfilename,' property.'])
           end
       end
+	  
+      function obj = assignCoeffs(obj,myWorksheet)
+          mycoeffsTable = getVPCoeffs(myWorksheet);
+          obj.coeffsTable = mycoeffsTable;
+      end	  
 
       function obj = assignIndices(obj, myWorksheet, myMapelOptions)
           % This method takes a worksheet and mapelOptions structure and
@@ -1362,6 +1384,8 @@ methods
       function obj = VPopRECIST()
           % This is the constructor method for an instance of a VPop
           % (virtual population) object.
+          obj.coeffsTable='';
+		  obj.coeffsDist='';
           obj.indexTable = '';
           obj.binEdges = '';
           obj.binMidPoints = '';
@@ -1397,7 +1421,7 @@ methods
           obj.relSLDvar = '';
           obj.absALDVar = '';
           obj.crCutoff = nan;            
-          obj.recistSimFilter = '';           
+          obj.recistSimFilter = '';
       end
 
 end

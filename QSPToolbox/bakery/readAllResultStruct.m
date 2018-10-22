@@ -1,6 +1,6 @@
 function myWorksheet = readAllResultStruct(myWorksheet, myFileName, myVPColName, myInterventionColName, myTimeColName)
-% This function takes a worksheet text file and reads all results.
-% from the text file and over-writes the worksheet structure.
+% This function takes a text file and reads results
+% and over-writes the worksheet results structure.
 % Note that you need to include the file extension in
 % myFileName.
 %

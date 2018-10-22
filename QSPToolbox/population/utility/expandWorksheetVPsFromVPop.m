@@ -1,4 +1,4 @@
-function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPopTest(myWorksheet,newVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, gaussianStd)
+function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPopTest(myWorksheet,newVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, gaussianStd, maxNewPerOld)
 % This function expands a worksheet given a VPop.  It selected out VPs to expand around,
 % samples for new VPs, scores the "children" based on available data, and adds
 % the best children to the worksheet.
@@ -23,6 +23,7 @@ function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPopTest(myWorkshee
 %  gaussianStd:        standard deviation for the guassian sampled parameters.
 %                       note this is applied across all axes in the transformed
 %                       units (i.e. within bounds normalized 0-1).
+%  maxNewPerOld:       maximum number of children per weighted parent
 %                      
 %                      
 %                      
@@ -97,7 +98,8 @@ if continueFlag
 	% maxNewPerOld = 2;
     % For V811 we revert (3 children per parent max).  This 
     % is to allow for inclusion of 2D evaluations.
-	maxNewPerOld = 3;	
+	% For V831 we take this as an input argument.
+	% maxNewPerOld = 3	
 	
     % We'll allow more if it looks like we want to allow many new VPs per seed.
     maxNewPerOld = max(maxNewPerOld,ceil(maxNewPerIterChecked/length(highVPindices)));
@@ -373,37 +375,40 @@ if continueFlag
 				% We evaluate values from new VPs that haven't dropped out.  i.e.
 				% that lie in the intersection of newIndices and predIndices
 				newPredIndices = intersect(newIndices,predIndices,'sorted');
+                
 				% Get the indices for the dropout filtered sample to get the test values
-				newPredIndicesFinal = find(ismember(predIndices,newPredIndices));
-				
+				newPredIndicesFinal = (find(ismember(predIndices,newPredIndices)));
 				% simSample is following filtering for dropouts
 				testValues = simSample(:,newPredIndicesFinal);
+                [~, nTestValues] = size(testValues);
 				
 				pdfDiff = (PDFexp-PDFsim).*(PDFexp>PDFsim);
 				% We want the indices 
 				newValInd =nan(1,0);
 				scInd =nan(1,0);
-				for testCounter = 1 : length(testValues)
-					curInd = find(ismember(combinedPoints',(testValues(:,testCounter))','rows'));
-					if length(curInd) > 0
-						% This is the position in combined points
-						scInd = [scInd, curInd(1)];
-						% This is the original index in the new VPs that have not dropped out
-						newValInd = [newValInd, testCounter];
-					end
-				end
-				% Need a map from new VPs that have not dropped out back into new VP position
-				newIndicesNotDropout = find(ismember(newIndices,newPredIndicesFinal));
-				
-				% We need to map back to the new VPs and correct
-                % for positions for ones that drop out
-				addScore(rowCounter,newIndicesNotDropout(newValInd)) = pdfDiff(scInd);
+                if nTestValues > 0
+                    for testCounter = 1 : nTestValues
+                        curInd = find(ismember(combinedPoints',(testValues(:,testCounter))','rows'));
+                        if length(curInd) > 0
+                            % This is the position in combined points
+                            scInd = [scInd, curInd(1)];
+                            % This is the original index in the new VPs that have not dropped out
+                            newValInd = [newValInd, testCounter];
+                        end
+                    end
+                    % Need a map from new VPs that have not dropped out back into new VP position
+                    newIndicesNotDropout = find(ismember(newIndices,newPredIndices));
+
+                    % We need to map back to the new VPs and correct
+                    % for positions for ones that drop out
+                    addScore(rowCounter,newIndicesNotDropout(newValInd)) = pdfDiff(scInd);
+                end
             end
 %             % Clean up the worker pool
 %             delete(gcp)            
 			newVPScores2D = sum(addScore.^2,1);
 		else
-			flagCheck2D = false
+			flagCheck2D = false;
 		end
 	end
     

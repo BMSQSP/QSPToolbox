@@ -41,13 +41,13 @@ myMapelOptions.nBins = 4;
 % of agreement with data.  Multiple VPop solutions may be acceptable.
 myMapelOptions.tol = 1E-2;
 myMapelOptions.randomStart = true;
-myMapelOptions.spreadOut = 100;
+myMapelOptions.spreadOut = 1;
 myMapelOptions.minEffN = 30;
 myMapelOptions.optimizePopSize = 1000;
 
 % We may want to run a short optimization to create a VPop object
 % just to see how well our experimental and simulated data ranges agree
-myMapelOptions.optimizeTimeLimit = 1;
+myMapelOptions.optimizeTimeLimit = 10;
 myVPop = mapel(myWorksheet, myMapelOptions);
 
 % This diagnostic plot for the population doesn't require a VPop solution, 
@@ -111,7 +111,7 @@ for myTestCounter = 1 : 1
         myVPop.gof
 end
 
-% This is an additional diagnostic tables for the places where we have
+% This is an additional diagnostic table for the places where we have
 % experimental and simulation data.  Note that these can become
 % rather crowded when we have a lot of distinct
 % outputs/interventions/times and don't exclude non-weighted times, but

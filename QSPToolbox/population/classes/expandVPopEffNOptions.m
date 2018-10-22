@@ -49,6 +49,8 @@ classdef expandVPopEffNOptions
 %  gaussianStd:        Degree of normalized gaussian noise to add to children of
 %                       highest weighted VPs in each iteration when resampling. 
 %                       Default = 0.05;
+%  maxNewPerOld:       Maximum number of VPs to keep per old parent VP for each iteration.
+%                       Default = 3;
 %  verbose:            (Optional) report progress to screen
 %                       Default = true;
 % 
@@ -66,6 +68,7 @@ classdef expandVPopEffNOptions
 		restartPVal
 		expandRandomStart
 		gaussianStd
+		maxNewPerOld
 		verbose
    end
 
@@ -306,7 +309,27 @@ classdef expandVPopEffNOptions
           if failFlag
               error(['Invalid gaussianStd specified for ',mfilename,'. A number >= 0 should be specified.'])
           end
-      end     	  
+      end     	
+
+      function obj = set.maxNewPerOld(obj,myMaxNewPerOld)
+          failFlag = false;
+          if isnumeric(myMaxNewPerOld) 
+              if isequal(size(myMaxNewPerOld),[1 1])
+                  if (myMaxNewPerOld >= 1)
+                      obj.maxNewPerOld = round(myMaxNewPerOld);
+                  else
+                      failFlag = true;
+                  end
+              else
+                  failFlag = true;
+              end
+          else
+              failFlag = true;
+          end
+          if failFlag
+              error(['Invalid maxNewPerOld specified for ',mfilename,'. A number >= 1 should be specified.'])
+          end
+      end  	  
 	  
 	  function obj = set.verbose(obj,myVerbose)
           if islogical(myVerbose)
@@ -342,7 +365,9 @@ classdef expandVPopEffNOptions
               case 'expandRandomStart'
                   value = obj.expandRandomStart;
               case 'gaussianStd'
-                  value = obj.gaussianStd;				  
+                  value = obj.gaussianStd;
+              case 'maxNewPerOld'
+                  value = obj.maxNewPerOld;				  
               case 'verbose'
                   value = obj.verbose;				  
               otherwise
@@ -367,6 +392,7 @@ classdef expandVPopEffNOptions
 		  obj.restartPVal = 1E-4;
 		  obj.expandRandomStart = 0;
 		  obj.gaussianStd = 0.05;
+		  obj.maxNewPerOld = 3;
 		  obj.verbose = true;		  
       end
    end

@@ -36,9 +36,36 @@ myVPop = evaluateGOF(myVPop);
 
 myObjective = 0;
 effN = 1/(sum((myVPop.pws).^2));
+
 if myVPop.spreadOut > 0
-    nPWs = length(myVPop.pws);
-    notUnif = myVPop.spreadOut*(nPWs/effN-1)/(nPWs-1);
+	[nAxis, nPWs] = size(myVPop.coeffsTable);
+	% myVPop.coeffsTable is nVP x nAxis
+    % Store this value to speed
+	% myD = pdist2(myVPop.coeffsTable',myVPop.coeffsTable');
+    myD = myVPop.coeffsDist;
+	% We can take the weighted sum along rows or columns
+	% to get the weighted distances, renormalize each 
+	% sum by (1-pwi).
+	% Then we sum each weighted sum by pwi to get the weighted
+	% average distance
+    % Vectorized this following calculation.  The new version
+    % is still slow, but a little better
+    % 	myDSum = nan(1, nPWs);   
+    % 	for vpCounter = 1: nPWs
+    % 		myDSum(vpCounter) = sum(myD(vpCounter,:).*(myVPop.pws/sum(myVPop.pws([1:vpCounter-1,vpCounter+1:nPWs]))));
+    % 	end
+    % 	myDAvg = sum(myDSum.*myVPop.pws);
+    repPWs = repmat(myVPop.pws,nPWs,1);	
+    ieye = ~eye(nPWs);
+	myDSum = sum(myD.*repPWs./repmat(sum(repPWs.*ieye,2),1,nPWs),2);
+    myDAvg = sum(myDSum'.*myVPop.pws);	
+    
+	% We re-normalize the effective distance
+	% by roughly what we would expect for nVP evenly spaced
+	% partices in
+	% a nAxis space
+	dIdeal = (1/nPWs)^(1/nAxis);
+    notUnif = myVPop.spreadOut*dIdeal/myDAvg;
     myObjective = myObjective + notUnif;
 end
 

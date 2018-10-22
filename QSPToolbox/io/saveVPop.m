@@ -48,7 +48,8 @@ end
 if flagContinue
     if strcmp('mat', myFormat)
         fullFileName = [myPath,myFileName,'.',myFormat];
-
+        % This is fast to recalculate and can take up space on disk
+        myVPop.coeffsDist='';
         save(fullFileName, 'myVPop', saveVersion);
     end
 else

@@ -15,9 +15,10 @@ classdef VPopRECISTnoBin
 % to VPs and the VPs are not grouped into bins based on their parameter axes.
 %
 % PROPERTIES:
-%  coeffsTable:     (Don't manipulate) A nAxis X nVP matrix with VP the
+%  coeffsTable:  (Don't manipulate) A nAxis X nVP matrix with VP the
 %                coefficients
-%                method.
+%  coeffsDist:   (Don't manipulate) A nVP X vVP matrix with VP the
+%                distance for the coefficients
 %  pws:          (Don't manipulate) A 1xnVP vector of prevalence weights,
 %                which are calculated based on the assignPWs.
 %  expData:      (Don't manipulate) A table of experimental data used to
@@ -108,6 +109,7 @@ classdef VPopRECISTnoBin
 
 properties
     coeffsTable
+	coeffsDist
     pws
     expData
     simData      
@@ -148,6 +150,9 @@ methods
       function obj = set.coeffsTable(obj,myCoeffsTable)
           obj.coeffsTable = myCoeffsTable;
       end
+      function obj = set.coeffsDist(obj,myCoeffsDist)
+          obj.coeffsDist = myCoeffsDist;
+      end	  
       function obj = set.pws(obj,myPWs)
           obj.pws = myPWs;
       end
@@ -316,6 +321,8 @@ methods
           switch propName
               case 'coeffsTable'
                   value = obj.coeffsTable;
+              case 'coeffsDist'
+                  value = obj.coeffsDist;				  
               case 'pws'
                   value = obj.pws; 
               case 'mnSDTable'
@@ -387,6 +394,7 @@ methods
           mycoeffsTable = getVPCoeffs(myWorksheet);
           obj.coeffsTable = mycoeffsTable;
       end
+	  
       function obj = startPWs(obj, myWorksheet, myRandomStart)
           % This method initializes pws, and is used
           % prior to the optization.
@@ -1139,6 +1147,7 @@ methods
           % This is the constructor method for an instance of a VPop
           % (virtual population) object.
           obj.coeffsTable='';
+		  obj.coeffsDist='';		  
           obj.pws = [];
           obj.mnSDTable = '';
           obj.binTable = '';
