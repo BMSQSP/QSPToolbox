@@ -6,7 +6,7 @@ Quantitative Systems Pharmacology Toolbox
 This toolbox was developed to support Quantitative Systems Pharmacology work.
 
 ## Current system requirements:
--MATLAB 2017a (other releases not fully supported)  
+-MATLAB 2018b (other releases not fully supported)  
  Required MATLAB toolboxes:  
   -SimBiology  
   -Optimization  
@@ -32,7 +32,7 @@ Workflow Components for Deploying Multi-Scale Mechanistic Models.  AAPS J 19(4),
 -Please contact us to contribute, or with related inquiries.  The current contact is brian(dot)schmidt{at}bms{dot}com.
 
 ## Other notes for our development efforts:
--The current fully public version corresponds to rev837 from the in-house development repository.
+-The current fully public version corresponds to rev862 from the in-house development repository.
 
 ## To install:
 -Once you download, add the root directory (QSPToolbox folder) to your MATLAB path.  
