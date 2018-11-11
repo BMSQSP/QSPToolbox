@@ -47,7 +47,7 @@ myIndices = intersect(intersect(intersect(intersect(intersect(myIndices1,myIndic
 % How many VPs fulfill all?  This should be all 1,000, although
 % it is possible a few fail due to differences that could be caused by
 % issues like alterations to the solver or tolerance.  This changed
-% a little in the update from 2016a to 2017a.
+% a little in the update from 2016a to later releases.
 length(myIndices)
 
 % Check how many VPs total.

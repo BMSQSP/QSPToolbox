@@ -82,8 +82,21 @@ if continueFlag
 
         % We want the two-sided test result
         sdPvals = 2 * min([sdPvals, 1-sdPvals],[],2);
+		
+		% This can fail, for example
+		% if the standard deviation is
+		% not defined.
+		% In that case, we set the pvalue to zero
+		repPos = find(isnan(meanPvals));
+		meanPvals(repPos) = 0;
+		repPos = find(isnan(sdPvals));
+		sdPvals(repPos) = 0;		
+		
         myVPop.gofMn = meanPvals;
         myVPop.gofSD = sdPvals;
+		
+
+		
     else
         myVPop.gofMn = [];
         myVPop.gofSD = [];

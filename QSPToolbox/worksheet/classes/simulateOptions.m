@@ -28,6 +28,9 @@ classdef simulateOptions
 %                       for an optimization.  Leave as -1 to ignore.
 % optimizeSeedExisting: whether to seed an optimization with existing VPs
 %                       or to seed fully randomly
+% clusterID:            which cluster to use, parallel.defaultClusterProfile is default
+% nWorkers:             how many workers in the pool to use.  Set to nan to
+%                        use the default (default).
 % intSeed:              A non-negative integer seed to initialize the 
 %                       random number generator.  Set to -1 to avoid
 %                       changing the state of the random number generator.
@@ -45,6 +48,8 @@ classdef simulateOptions
       optimizePopSize
       optimizeSeedExisting
       optimizeMaxIter
+      clusterID
+      nWorkers
       intSeed
       
    end
@@ -121,6 +126,22 @@ classdef simulateOptions
               error(['Invalid optimizeMaxIter specified for ',mfilename,', a non-negative integer should be specified, or -1 to ignore.'])
           end
       end          
+
+      function obj = set.clusterID(obj,myClusterID)
+          if ischar(myClusterID)
+              obj.clusterID = myClusterID;
+          else
+            error(['Invalid clusterID in ',milename,'.'])
+          end
+      end          
+      
+      function obj = set.nWorkers(obj,myNWorkers)
+          if (isnumeric(myNWorkers) == true)
+              obj.nWorkers = myNWorkers;
+          else
+            error(['Invalid nWorkers value in ',milename,'.'])
+          end
+      end
       
       function obj = set.intSeed(obj,myIntSeed)
           if ((mod(myIntSeed,1) == 0) && (myIntSeed>=-1))
@@ -149,7 +170,11 @@ classdef simulateOptions
               case 'optimizeSeedExisting'
                   value = obj.optimizeSeedExisting;  
               case 'optimizeMaxIter'
-                  value = obj.optimizeMaxIter;                     
+                  value = obj.optimizeMaxIter;  
+              case 'clusterID'
+                  value = obj.clusterID;  
+              case 'nWorkers'
+                  value = obj.nWorkers;                   
               case 'intSeed'
                   value = obj.intSeed;                   
               otherwise
@@ -264,6 +289,8 @@ classdef simulateOptions
           obj.optimizePopSize=1000;
           obj.optimizeSeedExisting=true;  
           obj.optimizeMaxIter = -1; 
+          obj.clusterID = parallel.defaultClusterProfile;
+          obj.nWorkers = nan;
           obj.intSeed = -1;          
       end
    end

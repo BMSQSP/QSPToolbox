@@ -18,7 +18,7 @@ classdef expandVPopEffNOptions
 %  expandCohortSize:   (Optional) size of the cohort to generate for testing when
 %                      making new VPs
 %                       Default = 2500                       
-%  effNDelta:          (Optional) How much to increment the minEffN each iteration
+%  effNDelta:          (Optional) How much to increment the minEffN each iterationv
 %                       Default = 2
 %  hotStartVPop:       (Optional) If we already have a good VPop for mapelOptions and either the 
 %                      current or a previous worksheet iteration, use this here.  
@@ -50,9 +50,22 @@ classdef expandVPopEffNOptions
 %                       highest weighted VPs in each iteration when resampling. 
 %                       Default = 0.05;
 %  maxNewPerOld:       Maximum number of VPs to keep per old parent VP for each iteration.
-%                       Default = 3;
+%                       This number can be exceeded if allowed by maxNewPerIter and the number of
+%                       parent VPs, but in the case when there aren't enough maxNewPerIter at least
+%                       this many will be kept.
+%                       Default = 2;
+%  nUnweightedParents: Number of unweighted VPs to try as a parent for expansion each iteration.
+%                       The existing worksheet VPs are scored similar to the children
+%                       and the ones that are not weighted but look like they may be
+%                       useful are included.
+%                       Default = 2;
+%  selectByParent:	   Whether to select children VPs each iteration based on
+%                       their parent, in which case maxNewPerOld is important to
+%                       select VPs, or to pool all the children together and
+%                       pick them based on their scores.
 %  verbose:            (Optional) report progress to screen
 %                       Default = true;
+%
 % 
 
    properties
@@ -69,6 +82,8 @@ classdef expandVPopEffNOptions
 		expandRandomStart
 		gaussianStd
 		maxNewPerOld
+		nUnweightedParents
+		selectByParent
 		verbose
    end
 
@@ -330,6 +345,34 @@ classdef expandVPopEffNOptions
               error(['Invalid maxNewPerOld specified for ',mfilename,'. A number >= 1 should be specified.'])
           end
       end  	  
+
+      function obj = set.nUnweightedParents(obj,myNUnweightedParents)
+          failFlag = false;
+          if isnumeric(myNUnweightedParents) 
+              if isequal(size(myNUnweightedParents),[1 1])
+                  if (myNUnweightedParents >= 0)
+                      obj.nUnweightedParents = round(myNUnweightedParents);
+                  else
+                      failFlag = true;
+                  end
+              else
+                  failFlag = true;
+              end
+          else
+              failFlag = true;
+          end
+          if failFlag
+              error(['Invalid nUnweightedParents specified for ',mfilename,'. A number >= 0 should be specified.'])
+          end
+      end  	  
+	  
+	  function obj = set.selectByParent(obj,mySelectByParent)
+          if islogical(mySelectByParent)
+               obj.selectByParent = mySelectByParent;
+          else
+               error(['Property selectByParent in ',milename,' must be true or false.'])
+          end
+      end   	  
 	  
 	  function obj = set.verbose(obj,myVerbose)
           if islogical(myVerbose)
@@ -367,9 +410,13 @@ classdef expandVPopEffNOptions
               case 'gaussianStd'
                   value = obj.gaussianStd;
               case 'maxNewPerOld'
-                  value = obj.maxNewPerOld;				  
+                  value = obj.maxNewPerOld;	
+              case 'nUnweightedParents'
+                  value = obj.nUnweightedParents;
+              case 'selectByParent'
+                  value = obj.selectByParent;
               case 'verbose'
-                  value = obj.verbose;				  
+                  value = obj.verbose;
               otherwise
                   error(['Error: ',propName ,' is not a valid ',mfilename,' property.'])
           end
@@ -392,7 +439,9 @@ classdef expandVPopEffNOptions
 		  obj.restartPVal = 1E-4;
 		  obj.expandRandomStart = 0;
 		  obj.gaussianStd = 0.05;
-		  obj.maxNewPerOld = 3;
+		  obj.maxNewPerOld = 2;
+		  obj.nUnweightedParents = 2;
+		  obj.selectByParent = true;
 		  obj.verbose = true;		  
       end
    end

@@ -1,6 +1,6 @@
-function myResultTable = createResultTable(myWorksheet, fileName)
+function myResultTable = createSimResultTable(myWorksheet, fileName)
 % This function takes a worksheet results structure
-% and creates a table from it.
+% and creates a simulation result table from it.
 % Note that you need to include the file extension in
 % myFileName.
 %

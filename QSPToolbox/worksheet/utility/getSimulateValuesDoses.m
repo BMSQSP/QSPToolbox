@@ -8,9 +8,9 @@ function [updateValues, updateDoses] = getSimulateValuesDoses(myWorksheet, flagR
 % ARGUMENTS
 %  myWorksheet:   a worksheet object
 %  flagRunVP:     a 1 x nVP vector of 1's ,0's to indicate whether to run
-%                 VP (optional)
+%                  VP (optional)
 %  flagRunSim:    a 1 x nSimulations vector of 1's 0's to indicate whether  
-%                 to run a simulation (optional)
+%                  to run a simulation (optional)
 %
 %
 % RETURNS

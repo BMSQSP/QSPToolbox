@@ -66,6 +66,13 @@ if continueFlag
     % Use the unbiased correction so it gives the
     % same answer as R's SD function
     wVar = wVar*n/(n-1);
-    wsd = sqrt(wVar);    
+    wsd = sqrt(wVar);  
+    % infinity can be returned
+    % with a PW of ~1 coupled with
+    % very small PWs.  The std
+    % of 1 value should be 0.
+    if isinf(wsd)
+        wsd = 0;
+    end
 end
 end
