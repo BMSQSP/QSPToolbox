@@ -1,6 +1,6 @@
 % A slight modification from example02 to demonstrate
 % using the optimization algorithms and response types.
-% Note that after updating MATLAB from 2016a to 2017a, the
+% Note that after updating MATLAB from 2016a to newer versions, the
 % output of the optimizations no longer exactly matched those
 % presented in 
 % Cheng Y, Thalhauser CJ, Smithline S, et al. QSP Toolbox: 

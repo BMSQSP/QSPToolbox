@@ -96,27 +96,8 @@ if flagContinue
     [C,IA,IC] = unique(mergedVariantElementNames,'last');
     mergedVariantElementNames = mergedVariantElementNames(IA);
     allVariantElements = allVariantElements(IA,:);
-    mergedModelElementNames = strcat(allModelElements(:,1), {'_'},allModelElements(:,2));
-    % We will preserve the order that the elements appear in
-    % allModelElements
-    if ~flagReturnFull
-        keepIndices = find(ismember(mergedModelElementNames,mergedVariantElementNames));
-        mergedModelElementNames = mergedModelElementNames(keepIndices);
-        allModelElements = allModelElements(keepIndices, :);
-        [nElements, dummy] = size(IA);
-        fun = @(x,y) find(ismember(x,y));
-        idxs = cell2mat((arrayfun(@(i) fun(mergedVariantElementNames,mergedModelElementNames(i)), 1:nElements,'UniformOutput',false))');
-        elementValues = allVariantElements(idxs,:);
-    else
-        testIndices = find(ismember(mergedModelElementNames,mergedVariantElementNames));
-        [nElements, dummy] = size(mergedModelElementNames);
-        fun = @(x,y) find(ismember(x,y));
-        idxs = cell2mat((arrayfun(@(i) fun(mergedVariantElementNames,mergedModelElementNames(i)), testIndices,'UniformOutput',false))');
-        mergedModelElementNames(testIndices) = mergedVariantElementNames(idxs);
-        allModelElements(testIndices,:) = allVariantElements(idxs,:);
-        elementValues = allModelElements;
-    end
-        
+    mergedModelElementNames = strcat(allModelElements(:,1), {'_'},allModelElements(:,2));     
+            
     % Now we add in the values from the axes
     % if indicated
     if applyAxes
@@ -141,13 +122,42 @@ if flagContinue
         [C,IA,IC] = unique(mergedAxisElementNames,'last');
         mergedAxisElementNames = mergedAxisElementNames(IA);
         axisElements = axisElements(IA,:);
-        testIndices = find(ismember(mergedModelElementNames,mergedAxisElementNames));
-        [nElements, dummy] = size(mergedAxisElementNames);
-        fun = @(x,y) find(ismember(x,y));
-        idxs = cell2mat((arrayfun(@(i) fun(mergedAxisElementNames,mergedModelElementNames(i)), testIndices,'UniformOutput',false))');
-        mergedModelElementNames(testIndices) = mergedAxisElementNames(idxs);
-        allModelElements(testIndices,:) = axisElements(idxs,:);
+        
+        % Now check to make sure the axis elements are in the model
+        % no - assume this is done when the axes are added
+        % testIndices = find(ismember(mergedAxisElementNames,mergedModelElementNames));
+        % mergedAxisElementNames = mergedAxisElementNames(testIndices,:);
+        
+        % Add the axes to the variants, prioritizing the axes
+        mergedVariantElementNames = [mergedVariantElementNames;mergedAxisElementNames];
+        allVariantElements = [allVariantElements;axisElements];
+        [C,IA,IC] = unique(mergedVariantElementNames,'last');
+        mergedVariantElementNames = mergedVariantElementNames(IA);
+        allVariantElements = allVariantElements(IA,:);        
+        
     end
+    
+    % We will preserve the order that the elements appear in
+    % allModelElements
+   
+    if ~flagReturnFull
+        keepIndices = find(ismember(mergedModelElementNames,mergedVariantElementNames));
+        mergedModelElementNames = mergedModelElementNames(keepIndices);
+        allModelElements = allModelElements(keepIndices, :);
+        [nElements, dummy] = size(IA);
+        fun = @(x,y) find(ismember(x,y));
+        idxs = cell2mat((arrayfun(@(i) fun(mergedVariantElementNames,mergedModelElementNames(i)), 1:nElements,'UniformOutput',false))');
+        elementValues = allVariantElements(idxs,:);
+    else
+        testIndices = find(ismember(mergedModelElementNames,mergedVariantElementNames));
+        [nElements, dummy] = size(mergedModelElementNames);
+        fun = @(x,y) find(ismember(x,y));
+        idxs = cell2mat((arrayfun(@(i) fun(mergedVariantElementNames,mergedModelElementNames(i)), testIndices,'UniformOutput',false))');
+        mergedModelElementNames(testIndices) = mergedVariantElementNames(idxs);
+        allModelElements(testIndices,:) = allVariantElements(idxs,:);
+        elementValues = allModelElements;
+    end    
+    
 else
     warning(['Unable to run',mfilename,'. Returning empty cell array.'])
 end

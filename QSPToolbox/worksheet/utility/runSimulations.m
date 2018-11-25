@@ -1,10 +1,14 @@
-function simResults = runSimulations(exportedModel, updateValues, updateDoses, mySaveElementResultIDs, flagRunSim, mySimulateOptions)
+function simResults = runSimulations(exportedModel, updateValues, updateIndices, baseValues, updateDoses, mySaveElementResultIDs, flagRunSim, mySimulateOptions)
 % This is a "utility function" that should be called directly.
 % This is called following preprocessing to run simulations in parallel
 %
 % ARGUMENTS
 %  exportedModel:          an exported simbiology model object
-%  updateValues:           a nInterventions x nVPs x nModelElements matrix of values 
+%  updateValues:           a nInterventions x nVPs x nVaryParameters matrix of values 
+%  updateIndices:          a vector of indices to replace baseValues for
+%                           each simulation.
+%  baseValues:             a vector of length nModelElements of "default"
+%                           parameter values.
 %  updateDoses:            a nInterventions array of dose arrays
 %  mySaveElementResultIDs  a cell array of variable names
 %  flagRunSim              a nVPs * nModelElements boolean vector indicating which
@@ -51,8 +55,10 @@ parfor simulationCounter = 1 : nSimulations
         % for the current run
         currentModelValues = updateValues(interventionCounter, vpCounter,:);
         currentModelValues = reshape(currentModelValues,[],1);
+        inputModelValues = baseValues;
+        inputModelValues(updateIndices) = currentModelValues;
         curDoses = updateDoses{interventionCounter};
-        simData = runSingleSimulation(exportedModel, currentModelValues, curDoses, mySaveElementResultIDs);
+        simData = runSingleSimulation(exportedModel, inputModelValues, curDoses, mySaveElementResultIDs);
         simResults{simulationCounter} = simData;
     else
         simResults{simulationCounter} = [];

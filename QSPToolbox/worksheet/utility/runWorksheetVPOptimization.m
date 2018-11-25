@@ -1,4 +1,4 @@
-function optAxesCoefs = runWorksheetVPOptimization(exportedModel, updateValues, updateDoses, myWorksheet, mySimulateOptions, flagRunVP,indicesForVaried, boundsForVaried, axisScale)
+function optAxesCoefs = runWorksheetVPOptimization(exportedModel, updateValues, updateIndices, baseValues, updateDoses, myWorksheet, mySimulateOptions, flagRunVP,indicesForVaried, boundsForVaried, axisScale)
 % This is a "utility function" that should be called directly.
 % This function is called following preprocessing to enable
 % multimple optimizations, one optimization where each VP in the worksheet
@@ -6,7 +6,11 @@ function optAxesCoefs = runWorksheetVPOptimization(exportedModel, updateValues, 
 %
 % ARGUMENTS
 %  exportedModel:          an exported simbiology model object
-%  updateValues:           a nInterventions x nVPs x nModelElements matrix of values 
+%  updateValues:           a nInterventions x nVPs x nVaryParameters matrix of values 
+%  updateIndices:          a vector of indices to replace baseValues for
+%                           each simulation.
+%  baseValues:             a vector of length nModelElements of "default"
+%                           parameter values.
 %  updateDoses:            a nInterventions array of dose arrays
 %  myWorksheet:            a worksheet data structure
 %  mySimulateOptions:      a simulateOptions object
@@ -36,6 +40,16 @@ nOptimizeAxes = length(optimizeAxisIDs);
 nVPs = length(vpIDs);
 nInterventions = length(updateDoses);
 responseTypeID = mySimulateOptions.responseTypeID;
+
+% We might be able to pare this down later, but for now expand
+% to the full input vector.  This isn't optimal but
+% a patch while we introduce getSimulateValuesDosesSep.
+[nElements, ~] = size(myWorksheet.compiled.elements);
+baseValues = reshape(baseValues,1,1,length(baseValues));
+baseValues = repmat(baseValues,nInterventions, nVPs,1);
+baseValues(:,:,updateIndices) = updateValues;
+updateValues = baseValues;
+clear baseValues
 
 % As a precaution, restart any existing parallel
 % pools
@@ -134,7 +148,6 @@ for vpCounter = 1 : nVPs
     reducedWorksheet = copyWorksheet(myWorksheet,{myVPID}, false);
     if flagRunVP(vpCounter) > 0
         vpElementDefaultValues = updateValues(:, vpCounter,:);
-        [nElements, dummy] = size(myWorksheet.compiled.elements);
         elementValuesAcrossInterventions = nan(nElements, nInterventions);
         for interventionCounter = 1 : nInterventions
             interventionElementDefaultValues = vpElementDefaultValues(interventionCounter,1,:);

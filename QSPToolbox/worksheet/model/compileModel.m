@@ -121,10 +121,14 @@ if flagContinue
         allDoseArray = [allDoseArray, curDose];
     end
 
-    
     myWorksheet.compiled.elements = elementNamesDefaultValues;
     myWorksheet.compiled.doses = doseNamesObjects;
     myWorksheet.compiled.model = exportedModel;
+	
+    % We will also refresh the variant information from the model
+	% stored in the worksheet in case this was edited in the model
+    myWorksheet.variantProps.variantTypes = getVariantTypes(myWorksheet);
+    myWorksheet.variantProps.typeValueSets = getVariantNames(myWorksheet);	
     
 end
         

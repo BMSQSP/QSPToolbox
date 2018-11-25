@@ -140,7 +140,10 @@ if flagContinue
 
     % We need to get the parameters ready before 
     % calling parfor
-    [updateValues, updateDoses] = getSimulateValuesDoses(myWorksheet, flagRunVP, flagRunSim);
+    % We are updating to getSimulateValuesDosesSep rather than getSimulateValuesDoses
+    % [updateValues, updateDoses] = getSimulateValuesDoses(myWorksheet, flagRunVP, flagRunSim);
+    [updateValues, updateIndices, updateDoses, baseValues, ~, ~] = getSimulateValuesDosesSep(myWorksheet, flagRunVP, flagRunSim);
+    
     
     % Specify simulation length and sample times
     exportedModel = myWorksheet.compiled.model;
@@ -158,7 +161,7 @@ if flagContinue
     
     if sum(ismember({'none'},optimizeType)) > 0
         if sum(flagRunSim) > 0
-            simResults = runSimulations(exportedModel, updateValues, updateDoses, mySaveElementResultIDs, flagRunSim, mySimulateOptions);
+            simResults = runSimulations(exportedModel, updateValues, updateIndices, baseValues, updateDoses, mySaveElementResultIDs, flagRunSim, mySimulateOptions);
         else
             simResults = cell(1, nSimulations);
         end
@@ -167,7 +170,7 @@ if flagContinue
         % When we call an optimization, we will need to also
         % get the variable/element indices and bounds along the axes
         [indicesForVaried, boundsForVaried, axisScale] = getOptimizationAxes(myWorksheet, mySimulateOptions);
-        optAxesCoefs = runWorksheetVPOptimization(exportedModel,updateValues,updateDoses,myWorksheet,mySimulateOptions,flagRunVP,indicesForVaried, boundsForVaried, axisScale);
+        optAxesCoefs = runWorksheetVPOptimization(exportedModel, updateValues, updateIndices, baseValues, updateDoses, myWorksheet, mySimulateOptions, flagRunVP, indicesForVaried, boundsForVaried, axisScale);
         simResults = cell(1, nSimulations);
         nOptimizeAxes = length(optimizeAxisIDs);
         for vpCounter = 1 : nVPs
@@ -199,7 +202,7 @@ if flagContinue
         % When we call an optimization, we will need to also
         % get the variable/element indices and bounds along the axes
         [indicesForVaried, boundsForVaried, axisScale] = getOptimizationAxes(myWorksheet, mySimulateOptions);
-        [newVPCoeffs, newVPIDs, newVPVariants] = runWorksheetCohortOptimization(exportedModel,updateValues,updateDoses,myWorksheet,mySimulateOptions,indicesForVaried, boundsForVaried, axisScale);
+        [newVPCoeffs, newVPIDs, newVPVariants] = runWorksheetCohortOptimization(exportedModel, updateValues, updateIndices, baseValues, updateDoses, myWorksheet, mySimulateOptions, indicesForVaried, boundsForVaried, axisScale);
         myVPID = vpIDs{1};
         reducedWorksheet = copyWorksheet(myWorksheet,{myVPID}, false);
         reducedWorksheet = createVPs(reducedWorksheet, newVPIDs, newVPVariants, newVPCoeffs);

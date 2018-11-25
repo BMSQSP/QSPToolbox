@@ -1,11 +1,15 @@
-function [newVPCoeffs, newVPIDs, newVPVariants] = runWorksheetCohortOptimization(exportedModel,updateValues,updateDoses,myWorksheet,mySimulateOptions,indicesForVaried, boundsForVaried, axisScale)
+function [newVPCoeffs, newVPIDs, newVPVariants] = runWorksheetCohortOptimization(exportedModel, updateValues, updateIndices, baseValues, updateDoses, myWorksheet, mySimulateOptions, indicesForVaried, boundsForVaried, axisScale)
 % This is a "utility function" that should be called directly.
 % This function is called following preprocessing to enable
 % an optimization returning multiple VPs.
 %
 % ARGUMENTS
 %  exportedModel:          an exported simbiology model object
-%  updateValues:           a nInterventions x nVPs x nModelElements matrix of values 
+%  updateValues:           a nInterventions x nVPs x nVaryParameters matrix of values 
+%  updateIndices:          a vector of indices to replace baseValues for
+%                           each simulation.
+%  baseValues:             a vector of length nModelElements of "default"
+%                           parameter values.
 %  updateDoses:            a nInterventions array of dose arrays
 %  myWorksheet:            a worksheet data structure
 %  mySimulateOptions:      a simulateOptions object
@@ -34,6 +38,16 @@ nOptimizeAxes = length(optimizeAxisIDs);
 nVPs = length(vpIDs);
 nInterventions = length(updateDoses);
 responseTypeID = mySimulateOptions.responseTypeID;
+
+% We might be able to pare this down later, but for now expand
+% to the full input vector.  This isn't optimal but
+% a patch while we introduce getSimulateValuesDosesSep.
+[nElements, ~] = size(myWorksheet.compiled.elements);
+baseValues = reshape(baseValues,1,1,length(baseValues));
+baseValues = repmat(baseValues,nInterventions, nVPs,1);
+baseValues(:,:,updateIndices) = updateValues;
+updateValues = baseValues;
+clear baseValues
 
 % As a precaution, restart any existing parallel
 % pools
