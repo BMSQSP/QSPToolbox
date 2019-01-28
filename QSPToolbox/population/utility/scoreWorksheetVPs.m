@@ -17,7 +17,7 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
 %                    that has been "found."
 %
 % RETURNS:
-%  vpScores:        A nNewIndices x nVPID matrix of score values.  High
+%  vpScores:        A nScores x nVPID matrix of score values.  High
 %                    scores indicate more useful VPs.
 %
 

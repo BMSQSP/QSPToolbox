@@ -38,6 +38,9 @@ classdef mapelOptions
 % spreadOut:         (Optional) Extra argument for "findFit" function that 
 %                    tries to force more VPs to be used in the solution.
 %                    This is also addressed with minEffN.  Default is 0.
+% minIndPVal:        Used for optimization, if nonzero, will  
+%                    apply a large penalty if any of the individual pvalues.
+%                    fall below the target.
 % useEffN:           (Optional) Boolean (true/false). Whether to use the  
 %                    total number of PWs above or effective N measure for 
 %                    optimization and calculating GOF statistics.  It is 
@@ -77,6 +80,7 @@ classdef mapelOptions
       equalBinBreaks
       tol
       spreadOut
+	  minIndPVal	  
       useEffN
       exactFlag
       optimizeTimeLimit
@@ -156,6 +160,14 @@ classdef mapelOptions
                error(['Property spreadOut in ',milename,' must be >= 0.'])
           end
       end  
+	  
+      function obj = set.minIndPVal(obj,myMinIndPVal)
+          if (myMinIndPVal >= 0) & (myMinIndPVal <= 1)
+               obj.minIndPVal = myMinIndPVal;
+          else
+               error(['Property minIndPVal in ',milename,' must be between 0 and 1.'])
+          end
+      end 			  
 
       function obj = set.useEffN(obj,myUseEffN)
           if islogical(myUseEffN)
@@ -241,6 +253,8 @@ classdef mapelOptions
                   value = obj.tol;
               case 'spreadOut'
                   value = obj.spreadOut;
+              case 'minIndPVal'
+                  value = obj.minIndPVal;				  
               case 'useEffN'
                   value = obj.useEffN;
               case 'exactFlag'
@@ -279,6 +293,7 @@ classdef mapelOptions
           obj.equalBinBreaks = false;
           obj.tol = 1E-3;
           obj.spreadOut = 0;
+          obj.minIndPVal = 0;			  		  		  
           obj.useEffN = false;
           obj.exactFlag = true;
           obj.optimizeTimeLimit = 10*60;

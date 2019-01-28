@@ -19,6 +19,7 @@ function myVPop = findFit(myVPop)
 %          gofDist
 %          gof
 %
+optimizeType = myVPop.optimizeType;
 if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPop')
 	initialBinProbs = myVPop.binProbs;
 	[myNAxis, myNBins] = size(initialBinProbs);
@@ -26,14 +27,35 @@ if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPop')
 	for axisCounter = 1 : myNAxis
 		myTransProbs(axisCounter,:) = hyperTransform(initialBinProbs(axisCounter,:));
 	end
-	optimizeType = myVPop.optimizeType;
 	transProbVect = probsToProbVect(myTransProbs);
 	nTransProbs = length(transProbVect);
 elseif isa(myVPop,'VPopRECISTnoBin')
 	initialPWs=myVPop.pws;
-	myPWTrans=hyperTransform(initialPWs);
-	nTransPWs=length(myPWTrans);
-	optimizeType = myVPop.optimizeType;
+	nTransPWs=length(initialPWs)-1;
+	if ~(ismember({'simplex'},optimizeType))
+		% We will also try supplementing the initial PWs with PWs from VP scores
+		myLinearCalibrateOptions = linearCalibrateOptions;
+		myLinearCalibrateOptions.priorPrevalenceWeightAssumption = 'specified';
+		[myVPopTest, myOptimResults] = linearCalibrate(myVPop,myLinearCalibrateOptions);
+		if myOptimResults.exitFlag == 1
+			initialPWs = [initialPWs;myVPopTest.pws];
+		end	
+			
+		% We will also try supplementing the VP scores scaled into PWs.  This
+		% likely won't be very effective at finding optimal solutions but will add
+		% points where VPs in sparser regions of the distributions are more highly weighted
+		vpScores = scoreWorksheetVPs(myVPop,1:(nTransPWs+1),1:(nTransPWs+1));
+		vpScores = (vpScores + 1E-12)./sum((vpScores + 1E-12),2);
+		initialPWs = [initialPWs;vpScores];
+		[nTest, ~] = size(initialPWs);
+		nTest = min(nTest,myVPop.optimizePopSize);
+		initialPWs = initialPWs(1:nTest,:);
+	end
+	myPWTrans = nan(nTest,nTransPWs);
+	for transCounter = 1 : nTest
+		myPWTrans(transCounter,:)=hyperTransform(initialPWs(transCounter,:));
+	end
+	
 end
 
 

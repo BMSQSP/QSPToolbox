@@ -83,17 +83,27 @@ gofMean = myVPop.gofMn;
 gofSD = myVPop.gofSD;
 gofBin = myVPop.gofBin;
 gofDist = myVPop.gofDist;
+minIndPVal = myVPop.minIndPVal;
 
 % May want to add checks here for the Mean/SD/Bin evaluations and whether
 % there are entries before adding the respective terms
 if ~isempty(myMnSDTable)
     myObjective = myObjective - 2*(sum(myMnSDTable{:,'weightMean'} .* log10(gofMean+epsilon)) + sum(myMnSDTable{:,'weightSD'} .* log10(gofSD+epsilon)));
+	if minIndPVal > 0
+		myObjective = myObjective + (sum((myMnSDTable{:,'weightMean'} > 0) .* (gofMean < minIndPVal) .* 1E6 .* (minIndPVal - gofMean)) + sum((myMnSDTable{:,'weightSD'} > 0) .* (gofSD < minIndPVal) .* 1E6 .* (minIndPVal - gofSD)));
+	end
 end
 if ~isempty(myBinTable)
     myObjective = myObjective - 2*(sum(myBinTable{:,'weight'} .* log10(gofBin+epsilon)));
+	if minIndPVal > 0
+		myObjective = myObjective + sum((myBinTable{:,'weight'} > 0) .* (gofBin < minIndPVal) .* 1E6 .* (gofBin - minIndPVal));
+	end	
 end
 if ~isempty(myDistTable)
     myObjective = myObjective - 2*(sum(myDistTable{:,'weight'} .* log10(gofDist+epsilon)));
+	if minIndPVal > 0
+		myObjective = myObjective + sum((myDistTable{:,'weight'} > 0) .* (gofDist < minIndPVal) .* 1E6 .* (minIndPVal - gofDist));
+	end		
 end
 
 end

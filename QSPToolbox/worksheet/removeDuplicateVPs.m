@@ -11,7 +11,7 @@ function myWorksheet = removeDuplicateVPs(myWorksheet)
 % Perform initial checks on the provided arguments
 flagContinue = false;
 
-if nargin > 2
+if nargin > 1
     warning([mfilename,' requires input argument: myWorksheet.  Too many arguments provided.'])
 elseif nargin == 0 
     warning([mfilename,' requires input argument: myWorksheet.  Insufficient arguments provided.'])

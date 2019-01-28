@@ -89,25 +89,44 @@ gofDist = myVPop.gofDist;
 gofDist2D = myVPop.gofDist2D;
 gofBR = myVPop.gofBR;
 gofR = myVPop.gofR;
+minIndPVal = myVPop.minIndPVal;
 
 % May want to add checks here for the Mean/SD/Bin evaluations and whether
 % there are entries before adding the respective terms
 if ~isempty(myMnSDTable)
     myObjective = myObjective - 2*(sum(myMnSDTable{:,'weightMean'} .* log10(gofMean+epsilon)) + sum(myMnSDTable{:,'weightSD'} .* log10(gofSD+epsilon)));
+	if minIndPVal > 0
+		myObjective = myObjective + (sum((myMnSDTable{:,'weightMean'} > 0) .* (gofMean < minIndPVal) .* 1E6 .* (minIndPVal - gofMean)) + sum((myMnSDTable{:,'weightSD'} > 0) .* (gofSD < minIndPVal) .* 1E6 .* (minIndPVal - gofSD)));
+	end	
 end
 if ~isempty(myBinTable)
     myObjective = myObjective - 2*(sum(myBinTable{:,'weight'} .* log10(gofBin+epsilon)));
+	if minIndPVal > 0
+		myObjective = myObjective + sum((myBinTable{:,'weight'} > 0) .* (gofBin < minIndPVal) .* 1E6 .* (minIndPVal - gofBin));
+	end		
 end
 if ~isempty(myDistTable)
     myObjective = myObjective - 2*(sum(myDistTable{:,'weight'} .* log10(gofDist+epsilon)));
+	if minIndPVal > 0
+		myObjective = myObjective + sum((myDistTable{:,'weight'} > 0) .* (gofDist < minIndPVal) .* 1E6 .* (minIndPVal - gofDist));
+	end			
 end
 if ~isempty(myDistTable2D)
     myObjective = myObjective - 2*(sum(myDistTable2D{:,'weight'} .* log10(gofDist2D+epsilon)));
+	if minIndPVal > 0
+		myObjective = myObjective + sum((myDistTable2D{:,'weight'} > 0) .* (gofDist2D < minIndPVal) .* 1E6 .* (minIndPVal - gofDist2D));
+	end			
 end
 if ~isempty(myBRTable)
     myObjective = myObjective - 2*(sum(myBRTable{:,'weight'} .* log10(gofBR+epsilon)));
+	if minIndPVal > 0
+		myObjective = myObjective + sum((myBRTable{:,'weight'} > 0) .* (gofBR < minIndPVal) .* 1E6 .* (minIndPVal - gofBR));
+	end		
 end
 if ~isempty(myRTable)
     myObjective = myObjective - 2*(sum(myRTable{:,'weight'} .* log10(gofR+epsilon)));
+	if minIndPVal > 0
+		myObjective = myObjective + sum((myRTable{:,'weight'} > 0) .* (gofR < minIndPVal) .* 1E6 .* (minIndPVal - gofR));
+	end		
 end
 end

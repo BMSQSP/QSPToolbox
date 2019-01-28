@@ -20,9 +20,12 @@ classdef mapelOptionsRECISTnoBin
 %                    or leave unassigned if no 2D distribution targets.
 % brTableRECIST:     (Required) A table with best RECIST responses.
 % rTableRECIST:      (Required) A table with RECIST responses.
-% initialPWs:        (Optional) A nVP by 1 vector of initial 
-%                    pws. If set to be [], probabilities are
-%                    initialized to be uniform.  The default is [].
+% initialPWs:        (Optional) 
+%                     - A 1 nVP vector of initial pws. OR
+%                     - (default) If set to be [], probabilities are
+%                       initialized to be uniform.  The default is []. OR
+%                     - if set to -1, we will try to find a near optimum starting
+%                       point based on a linearized problem formulation.
 % randomStart:       (Optional) If 0, the initial 
 %                    parameters are not perturbed in anyway.  Otherwise the 
 %                    transformed initial bin probabilities are perturbed  
@@ -40,13 +43,16 @@ classdef mapelOptionsRECISTnoBin
 % spreadOut:         (Optional) Extra argument for "findFit" function that 
 %                    tries to force more VPs to be used in the solution.
 %                    This is also addressed with minEffN.  Default is 0.
+% minIndPVal:        Used for optimization, if nonzero, will  
+%                    apply a large penalty if any of the individual pvalues.
+%                    fall below the target.
 % useEffN:           (Optional) Boolean (true/false). Whether to use the  
 %                    total number of PWs above or effective N measure for 
 %                    optimization and calculating GOF statistics.  It is 
 %                    strongly recommended to set this to false during
 %                    optimization.  It is set to false by
 %                    default.
-%  exactFlag:        Whether to check to apply Fisher's exact test instead
+% exactFlag:         Whether to check to apply Fisher's exact test instead
 %                    of the chi-square approximation for binned distribution
 %                    test.  This may be strictly correct but can slow
 %                    calculations, often with small impacts on GOF
@@ -83,6 +89,7 @@ classdef mapelOptionsRECISTnoBin
       nIters
       tol
       spreadOut
+	  minIndPVal	  
       useEffN    
       exactFlag			   
       optimizeTimeLimit
@@ -162,6 +169,14 @@ classdef mapelOptionsRECISTnoBin
                error(['Property spreadOut in ',milename,' must be >= 0.'])
           end
       end  
+	  
+      function obj = set.minIndPVal(obj,myMinIndPVal)
+          if (myMinIndPVal >= 0) & (myMinIndPVal <= 1)
+               obj.minIndPVal = myMinIndPVal;
+          else
+               error(['Property minIndPVal in ',milename,' must be between 0 and 1.'])
+          end
+      end 		  
 
       function obj = set.useEffN(obj,myUseEffN)
           if islogical(myUseEffN)
@@ -264,6 +279,8 @@ classdef mapelOptionsRECISTnoBin
                   value = obj.tol;
               case 'spreadOut'
                   value = obj.spreadOut;
+              case 'minIndPVal'
+                  value = obj.minIndPVal;				  
               case 'useEffN'
                   value = obj.useEffN;
               case 'exactFlag'
@@ -309,6 +326,7 @@ classdef mapelOptionsRECISTnoBin
           obj.nIters = 10000;
           obj.tol = 1E-3;
           obj.spreadOut = 0;
+          obj.minIndPVal = 0;			  		  		  
           obj.useEffN = false;
           obj.exactFlag = true;
           obj.optimizeTimeLimit = 10*60;

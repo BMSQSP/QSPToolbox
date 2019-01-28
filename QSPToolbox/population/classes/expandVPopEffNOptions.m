@@ -20,15 +20,10 @@ classdef expandVPopEffNOptions
 %                       Default = 2500                       
 %  effNDelta:          (Optional) How much to increment the minEffN each iterationv
 %                       Default = 2
-%  hotStartVPop:       (Optional) If we already have a good VPop for mapelOptions and either the 
-%                      current or a previous worksheet iteration, use this here.  
-%					   It will just be important that the first VPs in the worksheet
-%                      haven't been rearranged since the VPop was found.
-%                      That is, the worksheet may have new/more VPs, but the first N VPs
-%                      in the worksheet corresponse to the N VPs in the VPop used in the fit. 
-%                      It will be used in the initial worksheet iteration in case the 
-%                      algorithm has problems.  Enter '' if there is none.
-%                       Default = ''
+%  useMapelIntSeed:    (Optional) Whether to use the integer seed in the mapel options to
+%                       start the random number generator (true) or to use seeds fixed
+%                       by the algorithm for repeatability (false).
+%                       Default = false
 %  minPVal:            (Optional) minimum p-value for a good VPop
 %                       Default = 0.9
 %  nTries:             (Optional) Number of times to try a solution before triggering expansion.
@@ -75,6 +70,7 @@ classdef expandVPopEffNOptions
 		maxNewPerIter
 		expandCohortSize
 		effNDelta
+		useMapelIntSeed
 		minPVal
 		nTries
 		nRetries
@@ -205,6 +201,14 @@ classdef expandVPopEffNOptions
               error(['Invalid effNDelta specified for ',mfilename,'. A positive number should be specified.'])
           end
       end  	  
+		
+	  function obj = set.useMapelIntSeed(obj,myUseMapelIntSeed)
+          if islogical(myUseMapelIntSeed)
+               obj.useMapelIntSeed = myUseMapelIntSeed;
+          else
+               error(['Property useMapelIntSeed in ',milename,' must be true or false.'])
+          end
+      end   			
 		
       function obj = set.minPVal(obj,myMinPVal)
           failFlag = false;
@@ -397,6 +401,8 @@ classdef expandVPopEffNOptions
                   value = obj.expandCohortSize;				  
               case 'effNDelta'
                   value = obj.effNDelta;
+			  case 'useMapelIntSeed'
+				  value = obj.useMapelIntSeed;
               case 'minPVal'
                   value = obj.minPVal;
               case 'nTries'
@@ -433,6 +439,7 @@ classdef expandVPopEffNOptions
           obj.maxNewPerIter = 50;          
 		  obj.expandCohortSize = 2500;
           obj.effNDelta = 2;
+		  obj.useMapelIntSeed = false;
           obj.minPVal = 0.9;
           obj.nTries = 5;
           obj.nRetries = 30;

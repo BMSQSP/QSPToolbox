@@ -71,6 +71,7 @@ if continueFlag
     end    
     myMapelOptions.tol = myVPop.tol;
     myMapelOptions.spreadOut = myVPop.spreadOut;
+    myMapelOptions.minIndPVal = myVPop.minIndPVal;	
     myMapelOptions.exactFlag = myVPop.exactFlag;    
     myMapelOptions.minEffN = myVPop.minEffN;
     myMapelOptions.optimizePopSize = myVPop.optimizePopSize;  

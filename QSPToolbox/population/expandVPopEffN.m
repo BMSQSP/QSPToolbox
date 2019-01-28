@@ -122,6 +122,13 @@ if continueFlag
         oldVPop.exactFlag = true;
         oldVPop = evaluateGOF(oldVPop);	
     end
+	
+	if myExpandVPopEffNOptions.useMapelIntSeed
+		if myMapelOptions.intSeed > -1
+			rng(myMapelOptions.intSeed, 'twister');
+		end  
+		myMapelOptions.intSeed=-1;
+	end	
 
     while curEffN <= targetEffN
         bestPVal = 0;
@@ -129,7 +136,10 @@ if continueFlag
         myTestCounter = 0;
         while bestPVal < minPVal
             myTestCounter = myTestCounter + 1;
-            myMapelOptions.intSeed=myTestCounter;
+			% We check whether to reseed with myTestCounter for repeatability of the sequence
+			if ~myExpandVPopEffNOptions.useMapelIntSeed
+				myMapelOptions.intSeed=myTestCounter;
+			end
             % We will try to restart with initial probabilities, if
             % available, and refresh worksheet data if this is the the first
             % iteration.  We'll also enforce the MAPEL options in
@@ -138,6 +148,7 @@ if continueFlag
             if (myTestCounter == 1) && (nVPopsFound > 0)
                 newVPop = oldVPop;
                 newVPop.spreadOut = myMapelOptions.spreadOut;
+				newVPop.minIndPVal = myMapelOptions.minIndPVal;
                 newVPop.exactFlag = myMapelOptions.exactFlag;        
                 newVPop.useEffN = myMapelOptions.useEffN;    
                 newVPop.optimizeTimeLimit = myMapelOptions.optimizeTimeLimit;
@@ -263,8 +274,12 @@ if continueFlag
                     restartVPop = newVPop;
                     restartVPop.useEffN = myMapelOptions.useEffN;
                     restartVPop.exactFlag = myMapelOptions.exactFlag;
-                    restartVPop.intSeed = myTestCounter + restartCounter;
-                    % Increase the tolerance stringency for restarting
+					
+					if ~myExpandVPopEffNOptions.useMapelIntSeed
+						restartVPop.intSeed = myTestCounter + restartCounter;
+					end
+					
+					% Increase the tolerance stringency for restarting
                     restartVPop.tol = newVPop.tol*0.1;
                     restartVPop = restartMapel(restartVPop, myRandomStart);
                     restartVPop.tol = newVPop.tol;

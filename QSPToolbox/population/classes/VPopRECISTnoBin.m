@@ -81,6 +81,9 @@ classdef VPopRECISTnoBin
 %  spreadOut:    Used for optimization, if nonzero, will  
 %                apply a penalty proportional to spreadOut to increase how
 %                the prevalence weight is distributed.
+%  minIndPVal:   Used for optimization, if nonzero, will  
+%                apply a large penalty if any of the individual pvalues.
+%                fall below the target.
 %  optimizeTimeLimit:   Time limit for optimizing the VPop in s.
 %  optimizeType:        Type of optimization algorithm to employ: "pso,"
 %                       "ga," or "simplex".  Default is
@@ -131,7 +134,8 @@ properties
     gof
     useEffN  
     exactFlag			 
-    spreadOut     
+    spreadOut   
+	minIndPVal
     optimizeTimeLimit
     optimizeType
     optimizePopSize
@@ -225,7 +229,7 @@ methods
           if islogical(myUseEffN)
                obj.useEffN = myUseEffN;
           else
-               error(['Property useEffN in ',milename,' must be logical.'])
+               error(['Property useEffN in ',mfilename,' must be logical.'])
           end
       end  
       
@@ -237,9 +241,17 @@ methods
           if (mySpreadOut >= 0)
                obj.spreadOut = mySpreadOut;
           else
-               error(['Property spreadOut in ',milename,' must be >= 0.'])
+               error(['Property spreadOut in ',mfilename,' must be >= 0.'])
           end
       end    
+	  
+      function obj = set.minIndPVal(obj,myMinIndPVal)
+          if (myMinIndPVal >= 0) & (myMinIndPVal <= 1)
+               obj.minIndPVal = myMinIndPVal;
+          else
+               error(['Property minIndPVal in ',mfilename,' must be between 0 and 1.'])
+          end
+      end 	 	  
       
       function obj = set.optimizeTimeLimit(obj,myOptimizeTimeLimit)
           obj.optimizeTimeLimit = myOptimizeTimeLimit;
@@ -249,7 +261,7 @@ methods
           if sum(ismember({'pso','ga','simplex'},lower(myOptimizeType))) == 1
               obj.optimizeType = lower(myOptimizeType);
           else
-              error(['Property optimizeType in ',milename,' must be "ga," "pso," or "simplex"'])
+              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," or "simplex"'])
           end
       end          
       
@@ -281,7 +293,7 @@ methods
           if (myTol > 0)
                obj.tol = myTol;
           else
-               error(['Property tol in ',milename,' must be > 0.'])
+               error(['Property tol in ',mfilename,' must be > 0.'])
           end
       end       
       
@@ -289,7 +301,7 @@ methods
           if (myNIters > 0) && (mod(myNIters,1) == 0)
                obj.nIters = myNIters;
           else
-               error(['Property nIters in ',milename,' must be a positive integer.'])
+               error(['Property nIters in ',mfilename,' must be a positive integer.'])
           end
       end         
       
@@ -357,6 +369,8 @@ methods
                   value = obj.gof;                     
               case 'spreadOut'
                   value = obj.spreadOut;
+              case 'minIndPVal'
+                  value = obj.minIndPVal;					  
               case 'useEffN'
                   value = obj.useEffN;
               case 'exactFlag'
@@ -402,7 +416,7 @@ methods
           % ARGUMENTS
           %  (self)
           %  myRandomStart:  A boolean variable (true/false), if true
-          %                  the bin probabilities will be set
+          %                  prevalence weights will be set
           %                  randomly and if false they will be uniform
            if nargin < 1
                 myRandomStart = false;
@@ -1165,7 +1179,8 @@ methods
           obj.gofBR = '';  
           obj.gofR = '';                              
           obj.gof = '';          
-          obj.spreadOut = 0;   							
+          obj.spreadOut = 0;
+          obj.minIndPVal = 0;	
           obj.useEffN = false;
           obj.exactFlag = true; 		  
           obj.optimizeTimeLimit = 10*60;

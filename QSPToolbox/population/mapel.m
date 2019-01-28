@@ -45,6 +45,7 @@ if continueFlag
 	end
     % First, get the properties from myMapelOptions
     myVPop.spreadOut = myMapelOptions.spreadOut;
+	myVPop.minIndPVal = myMapelOptions.minIndPVal;
     myVPop.exactFlag = myMapelOptions.exactFlag;        
     myVPop.useEffN = myMapelOptions.useEffN;    
     myVPop.optimizeTimeLimit = myMapelOptions.optimizeTimeLimit;
@@ -130,11 +131,19 @@ if continueFlag
     if myVPop.intSeed > -1
         rng(myVPop.intSeed, 'twister');
     end        
+	
+    % Also assign the now fixed sim data into the bin tables initially
+    % rather than during execution to reduce table assignments and
+    % recalculating the 1D mesh.
+    myVPop = myVPop.addDistTableSimVals();
+    if ~isa(myVPop,'VPop')
+        myVPop = myVPop.addDistTable2DSimVals();
+    end	
     
     if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPop')
         % We adopt the index table convention from the original MAPEL paper
         myIndexTable = myVPop.indexTable;
-        [myNAxis, myNVP] = size(myIndexTable);
+        [myNAxis, nVP] = size(myIndexTable);
         myBinEdges = myVPop.binEdges;
         myBinMidPoints = myVPop.binMidPoints;
         myNBins = myMapelOptions.nBins;
@@ -157,11 +166,26 @@ if continueFlag
         else
             myVPop = myVPop.startProbs(myRandomStart>0);            
         end
-    else %isa(myVPop,'VPopRECISTnoBin')
+    else 
 		[nAxis, nVP] = size(myVPop.coeffsTable);
         
 		myInitialPWs = myMapelOptions.initialPWs;
 		myRandomStart = myMapelOptions.randomStart;
+		
+		if isequal(1, length(myInitialPWs))
+			if myInitialPWs < 0
+				% This implies we want to try starting from near an
+				% optimal solution to the linearized problem
+				myLinearCalibrateOptions = linearCalibrateOptions;
+				[myVPopTest, myOptimResults] = linearCalibrate(myVPop,myLinearCalibrateOptions);
+				if myOptimResults.exitflag == 1
+					myInitialPWs = myVPopTest.pws;
+				else
+					warning(['Unable to find optimal solution to linear problem in ',mfilename,'.  Proceeding with default options.'])
+					myInitialPWs = [];
+				end
+			end
+		end
         
 		if isequal(nVP, length(myInitialPWs))
 			if myRandomStart > 0
@@ -177,15 +201,10 @@ if continueFlag
 		
 	end    
     
-    
-    % Also assign the now fixed sim data into the bin tables initially
-    % rather than during execution to reduce table assignments and
-    % recalculating the 1D mesh.
-    myVPop = myVPop.addDistTableSimVals();
-    if ~isa(myVPop,'VPop')
-        myVPop = myVPop.addDistTable2DSimVals();
-    end
-    
+    % Before starting findFit we update the predicted values
+	% with the selected initial guess.
+	myVPop=myVPop.addPredTableVals();
+
 	myVPop = findFit(myVPop);
 else
     myVPop = VPop;
