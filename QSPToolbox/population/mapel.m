@@ -177,8 +177,11 @@ if continueFlag
 				% This implies we want to try starting from near an
 				% optimal solution to the linearized problem
 				myLinearCalibrateOptions = linearCalibrateOptions;
+                % Need to add predTableVals to run.
+                myVPop = myVPop.startPWs(myWorksheet,0);
+                myVPop=myVPop.addPredTableVals();
 				[myVPopTest, myOptimResults] = linearCalibrate(myVPop,myLinearCalibrateOptions);
-				if myOptimResults.exitflag == 1
+				if myOptimResults.exitFlag == 1
 					myInitialPWs = myVPopTest.pws;
 				else
 					warning(['Unable to find optimal solution to linear problem in ',mfilename,'.  Proceeding with default options.'])

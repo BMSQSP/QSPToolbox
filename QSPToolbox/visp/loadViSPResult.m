@@ -11,6 +11,7 @@ function myWorksheet = loadViSPResult(myWorksheet, myUniqueID, myPath, filterFai
 %                            string
 %  myPath:          (optional, string)  path to results
 %  filterFailedVPs: (optional, boolean) whether to delete VPs that fail
+%  useParallel:     (optional, boolean) whether to use parallel pool
 %  screenVPs:       (optional, boolean) whether to screen VPs based on the
 %                                       response types
 %
@@ -93,6 +94,7 @@ if flagContinue
 		end
 	end
 	
+	
 	% Now we just load the results in piecewise
 	myWorksheetCells = cell(1,myNWorkers);
 	if myNWorkers > 1
@@ -113,9 +115,9 @@ if flagContinue
     myResponseSummaryTables = cell(1,nResponseTypes);
     testBounds = cell(1,nResponseTypes);
     for responseTypeCounter = 1 : nResponseTypes
-        myResponseSummaryTables{responseTypeCounter} = createResponseSummaryTable(myWorksheet, allResponseTypeIDs{responseTypeCounter});
-        testBounds{responseTypeCounter} = max(myResponseSummaryTables{responseTypeCounter}.values((nAxis+1):end,:),[],2);
-        testBounds{responseTypeCounter} = 0 * testBounds{responseTypeCounter};
+		curResponseTypeID = allResponseTypeIDs{responseTypeCounter};
+		curResponseTypeElementIDs = getResponseTypeElementIDs(myWorksheet,curResponseTypeID);
+        testBounds{responseTypeCounter} = zeros(length(curResponseTypeElementIDs)+1,1);
     end
     % end	
     disp(['Found full result files for ',num2str(nVPs-sum(ismember(resultVPIDs,''))),' of ',num2str(nVPs),' VPs in ',mfilename,'.'])
@@ -129,10 +131,11 @@ if flagContinue
 		curVPIDs = vpIDs(curIndices);
         curResultVPIDs = resultVPIDs(curIndices);
 		if filterFailedVPs
-			curIndices = curIndices(~ismember(curResultVPIDs,{''}));
-            curResultVPIDs = curResultVPIDs(curIndices);
-			curVPIDs = curVPIDs(curIndices);
-		end
+			tempIndices = (~ismember(curResultVPIDs,{''}));
+            curResultVPIDs = curResultVPIDs(tempIndices);
+            curVPIDs = curVPIDs(tempIndices);
+            curIndices = curIndices(tempIndices);
+        end
 		curWorksheet = copyWorksheet(myWorksheet, curVPIDs, false, false);
 		curResults = cell(nInterventions, length(curIndices));
 		for indexCounter = 1 : length(curIndices)
