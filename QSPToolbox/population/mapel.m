@@ -179,7 +179,7 @@ if continueFlag
 				myLinearCalibrateOptions = linearCalibrateOptions;
                 % Need to add predTableVals to run.
                 myVPop = myVPop.startPWs(myWorksheet,0);
-                myVPop=myVPop.addPredTableVals();
+                myVPop = myVPop.addPredTableVals();
 				[myVPopTest, myOptimResults] = linearCalibrate(myVPop,myLinearCalibrateOptions);
 				if myOptimResults.exitFlag == 1
 					myInitialPWs = myVPopTest.pws;
@@ -203,10 +203,6 @@ if continueFlag
 		end
 		
 	end    
-    
-    % Before starting findFit we update the predicted values
-	% with the selected initial guess.
-	myVPop=myVPop.addPredTableVals();
 
 	myVPop = findFit(myVPop);
 else
