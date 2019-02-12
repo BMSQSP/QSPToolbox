@@ -32,7 +32,22 @@ if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPop')
 elseif isa(myVPop,'VPopRECISTnoBin')
 	initialPWs=myVPop.pws;
 	nTransPWs=length(initialPWs)-1;
-    [nTest, ~] = size(initialPWs);
+	[nTest, ~] = size(initialPWs);
+	
+	if ~(ismember({'simplex'},optimizeType))
+		% We will also try supplementing the VP scores scaled into PWs.  This
+		% likely won't be very effective at finding optimal solutions but will add
+		% points where VPs in sparser regions of the distributions relative to the data 
+		% are more highly weighted which could help to weight to where it is needed
+		% without overly focusing on a few VPs
+		vpScores = scoreWorksheetVPs(myVPop,1:(nTransPWs+1),1:(nTransPWs+1));
+		vpScores = (vpScores + 1E-12)./sum((vpScores + 1E-12),2);
+		initialPWs = [initialPWs;vpScores];
+		[nTest, ~] = size(initialPWs);
+		nTest = min(nTest,myVPop.optimizePopSize);
+		initialPWs = initialPWs(1:nTest,:);
+	end	
+    
 	myPWTrans = nan(nTest,nTransPWs);
 	for transCounter = 1 : nTest
 		myPWTrans(transCounter,:)=hyperTransform(initialPWs(transCounter,:));

@@ -163,8 +163,10 @@ if continueFlag
                 end
             end
             myVPop.binProbs = myInitialProbs;
+            myVPop = myVPop.assignPWs();
         else
-            myVPop = myVPop.startProbs(myRandomStart>0);            
+            myVPop = myVPop.startProbs(myRandomStart>0);  
+            myVPop = myVPop.assignPWs();
         end
     else 
 		[nAxis, nVP] = size(myVPop.coeffsTable);
@@ -182,7 +184,14 @@ if continueFlag
                 myVPop = myVPop.addPredTableVals();
 				[myVPopTest, myOptimResults] = linearCalibrate(myVPop,myLinearCalibrateOptions);
 				if myOptimResults.exitFlag == 1
+                    % Run 2x as results are sensitive to prior PW
+                    % assumption
+                    myLinearCalibrateOptions.priorPrevalenceWeightAssumption = 'specified';
 					myInitialPWs = myVPopTest.pws;
+					[myVPopTest, myOptimResults] = linearCalibrate(myVPopTest,myLinearCalibrateOptions);
+					if myOptimResults.exitFlag == 1
+						myInitialPWs = myVPopTest.pws;
+					end
 				else
 					warning(['Unable to find optimal solution to linear problem in ',mfilename,'.  Proceeding with default options.'])
 					myInitialPWs = [];
@@ -199,12 +208,15 @@ if continueFlag
 			end
 			myVPop.pws = myInitialPWs;
 		else
-			myVPop = myVPop.startPWs(myWorksheet,myRandomStart>0);            
+			myVPop = myVPop.startPWs(myWorksheet,myRandomStart>0);   
 		end
 		
-	end    
+    end    
 
-	myVPop = findFit(myVPop);
+    % Update table values.  Not strictly necessary but a nice
+    % step to diagnose and does have much computational cost            
+    myVPop = myVPop.addPredTableVals();    
+    myVPop = findFit(myVPop);
 else
     myVPop = VPop;
     warning(['Unable to run ',mfilename,'.  Returning an empty VPop.'])
