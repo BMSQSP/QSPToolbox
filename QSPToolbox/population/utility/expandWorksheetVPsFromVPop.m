@@ -111,30 +111,53 @@ if continueFlag
     originalVPIDsSort = originalVPIDs(sortIndices);
     
     % Consider VPs for inclusion as seed if they are weighted "heavily"
-    pwExpandCutoff = 0.01;
     allResponseTypeIDs = getResponseTypeIDs(myWorksheet);
     nResponseTypes = length(allResponseTypeIDs);
     myPWs = newVPop.pws;
-    curEffN = round(1/sum(myPWs.^2));
-    highVPindices1 = find(myPWs>=pwExpandCutoff);
     [~, highVPindices2] = sort(myPWs, 'descend');
-    highVPindices2 = highVPindices2(1 : curEffN);
-    highVPindicesCat = [highVPindices2,highVPindices1];
-    [highVPindices,i,j] = unique(highVPindicesCat, 'first'); 
-    highVPindices = highVPindicesCat(sort(i));
+	% The first VP will be the highest weighted, but the
+	% remainder will be randomly selected according
+	% to prevalence weight
+	highVPindices1 = highVPindices2(1);
+    highVPindices2 = highVPindices2(2 : end);
+	myPWs2 = myPWs(highVPindices2(2 : end))/sum(myPWs(highVPindices2(2 : end)));
+	% We will resample until we use VPs representing at least 20%
+	% of the remaining probability mass excluding the
+	% highest weighted VP.
+	highVPindices2keep = nan(1,0);
+	highVPindices2mass = 0;
+	myPWs2cumSum = cumsum(myPWs2);
+	while highVPindices2mass < 0.2
+		curTry = rand(1);
+		curIndex = find(myPWs2cumSum>curTry);
+		curIndex = curIndex(1);
+		% Need to correct for noralization due to
+		% the mass that has already been added
+		highVPindices2mass = highVPindices2mass + myPWs2(curIndex)*(1-highVPindices2mass);
+		% We'll sample without replacement
+		myPWs2(curIndex) = [];
+		% Renormalize the remaining
+		myPWs2 = myPWs2/sum(myPWs2);
+		myPWs2cumSum = cumsum(myPWs2);
+		highVPindices2keep = [highVPindices2keep,highVPindices2(curIndex)];
+		highVPindices2(curIndex) = [];
+	end
+    highVPindices = [highVPindices1,highVPindices2keep];
     highVPIDs = originalVPIDs(highVPindices);
     [originalVPIDsSort,sortIndicesPick] = setdiff(originalVPIDsSort,highVPIDs,'stable');
     sortIndices = sortIndices(sortIndicesPick);
-    % Now combine considerations for heavily weighted VPs and
-    % parents that look like they are useful.
+    % Now combine considerations for VPs selected by weight and
+    % parents that directly look like they are useful.
     highVPIDs = [highVPIDs,originalVPIDsSort(1:min(nUnweightedParents,length(originalVPIDsSort)))];
     highVPindices = [highVPindices,sortIndices(1:min(nUnweightedParents,length(originalVPIDsSort)))];
 
-    % Decide how many of the VPs from the seed expansion we can add.
+    % Decide how many of the VPs from the seed expansion we 
+	% can add.
+	curEffN = round(1/sum(myPWs.^2));
     if maxNewPerIter < 0
-        maxNewPerIterChecked = curEffN;
+		maxNewPerIterChecked = curEffN;
     else
-        maxNewPerIterChecked = maxNewPerIter;
+		maxNewPerIterChecked = maxNewPerIter;
     end
 	
     % We'll allow more than maxNewPerOld if it looks like we want
