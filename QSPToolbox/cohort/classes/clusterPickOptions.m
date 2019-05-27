@@ -18,6 +18,9 @@ classdef clusterPickOptions
 %  pointsDefaultLastOnly:   When defining clusters by default method, if true,
 %                           for responseTypeElementPoints only the last time
 %                           point will be used (boolean)
+%  maxIter:         Maximum number of iterations
+%  algorithm:       kmedoid algorithm to use
+%  replicates:      Number of replicates
 
    properties
       nClusters
@@ -27,6 +30,9 @@ classdef clusterPickOptions
       intSeed
       edgeVPFlag
       pointsDefaultLastOnly
+	  maxIter
+	  algorithm
+	  replicates
    end
    
    methods
@@ -100,7 +106,50 @@ classdef clusterPickOptions
           else
               error(['Invalid pointsDefaultLastOnly specified for ',mfilename,', a boolean (true/false) should be specified.'])
           end
-      end         
+      end     
+	  
+      function obj = set.maxIter(obj,myMaxIter)
+          if ismatrix(myMaxIter)
+              if isequal(size(myMaxIter),[1 1])
+                  if myMaxIter > 0
+                    % Enforce integer
+                    obj.maxIter = round(myMaxIter);
+                  else
+                    error(['Invalid maxIter specified for ',mfilename,', a positive integer must be specified.'])
+                  end
+              else
+                  error(['Invalid maxIter specified for ',mfilename,', a positive integer must be specified.'])
+              end
+          else
+              error(['Invalid maxIter specified for ',mfilename,', a positive integer must be specified.'])
+          end
+      end 	  
+
+      function obj = set.algorithm(obj,myAlgorithm)
+          allowedSettings = {'pam','clara','small','large'};
+          if sum(ismember(allowedSettings, lower(myAlgorithm))>0)
+              obj.algorithm = lower(myAlgorithm);
+          else
+              error(['Invalid algorithm specified for ',mfilename,', should specify one of: ',strjoin(allowedSettings,', '),'.'])
+          end
+      end 	  
+	  
+      function obj = set.replicates(obj,myReplicates)
+          if ismatrix(myReplicates)
+              if isequal(size(myReplicates),[1 1])
+                  if myReplicates > 0
+                    % Enforce integer
+                    obj.replicates = round(myReplicates);
+                  else
+                    error(['Invalid replicates specified for ',mfilename,', a positive integer must be specified.'])
+                  end
+              else
+                  error(['Invalid replicates specified for ',mfilename,', a positive integer must be specified.'])
+              end
+          else
+              error(['Invalid replicates specified for ',mfilename,', a positive integer must be specified.'])
+          end
+      end 	  
      
       function value = get(obj,propName)
           switch propName
@@ -119,7 +168,13 @@ classdef clusterPickOptions
               case 'edgeVPFlag'
                   value = obj.edgeVPFlag;               
               case 'pointsDefaultLastOnly'
-                  value = obj.pointsDefaultLastOnly;                  
+                  value = obj.pointsDefaultLastOnly;   
+              case 'maxIter'
+                  value = obj.maxIter;  
+              case 'algorithm'
+                  value = obj.algorithm;  
+              case 'replicates'
+                  value = obj.replicates;  				  
               otherwise
                   error(['Error: ',propName ,' is not a valid ',mfilename,' property.'])
           end
@@ -277,6 +332,9 @@ classdef clusterPickOptions
           obj.intSeed = -1;
           obj.edgeVPFlag = false;
           obj.pointsDefaultLastOnly = true;
+		  obj.maxIter = 1000;
+	      obj.algorithm = 'pam';
+	      obj.replicates = 100;
       end
     end
 end

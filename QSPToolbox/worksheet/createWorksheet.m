@@ -52,6 +52,7 @@ myWorksheet.simProps.absoluteToleranceStepSize = [];%myWorksheet.simProps.absolu
 myWorksheet.simProps.relativeTolerance = 1e-3;
 myWorksheet.simProps.absoluteToleranceScaling = true;
 myWorksheet.simProps.maximumWallClock = 5*60;
+myWorksheet.simProps.maxStep = [];
 myWorksheet.simProps.solverType = 'sundials';
 myWorksheet.simProps.saveElementResultIDs = {};
 

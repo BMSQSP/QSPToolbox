@@ -18,6 +18,7 @@ classdef mapelOptionsRECISTnoBin
 %                    match.  Must be
 %                    populated with experimental data before calling MAPEL,
 %                    or leave unassigned if no 2D distribution targets.
+% corTable:
 % brTableRECIST:     (Required) A table with best RECIST responses.
 % rTableRECIST:      (Required) A table with RECIST responses.
 % initialPWs:        (Optional) 
@@ -82,6 +83,7 @@ classdef mapelOptionsRECISTnoBin
       binTable
       distTable
       distTable2D	  
+	  corTable
       brTableRECIST
       rTableRECIST      
       initialPWs
@@ -133,6 +135,9 @@ classdef mapelOptionsRECISTnoBin
       function obj = set.distTable2D(obj,myExpDistData2D)
           obj.distTable2D = myExpDistData2D;
       end   	  
+      function obj = set.corTable(obj,myCorTable)
+          obj.corTable = myCorTable;
+      end 	 	 
 
       function obj = set.initialPWs(obj,myInitialPWs)
           obj.initialPWs = myInitialPWs;
@@ -265,6 +270,8 @@ classdef mapelOptionsRECISTnoBin
                   value = obj.distTable; 	
               case 'distTable2D'
                   value = obj.distTable2D; 				  
+              case 'corTable'
+                  value = obj.corTable;					 
               case 'brTableRECIST'
                   value = obj.brTableRECIST; 
               case 'rTableRECIST'
@@ -319,6 +326,7 @@ classdef mapelOptionsRECISTnoBin
           obj.binTable = '';
           obj.distTable = '';   
 		  obj.distTable2D = ''; 
+		  obj.corTable = ''; 					   
           obj.brTableRECIST = '';
           obj.rTableRECIST = '';          
           obj.initialPWs = []; %=NULL

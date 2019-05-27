@@ -80,52 +80,130 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
         % observed experimental data...
         
         expDataRow = find((ismember(testVPop.expData{:,'time'},simTime))&(ismember(testVPop.expData{:,'interventionID'},interventionID))&(ismember(testVPop.expData{:,'elementID'},elementID))&(ismember(testVPop.expData{:,'elementType'},elementType)));
-        curExpVals = testVPop.expData{expDataRow,vpopDataCol1Index:end};
-        curExpVals = curExpVals(~isnan(curExpVals));
+		
+		if ~isempty(expDataRow)
+			
+			curExpVals = testVPop.expData{expDataRow,vpopDataCol1Index:end};
+			curExpVals = curExpVals(~isnan(curExpVals));
 
-        [~,simValsSortIndices] = sort(curSimVals,'ascend');
-        
-        originalRange = originalValsSort(length(originalValsSort)) - originalValsSort(1);
-        [~, ~, SCall] = alignSamples(sort(curExpVals,'ascend'), sort(curSimVals,'ascend'));
+			[~,simValsSortIndices] = sort(curSimVals,'ascend');
+			
+			originalRange = originalValsSort(length(originalValsSort)) - originalValsSort(1);
+			[~, ~, SCall] = alignSamples(sort(curExpVals,'ascend'), sort(curSimVals,'ascend'));
 
-        curBandWidth = (max(SCall) - min(SCall))/10;
-        % Calculate VP scores
-        % by comparing the cohort PDF to data
-        [PDFsim,~] = ksdensity(originalValsSort,SCall,'bandwidth',curBandWidth);%,'Support',[min(SC)-eps max(SC)+eps]);
-        [PDFexp,~] = ksdensity(sort(curExpVals,'ascend'),SCall,'bandwidth',curBandWidth);%,'Support',[min(SC)-eps max(SC)+eps]);
-        % The PDF integral may not quite be ~1 since the
-        % pdf density is not restricted to
-        % fall within the observed range
-        % We therefore correct the PDFs so we don't bias towards
-        % prioritizing the match for biomarkers that have most of their
-        % density away from the edges
-        PDFsim = PDFsim / trapz(SCall,PDFsim);
-        PDFexp = PDFexp / trapz(SCall,PDFexp);
-        % We will want to compare the differences 
-        pdfDiff = (PDFexp-PDFsim).*(PDFexp>PDFsim);
-        
-        % These are not needed but included to help debug
-        % pdfDiffComb{rowCounter} = pdfDiff;
-        % PDFexpComb{rowCounter} = PDFexp;
-        % PDFsimComb{rowCounter} = PDFsim;
-        % SCallComb{rowCounter}=SCall;
-        
-        % We want the indices 
-        newValInd =nan(1,0);
-        scInd =nan(1,0);
-        for newCounter = 1 : length(newVals)
-            curInd = find(ismember(SCall,newVals(newCounter)));
-            if length(curInd) > 0
-                scInd = [scInd, curInd(1)];
-                newValInd = [newValInd, newCounter];
-            end
-        end
-         
-        addScore(rowCounter,newNonNANIndices(newValInd)) = pdfDiff(scInd);
-        % We will emphasize VPs that help
-        % to address issues with individual
-        % variables in the marginal density functions by
-        % taking the square
+			curBandWidth = (max(SCall) - min(SCall))/10;
+			% Calculate VP scores
+			% by comparing the cohort PDF to data
+			[PDFsim,~] = ksdensity(originalValsSort,SCall,'bandwidth',curBandWidth);%,'Support',[min(SC)-eps max(SC)+eps]);
+			[PDFexp,~] = ksdensity(sort(curExpVals,'ascend'),SCall,'bandwidth',curBandWidth);%,'Support',[min(SC)-eps max(SC)+eps]);
+			% The PDF integral may not quite be ~1 since the
+			% pdf density is not restricted to
+			% fall within the observed range
+			% We therefore correct the PDFs so we don't bias towards
+			% prioritizing the match for biomarkers that have most of their
+			% density away from the edges
+			PDFsim = PDFsim / trapz(SCall,PDFsim);
+			PDFexp = PDFexp / trapz(SCall,PDFexp);
+			% We will want to compare the differences 
+			pdfDiff = (PDFexp-PDFsim).*(PDFexp>PDFsim);
+			
+			% These are not needed but included to help debug
+			% pdfDiffComb{rowCounter} = pdfDiff;
+			% PDFexpComb{rowCounter} = PDFexp;
+			% PDFsimComb{rowCounter} = PDFsim;
+			% SCallComb{rowCounter}=SCall;
+			
+			% We want the indices 
+			newValInd =nan(1,0);
+			scInd =nan(1,0);
+			for newCounter = 1 : length(newVals)
+				curInd = find(ismember(SCall,newVals(newCounter)));
+				if length(curInd) > 0
+					scInd = [scInd, curInd(1)];
+					newValInd = [newValInd, newCounter];
+				end
+			end
+			 
+			addScore(rowCounter,newNonNANIndices(newValInd)) = pdfDiff(scInd);
+			% We will emphasize VPs that help
+			% to address issues with individual
+			% variables in the marginal density functions by
+			% taking the square
+			
+		else
+			% If the data can't be found in the experimental data,
+			% it means we don't have the distributions.  There are a couple
+			% things we could do, for example if calibrating summary statistics
+			% we could look at the theoretical PDF assuming normality
+			% given the available summary data, and fill needed regions there.
+			myMnSdData = testVPop.mnSDTable;
+			[nMnSdRows, nMnSdCols] = size(myMnSdData);
+			setToZero=false;
+			if nMnSdRows > 0
+				mnSDRow = find((ismember(myMnSdData{:,'time'},simTime))&(ismember(myMnSdData{:,'interventionID'},interventionID))&(ismember(myMnSdData{:,'elementID'},elementID))&(ismember(myMnSdData{:,'elementType'},elementType)));
+				if ~isempty(mnSDRow)
+					if ((myMnSdData{mnSDRow,'weightMean'}>0) & (myMnSdData{mnSDRow,'weightSD'}>0))
+					
+						[~,simValsSortIndices] = sort(curSimVals,'ascend');
+						
+						% We'll just evaluate the hypothetical PDF at the simulated points
+						originalRange = originalValsSort(length(originalValsSort)) - originalValsSort(1);
+						SCall = sort(curSimVals,'ascend');
+										
+						curBandWidth = (max(SCall) - min(SCall))/10;
+						
+						% Calculate VP scores
+						% by comparing the cohort PDF to data						
+						[PDFsim,~] = ksdensity(originalValsSort,SCall,'bandwidth',curBandWidth);%,'Support',[min(SC)-eps max(SC)+eps]);
+						% We just take SCall as the experimental data points, then
+						PDFexp = normpdf(SCall,myMnSdData{mnSDRow,'expMean'},myMnSdData{mnSDRow,'expSD'});
+			
+						% The PDF integral may not quite be ~1 since the
+						% pdf density is not restricted to
+						% fall within the observed range
+						% We therefore correct the PDFs so we don't bias towards
+						% prioritizing the match for biomarkers that have most of their
+						% density away from the edges
+						PDFsim = PDFsim / trapz(SCall,PDFsim);
+						
+						% Since we have a theoretical PDF we won't re-normalize.  There
+						% may be issues with the PDF density for variables that may not 
+						% become negative, but we will ignore for now especially since we
+						% don't penalize.
+						% PDFexp = PDFexp / trapz(SCall,PDFexp);
+						
+						% We will want to compare the differences 
+						pdfDiff = (PDFexp-PDFsim).*(PDFexp>PDFsim);
+			
+						% We want the indices 
+						newValInd =nan(1,0);
+						scInd =nan(1,0);
+						for newCounter = 1 : length(newVals)
+							curInd = find(ismember(SCall,newVals(newCounter)));
+							if length(curInd) > 0
+								scInd = [scInd, curInd(1)];
+								newValInd = [newValInd, newCounter];
+							end
+						end
+						 
+						addScore(rowCounter,newNonNANIndices(newValInd)) = pdfDiff(scInd);
+					
+					else
+						setToZero = true;
+					end
+				else
+					setToZero = true;
+				end
+				
+			else
+				setToZero = true;
+			end
+			% Otherwise, we will simply implement
+			% as a zero.		
+			if setToZero
+				addScore(rowCounter,newNonNANIndices(newValInd)) = zeros(1,length(newValInd));
+			end
+		end
         
     end
     % The sum of the positive difference square terms or just the sum of the

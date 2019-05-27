@@ -12,6 +12,10 @@ function myObjective = evaluateObjectiveRECIST(myVPop, myProbVectTrans)
 %                        mnSDTable: should at least be populated with
 %                                   experiment data
 %                        binTable:  Also need experiment data
+%                        distTable2D
+%                        corTable
+%                        brTableRECIST
+%                        rTableRECIST
 %  myProbVectTrans:     a 1 x (nBins-1 * nAxis) vector of transformed 
 %                       probabilities
 %
@@ -76,6 +80,7 @@ myMnSDTable = myVPop.mnSDTable;
 myBinTable = myVPop.binTable;
 myDistTable = myVPop.distTable;
 myDistTable2D = myVPop.distTable2D;
+myCorTable = myVPop.corTable;
 myBRTable = myVPop.brTableRECIST;
 myRTable = myVPop.rTableRECIST;
 
@@ -87,6 +92,7 @@ gofSD = myVPop.gofSD;
 gofBin = myVPop.gofBin;
 gofDist = myVPop.gofDist;
 gofDist2D = myVPop.gofDist2D;
+gofCor = myVPop.gofCor;
 gofBR = myVPop.gofBR;
 gofR = myVPop.gofR;
 minIndPVal = myVPop.minIndPVal;
@@ -115,6 +121,12 @@ if ~isempty(myDistTable2D)
     myObjective = myObjective - 2*(sum(myDistTable2D{:,'weight'} .* log10(gofDist2D+epsilon)));
 	if minIndPVal > 0
 		myObjective = myObjective + sum((myDistTable2D{:,'weight'} > 0) .* (gofDist2D < minIndPVal) .* 1E6 .* (minIndPVal - gofDist2D));
+	end			
+end
+if ~isempty(myCorTable)
+    myObjective = myObjective - 2*(sum(myCorTable{:,'weight'} .* log10(gofCor+epsilon)));
+	if minIndPVal > 0
+		myObjective = myObjective + sum((myCorTable{:,'weight'} > 0) .* (gofCor < minIndPVal) .* 1E6 .* (minIndPVal - gofCor));
 	end			
 end
 if ~isempty(myBRTable)

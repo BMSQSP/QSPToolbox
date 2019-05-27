@@ -155,6 +155,7 @@ if flagContinue
     exportedModel.SimulationOptions.AbsoluteToleranceStepSize = myWorksheet.simProps.absoluteToleranceStepSize;    
     exportedModel.SimulationOptions.MaximumWallClock = myWorksheet.simProps.maximumWallClock;
     exportedModel.SimulationOptions.SolverType = myWorksheet.simProps.solverType;
+	exportedModel.SimulationOptions.MaxStep = myWorksheet.simProps.maxStep;
     % It doesn't appear the exportedModel has a property similar to states 
     % to log in the configset object, so this will be done manually.
     mySaveElementResultIDs = myWorksheet.simProps.saveElementResultIDs;

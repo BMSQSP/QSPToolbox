@@ -18,15 +18,18 @@ classdef varyAxesOptions
 %                        'lh'      latin hypercube
 %                        'none'     no randomization is applied to the
 %                                   children
+%                        'localpca' sample along PCAs for the nearest VPs
 %  additionalIDString:  an additional string to add to the VP IDs
 %                       generated.  This can be helpful for ensuring
 %                       each VP ID is unique, even with multiple runs
 %                       and filtering VPs
 %  varyAxisIDs:         a cell array of strings, each being an axis
 %                       in the worksheet
-%  gaussianStd:         Only used if 'gaussian' is the varyMethod.
-%                       This is a normalized standard deviation, since the
-%                       axes are scaled between 0 and 1
+%  gaussianStd:         Only used if 'gaussian' or 'localPCA' is the varyMethod.
+%                       For gaussian, this is a normalized standard deviation, 
+%                       since the axes are scaled between 0 and 1.
+%                       For localPCA, this is a relative  re-scaling of the 
+%                       standard deviation along all principal components when sampling
 %  intSeed:             A non-negative integer seed to initialize the 
 %                       random number generator.  Set to -1 to avoid
 %                       changing the state of the random number generator.
@@ -72,7 +75,7 @@ classdef varyAxesOptions
       end
 
       function obj = set.varyMethod(obj,myVaryMethod)
-          allowedSettings = {'uniform','sobol','saltelli','gaussian','lh','none'};
+          allowedSettings = {'uniform','sobol','saltelli','gaussian','lh','none','localpca'};
           if sum(ismember(allowedSettings, lower(myVaryMethod)))>0
               obj.varyMethod = lower(myVaryMethod);
           else

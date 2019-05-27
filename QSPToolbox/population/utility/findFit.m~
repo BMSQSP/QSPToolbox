@@ -48,7 +48,10 @@ elseif isa(myVPop,'VPopRECISTnoBin')
 		initialPWs = initialPWs(1:nTest,:);
 		% Try supplementing with initial guesses that weight VPs near
 		% the initial points
-        nAdd = floor(myVPop.optimizePopSize/2-nTest);
+        if floor(myVPop.optimizePopSize/2-nTest)>0
+            nAdd = floor(myVPop.optimizePopSize/2-nTest);
+        else 
+            nAdd = 
 		if (((myVPop.optimizePopSize-nTest-nAdd) > 0) && (nAdd>0))
 			vpScores = spreadPWsToNeighbors(initialPWs(1,:), myVPop.coeffsTable, nAdd);
 			initialPWs = [initialPWs;vpScores];

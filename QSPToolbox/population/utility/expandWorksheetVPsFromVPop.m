@@ -1,4 +1,4 @@
-function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,newVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, gaussianStd, maxNewPerOld, nUnweightedParents, selectByParent)
+function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,newVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, varyMethod, gaussianStd, maxNewPerOld, nUnweightedParents, selectByParent, myScreenFunctionName)
 % This function expands a worksheet given a VPop.  It selected out VPs to expand around,
 % samples for new VPs, scores the "children" based on available data, and adds
 % the best children to the worksheet.
@@ -20,7 +20,8 @@ function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,ne
 %                       TODO: update this to take a cell array of
 %                       standard outputs of evaluateResponseType
 %  expandCohortSize:   size of the cohort to generate for testing
-%  gaussianStd:        standard deviation for the guassian sampled parameters.
+%  varyMethod:         method for resampling.  i.e. 'gaussian' or 'localPCA'
+%  gaussianStd:        standard deviation for the re-sampled parameters.
 %                       note this is applied across all axes in the transformed
 %                       units (i.e. within bounds normalized 0-1).
 %  maxNewPerOld:       maximum number of children per weighted parent
@@ -29,7 +30,13 @@ function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,ne
 %  selectByParent:     a boolean variable indicating whether children
 %                       VPs are selected for inclusion each iteraction 
 %                       based on their parent, or just pooled together
-%                      
+%  myScreenFunctionName: a string indicating a function to use for screening
+%                         VPs before simulation.  It should take two input
+%                         arguments: a worksheet and a list of VPIDs to
+%                         screen.  It should return a worksheet with
+%                         identical number of names of VPs, possibly 
+%                         modified after bing checked against some
+%                         criteria. '' indicates no screening.
 %                      
 %                      
 % RETURNS:
@@ -168,7 +175,7 @@ if continueFlag
     maxNewPerOld = max(maxNewPerOld,ceil(maxNewPerIterChecked/length(highVPindices)));
 
     myVaryAxesOptions = varyAxesOptions;
-    myVaryAxesOptions.varyMethod = 'gaussian';
+    myVaryAxesOptions.varyMethod = varyMethod;
     myVaryAxesOptions.gaussianStd = gaussianStd;
     myVaryAxesOptions.varyAxisIDs = getAxisDefIDs(myWorksheet);
     myVaryAxesOptions.intSeed = wsIterCounter;
@@ -191,6 +198,11 @@ if continueFlag
         jitteredWorksheet.axisProps.axisVP.coefficients(axisIndex,vpIndex) = rand(1);
     end
 
+    % Also screen the worksheet if a function is provided
+    if length(myScreenFunctionName) > 0
+        jitteredWorksheet = eval([myScreenFunctionName,'(jitteredWorksheet,newVPIDs)']);
+    end
+    
     mySimulateOptions = simulateOptions;
     mySimulateOptions.rerunExisting = false;
     mySimulateOptions.optimizeType = 'none';

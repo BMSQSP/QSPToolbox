@@ -41,6 +41,8 @@ classdef expandVPopEffNOptions
 %                      normalized standard deviation of the specified value. 
 %					   Set to Inf for a fully random initial start. 
 %                       Default = 0; 
+%  varyMethod :        Method to use to guide resampling.  See varyAxesOptions,
+%                       currently allowed values are 'gaussian' and 'localPCA'
 %  gaussianStd:        Degree of normalized gaussian noise to add to children of
 %                       highest weighted VPs in each iteration when resampling. 
 %                       Default = 0.05;
@@ -54,6 +56,13 @@ classdef expandVPopEffNOptions
 %                       and the ones that are not weighted but look like they may be
 %                       useful are included.
 %                       Default = 2;
+%  screenFunctionName  A string with a name for a VP screening function.
+%                       The function will be called every iteration when
+%                       VPs are expanded.  The function should be in a file
+%                       in the MATLAB path with the same filename, do 
+%                       not include '.m'.  The function should accept
+%                       a worksheet and a list of VPIDs to screen as input,
+%                       and should return a screened worksheet as output.
 %  selectByParent:	   Whether to select children VPs each iteration based on
 %                       their parent, in which case maxNewPerOld is important to
 %                       select VPs, or to pool all the children together and
@@ -76,9 +85,11 @@ classdef expandVPopEffNOptions
 		nRetries
 		restartPVal
 		expandRandomStart
+		varyMethod
 		gaussianStd
 		maxNewPerOld
 		nUnweightedParents
+        screenFunctionName
 		selectByParent
 		verbose
    end
@@ -310,6 +321,15 @@ classdef expandVPopEffNOptions
           end
       end  	  
 
+      function obj = set.varyMethod(obj,myVaryMethod)
+          allowedSettings = {'gaussian', 'localpca'};
+          if sum(ismember(allowedSettings, lower(myVaryMethod)))>0
+              obj.varyMethod = lower(myVaryMethod);
+          else
+              error('Invalid varyMethod specified for ',mfilename,', should specify one of: ',strjoin(allowedSettings,', '),'.')
+          end
+      end 
+	  
       function obj = set.gaussianStd(obj,myGaussianStd)
           failFlag = false;
           if isnumeric(myGaussianStd) 
@@ -368,7 +388,15 @@ classdef expandVPopEffNOptions
           if failFlag
               error(['Invalid nUnweightedParents specified for ',mfilename,'. A number >= 0 should be specified.'])
           end
-      end  	  
+      end
+      
+	  function obj = set.screenFunctionName(obj,myScreenFunctionName)
+          if ischar(myScreenFunctionName)
+               obj.screenFunctionName = myScreenFunctionName;
+          else
+               error(['Property screenFunctionName in ',milename,' must be a character array.'])
+          end
+      end       
 	  
 	  function obj = set.selectByParent(obj,mySelectByParent)
           if islogical(mySelectByParent)
@@ -413,12 +441,16 @@ classdef expandVPopEffNOptions
                   value = obj.restartPVal;	
               case 'expandRandomStart'
                   value = obj.expandRandomStart;
+              case 'varyMethod'
+                  value = obj.varyMethod;				  
               case 'gaussianStd'
                   value = obj.gaussianStd;
               case 'maxNewPerOld'
                   value = obj.maxNewPerOld;	
               case 'nUnweightedParents'
                   value = obj.nUnweightedParents;
+              case 'screenFunctionName'
+                  value = obj.screenFunctionName;
               case 'selectByParent'
                   value = obj.selectByParent;
               case 'verbose'
@@ -445,9 +477,11 @@ classdef expandVPopEffNOptions
           obj.nRetries = 30;
 		  obj.restartPVal = 1E-4;
 		  obj.expandRandomStart = 0;
+		  obj.varyMethod = 'gaussian';
 		  obj.gaussianStd = 0.05;
 		  obj.maxNewPerOld = 2;
 		  obj.nUnweightedParents = 2;
+          obj.screenFunctionName = '';
 		  obj.selectByParent = true;
 		  obj.verbose = true;		  
       end

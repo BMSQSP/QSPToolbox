@@ -131,7 +131,7 @@ classdef simulateOptions
           if ischar(myClusterID)
               obj.clusterID = myClusterID;
           else
-            error(['Invalid clusterID in ',milename,'.'])
+            error(['Invalid clusterID in ',mfilename,'.'])
           end
       end          
       
@@ -139,7 +139,7 @@ classdef simulateOptions
           if (isnumeric(myNWorkers) == true)
               obj.nWorkers = myNWorkers;
           else
-            error(['Invalid nWorkers value in ',milename,'.'])
+            error(['Invalid nWorkers value in ',mfilename,'.'])
           end
       end
       

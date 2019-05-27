@@ -15,16 +15,16 @@ function [myWorksheet, newVPop] = expandVPopEffN(myWorksheet,refWorksheet,myExpa
 % target effN.
 % 
 % ARGUMENTS:
-%  myWorksheet:            A worksheet to expand
-%  refWorksheet:           A reference worksheet to use for testBounds.  This should
-%                           have the same response types and axes as myWorksheet.
-%                           It could be a repeat of myWorksheet if
-%                           you just want to maintain current bounds.
-%  myExpandVPopEffNOptions An expandVPopEffNOptions object
-%  myMapelOptions:         A mapelOptions object
-%  hotStartVPop:           A VPop object, will try to hot
-%                           start from this solution if provided.
-%                           Leave empty or '' if no hot start desired.
+%  myWorksheet:             A worksheet to expand
+%  refWorksheet:            A reference worksheet to use for testBounds.  This should
+%                            have the same response types and axes as myWorksheet.
+%                            It could be a repeat of myWorksheet if
+%                            you just want to maintain current bounds.
+%  myExpandVPopEffNOptions: An expandVPopEffNOptions object
+%  myMapelOptions:          A mapelOptions object
+%  hotStartVPop:            A VPop object, will try to hot
+%                            start from this solution if provided.
+%                            Leave empty or '' if no hot start desired.
 %
 % RETURNS:
 %  myWorksheet
@@ -68,9 +68,6 @@ if continueFlag
     end         
 end 
     
-
-
-
 if continueFlag    
     suffix = myExpandVPopEffNOptions.suffix;
     wsIterCounter = myExpandVPopEffNOptions.wsIterCounter;
@@ -83,7 +80,6 @@ if continueFlag
     verbose = myExpandVPopEffNOptions.verbose;
     expandCohortSize = myExpandVPopEffNOptions.expandCohortSize;
     restartPVal = myExpandVPopEffNOptions.restartPVal;
-
 
     % Starting effN
     curEffN = myMapelOptions.minEffN;
@@ -146,31 +142,11 @@ if continueFlag
             % case they are tweaked.  Note we don't just directly restart
             % since there may be new simData in the worksheet.
             if (myTestCounter == 1) && (nVPopsFound > 0)
-                newVPop = oldVPop;
-                newVPop.spreadOut = myMapelOptions.spreadOut;
-				newVPop.minIndPVal = myMapelOptions.minIndPVal;
-                newVPop.exactFlag = myMapelOptions.exactFlag;        
-                newVPop.useEffN = myMapelOptions.useEffN;    
-                newVPop.optimizeTimeLimit = myMapelOptions.optimizeTimeLimit;
-                newVPop.optimizeType = myMapelOptions.optimizeType;        
-                newVPop.optimizePopSize = myMapelOptions.optimizePopSize;
-                newVPop.intSeed = myMapelOptions.intSeed;
-                newVPop.nIters = myMapelOptions.nIters;
-                newVPop.tol = myMapelOptions.tol;
-                newVPop.expData = myMapelOptions.expData;
-                newVPop.mnSDTable = myMapelOptions.mnSDTable;
-                newVPop.binTable = myMapelOptions.binTable;
-                newVPop.distTable = myMapelOptions.distTable; 
-                if isa(myMapelOptions,'mapelOptionsRECIST') || isa(myMapelOptions,'mapelOptionsRECISTnoBin')
-                    newVPop.distTable2D = myMapelOptions.distTable2D;
-                    newVPop.relSLDvar = myMapelOptions.relSLDvar;
-                    newVPop.absALDVar = myMapelOptions.absALDVar;
-                    newVPop.crCutoff = myMapelOptions.crCutoff;                      
-                    newVPop.brTableRECIST = myMapelOptions.brTableRECIST;
-                    newVPop.rTableRECIST = myMapelOptions.rTableRECIST;                    
+                newVPop = initializeOptionPropertiesToVPop(myMapelOptions);
+                
+                if isa(myMapelOptions,'mapelOptionsRECIST') || isa(myMapelOptions,'mapelOptionsRECISTnoBin')                   
                     newVPop.recistSimFilter = createRECISTSimFilter(myWorksheet, newVPop);                    
                 end		
-				newVPop.minEffN = myMapelOptions.minEffN;
 				newVPop = newVPop.getSimData(myWorksheet);
 				if ~isa(newVPop,'VPopRECISTnoBin')
 					newVPop = newVPop.assignIndices(myWorksheet, myMapelOptions);
@@ -234,7 +210,7 @@ if continueFlag
 					if isa(newVPop, 'VPopRECISTnoBin')
 						newVPop = newVPop.startPWs(myWorksheet,true);
 					else
-						newVPop = newVPop.startProbs(true)
+						newVPop = newVPop.startProbs(true);
 					end	
 					newVPop = restartMapel(newVPop, 0);
 				else
@@ -316,7 +292,7 @@ if continueFlag
             if (mod(myTestCounter,nTries) == 0) && (nVPopsFound > 0) && ~((newVPop.gof > minPVal) && (1/sum(newVPop.pws.^2) >= curEffN))
                 if expandCohortSize > 0
                     wsIterCounter = wsIterCounter + 1;
-                    [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, myExpandVPopEffNOptions.gaussianStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.nUnweightedParents, myExpandVPopEffNOptions.selectByParent);
+                    [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.gaussianStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.nUnweightedParents, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
                     saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]); 
                     if verbose
                         disp(['Unable to find an acceptable VPop with initial worksheet in ',num2str(nTries),' VPop fit restarts, added ', num2str(length(newPassNames)), ' VPs to the worksheet in ',mfilename,' to start worksheet iteration ',num2str(wsIterCounter),'.'])
@@ -334,7 +310,7 @@ if continueFlag
             if expandCohortSize > 0
                 % Get ready to expand VPs
                 wsIterCounter = wsIterCounter+1;
-                [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, myExpandVPopEffNOptions.gaussianStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.nUnweightedParents, myExpandVPopEffNOptions.selectByParent);
+                [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet, oldVPop, myMapelOptions, suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.gaussianStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.nUnweightedParents, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
                 % Save the new worksheet that will be used.
                 saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);   
                 if verbose

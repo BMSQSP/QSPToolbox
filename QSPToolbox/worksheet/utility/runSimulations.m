@@ -27,11 +27,7 @@ if ~isempty(gcp('nocreate'))
    delete(gcp);
 end
 % First check the default number of workers, if needed
-if isnan(mySimulateOptions.nWorkers)
-    myPool = parpool(mySimulateOptions.clusterID);
-    mySimulateOptions.nWorkers = myPool.NumWorkers;
-    delete(myPool);
-end
+mySimulateOptions = checkNWorkers(mySimulateOptions);
 myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
 
 % in 2017a this message can cause issues, especially when

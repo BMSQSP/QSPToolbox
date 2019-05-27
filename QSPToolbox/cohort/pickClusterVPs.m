@@ -124,6 +124,10 @@ if continueFlag
         edgeIndices = unique(edgeIndices);
         edgeIndices = sort(edgeIndices,'ascend');
         myIndices(1:length(edgeIndices)) = edgeIndices;
+		disp(['Found ',num2str(length(edgeIndices)),' edge VPs, total requested number of VPs post clustering is ',num2str(myNClusters),'.  Proceeding.'])
+		if length(edgeIndices) >= myNClusters
+			warning(['Edge VPs are greater than number of requested clustered VPs in ',mfilename,'.  Returning edge VPs but not clustering.'])
+		end
         nVPFromEdges = length(edgeIndices);
         myIndicesMap(edgeIndices) = [];
         theMatrixToCluster(:,edgeIndices) = [];
@@ -134,8 +138,8 @@ if continueFlag
     
     medoidIndices = nan(myNClusters-length(edgeIndices),1);
     if sum(isnan(myIndices)) > 0
-        opts = statset('MaxIter',1000,'UseParallel',1);
-        [idx,theMedoids,sumd,D,midx,info] = kmedoids(theMatrixToCluster, (myNClusters - nVPFromEdges), 'Algorithm', 'pam','Start','plus', 'Replicates',100,'Options',opts);
+        opts = statset('MaxIter',myClusterPickOptions.maxIter,'UseParallel',1);
+        [idx,theMedoids,sumd,D,midx,info] = kmedoids(theMatrixToCluster, (myNClusters - nVPFromEdges), 'Algorithm', myClusterPickOptions.algorithm, 'Start','plus', 'Replicates', myClusterPickOptions.replicates, 'Options',opts);
 
         % Clean up the worker pool
         delete(gcp)      

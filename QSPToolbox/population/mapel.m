@@ -36,59 +36,25 @@ if continueFlag
 end
 
 if continueFlag
-	if isa(myMapelOptions, 'mapelOptions')
-		myVPop = VPop;
-    elseif isa(myMapelOptions, 'mapelOptionsRECIST')
-		myVPop = VPopRECIST;
-    else
-        myVPop = VPopRECISTnoBin;
-	end
-    % First, get the properties from myMapelOptions
-    myVPop.spreadOut = myMapelOptions.spreadOut;
-	myVPop.minIndPVal = myMapelOptions.minIndPVal;
-    myVPop.exactFlag = myMapelOptions.exactFlag;        
-    myVPop.useEffN = myMapelOptions.useEffN;    
-    myVPop.optimizeTimeLimit = myMapelOptions.optimizeTimeLimit;
-    myVPop.optimizeType = myMapelOptions.optimizeType;        
-    myVPop.optimizePopSize = myMapelOptions.optimizePopSize;
-	myVPop.objectiveLimit = myMapelOptions.objectiveLimit; 	
-    myVPop.intSeed = myMapelOptions.intSeed;
-    myVPop.nIters = myMapelOptions.nIters;
-    myVPop.tol = myMapelOptions.tol;
-
-    myVPop.expData = myMapelOptions.expData;
-    myVPop.mnSDTable = myMapelOptions.mnSDTable;
-    myVPop.binTable = myMapelOptions.binTable;
-    myVPop.distTable = myMapelOptions.distTable;    
-    myVPop.minEffN = myMapelOptions.minEffN;
+    % First copy all of the needed properties over
+    myVPop = initializeOptionPropertiesToVPop(myMapelOptions);
     
-    if isa(myVPop,'VPopRECIST')
-        myVPop.distTable2D = myMapelOptions.distTable2D;
-		myVPop.brTableRECIST = myMapelOptions.brTableRECIST;
-		myVPop.rTableRECIST = myMapelOptions.rTableRECIST;        
-        myVPop.relSLDvar = myMapelOptions.relSLDvar;
-        myVPop.absALDVar = myMapelOptions.absALDVar;
-        myVPop.crCutoff = myMapelOptions.crCutoff;        
+    % Now add additional properties not in the mapelOptions
+    if isa(myVPop,'VPopRECIST')      
         if ~isa(myWorksheet,'VPopRECIST')
             myVPop.recistSimFilter = createRECISTSimFilter(myWorksheet, myVPop);
         else   
             myVPop.recistSimFilter = myWorksheet.recistSimFilter;
         end
     end	    
-	if isa(myVPop,'VPopRECISTnoBin')
-        myVPop.distTable2D = myMapelOptions.distTable2D;
-		myVPop.brTableRECIST = myMapelOptions.brTableRECIST;
-		myVPop.rTableRECIST = myMapelOptions.rTableRECIST;        
-        myVPop.relSLDvar = myMapelOptions.relSLDvar;
-        myVPop.absALDVar = myMapelOptions.absALDVar;
-        myVPop.crCutoff = myMapelOptions.crCutoff;        
+	if isa(myVPop,'VPopRECISTnoBin')      
         if ~isa(myWorksheet,'VPopRECISTnoBin')
             myVPop.recistSimFilter = createRECISTSimFilter(myWorksheet, myVPop);
         else   
             myVPop.recistSimFilter = myWorksheet.recistSimFilter;
         end
-	end		 
-    
+    end		 
+
     % Next, we create a table of nVPs x nBins to index each VP axis into a
     % bin for subsequent calculations.
     % We go to the simulation results in the worksheet and create
@@ -138,6 +104,7 @@ if continueFlag
     myVPop = myVPop.addDistTableSimVals();
     if ~isa(myVPop,'VPop')
         myVPop = myVPop.addDistTable2DSimVals();
+		myVPop = myVPop.addCorTableSimVals();
     end	
     
     if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPop')

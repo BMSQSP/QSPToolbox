@@ -53,10 +53,12 @@ if continueFlag
 		myRTableRECIST = myVPop.rTableRECIST;        
 	end
 	if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPopRECISTnoBin')
-		myDistTable2D = myVPop.distTable2D;	
+		myDistTable2D = myVPop.distTable2D;
+		myCorTable = myVPop.corTable;
 	else
 		% Not implemented yet
 		myDistTable2D = '';
+		myCorTable = '';
 	end
     
 
@@ -177,6 +179,21 @@ if continueFlag
         myVPop.gofDist2D = ksPvals2D;
     elseif isa(myVPop,'VPopRECIST') || isa(myVPop,'VPopRECISTnoBin')
         myVPop.gofDist2D = [];
+	end	
+    if ~isempty(myCorTable)
+        [nStatRows, ~] = size(myCorTable);
+        corPvals2D = nan(nStatRows,1);
+        expN = myCorTable.('expN');
+        predN = myCorTable.('predN');
+		expCor = myCorTable.('expCor');
+		predCor = myCorTable.('predCor');
+        for rowCounter = 1 : nStatRows 
+			corPvals2D(rowCounter) = compare_correlation_coefficients(expCor(rowCounter),predCor(rowCounter),expN(rowCounter),predN(rowCounter));
+        end		
+        % Write these pvals to the VPop before returning it.
+        myVPop.gofCor = corPvals2D;
+    elseif isa(myVPop,'VPopRECIST') || isa(myVPop,'VPopRECISTnoBin')
+        myVPop.gofCor = [];
 	end	
 	if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPopRECISTnoBin')
 		if ~isempty(myBRTableRECIST)

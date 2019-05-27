@@ -129,9 +129,11 @@ if flagContinue
     nVPs1 = length(vpIDs1);
     nVPs2 = length(vpIDs2);
     variantArray = cell(1,nVPs2);
+	% We have already removed VPs if needed from worksheet 2, 
+	% and the IDs are in order.
+	% Can just copy these directly.
     for vpCounter = 1 : nVPs2
-        myVP = getVP(myWorksheet2, vpIDs2{vpCounter});
-        variantArray{vpCounter} = myVP.variants;
+        variantArray{vpCounter} = myWorksheet2.vpDef{vpCounter}.variants;
     end
     mergedWorksheet = createVPs(mergedWorksheet, vpIDs2, variantArray, myWorksheet2.axisProps.axisVP.coefficients);
     % Also check to see if there are results to copy over

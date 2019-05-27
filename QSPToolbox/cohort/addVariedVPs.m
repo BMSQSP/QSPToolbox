@@ -7,7 +7,7 @@ function myWorksheet = addVariedVPs(myWorksheet, myVaryAxesOptions)
 %
 % RETURNS
 % myWorksheet
-
+%
 % First check the number of input arguments and apply defaults as needed
 continueFlag = false;
 if nargin > 2
@@ -92,6 +92,24 @@ if continueFlag
     end
 end
 
+if continueFlag
+	existingVPCoefficients = getVPCoeffs(myWorksheet);
+    
+	allAxisIDs = getAxisDefIDs(myWorksheet);    
+    variedAxisIndices = find(ismember(allAxisIDs, myVaryAxesOptions.varyAxisIDs));
+	[nAxis,nVP] = size(existingVPCoefficients);
+	if strcmp(myVaryAxesOptions.varyMethod,'localpca')
+		if nAxis > (nVP+1)
+			warning(['Not enough VPs for localpca option in ',mfilename,'.  Number of VPs should be at least 1 greater than the number of axes.  Exiting.'])
+			continueFlag = false;
+		end	
+		if length(variedAxisIndices) < nAxis
+			warning(['All axies should be varied for localpca option in ',mfilename,'.  Exiting.'])
+			continueFlag = false;
+		end	
+	end
+end
+
 % Now for actually creating the varied VPs
 if continueFlag
     
@@ -105,7 +123,7 @@ if continueFlag
     else
         additionalIDString = '_';
     end
-    allAxisIDs = getAxisDefIDs(myWorksheet);    
+    
     nAxis = length(allAxisIDs);
     nRAxis = length(myVaryAxesOptions.varyAxisIDs);
     % Even though a little slower, we do this with a for loop to maintain
@@ -114,9 +132,7 @@ if continueFlag
     for baseVPCounter = 1 : nBaseVPs
         baseVPIndices(baseVPCounter) = find(ismember(testVPIDs, myVaryAxesOptions.baseVPIDs{baseVPCounter}));
     end
-    existingVPCoefficients = getVPCoeffs(myWorksheet);
     baseVPCoefficients = existingVPCoefficients(:,baseVPIndices);
-    variedAxisIndices = find(ismember(allAxisIDs, myVaryAxesOptions.varyAxisIDs));
     if strcmp(myVaryAxesOptions.varyMethod,'uniform')
         newVPIDs = cell(1,myVaryAxesOptions.newPerOld * nBaseVPs);
         randomCoefficients = rand(nRAxis, myVaryAxesOptions.newPerOld * nBaseVPs);
@@ -140,6 +156,22 @@ if continueFlag
         randomCoefficients(indicesNeg) = 0;
         indicesBig = find(randomCoefficients > 1);
         randomCoefficients(indicesBig) = 1;     
+    elseif strcmp(myVaryAxesOptions.varyMethod,'localpca')
+        newVPIDs = cell(1,myVaryAxesOptions.newPerOld * nBaseVPs);
+        randomCoefficients = nan(nRAxis,myVaryAxesOptions.newPerOld * nBaseVPs);
+		vpDistance = pdist2(existingVPCoefficients',existingVPCoefficients');
+        for baseVPCounter = 1 : nBaseVPs
+			% Find the VPs closest to the current base
+            curDistance = vpDistance(baseVPIndices(baseVPCounter),:);
+			% Get just enough for a square matrix so we can compute principal components
+			[B, sortI] = sort(curDistance,'ascend');
+			localCoeffs = existingVPCoefficients(:,sortI(1:(nAxis+1)));
+			% Bounds will be adjusted in the function
+			randomCoefficients(:, ((baseVPCounter-1) * myVaryAxesOptions.newPerOld + 1) : (baseVPCounter*myVaryAxesOptions.newPerOld)) = resamplePCASpace(localCoeffs,1,myVaryAxesOptions.gaussianStd,myVaryAxesOptions.newPerOld,[zeros(nAxis,1),ones(nAxis,1)]);
+            for newVPCounter = 1 : myVaryAxesOptions.newPerOld
+                newVPIDs{1, newVPCounter + (baseVPCounter-1) * myVaryAxesOptions.newPerOld} = [myVaryAxesOptions.baseVPIDs{baseVPCounter},additionalIDString,num2str(newVPCounter)];
+            end
+        end 		
     elseif strcmp(myVaryAxesOptions.varyMethod,'lh')
         newVPIDs = cell(1,myVaryAxesOptions.newPerOld * nBaseVPs);
         randomCoefficients = lhsdesign(myVaryAxesOptions.newPerOld * nBaseVPs,nRAxis);
@@ -210,7 +242,7 @@ if continueFlag
     end
     nNewVPs = length(newVPIDs);
     nWshVPs = length(testVPIDs);
-    [nInterventions, dummy] = size(myWorksheet.interventions);
+    [nInterventions, ~] = size(myWorksheet.interventions);
     fieldNames = fields(myWorksheet);
     newVPCoefficients = nan(nAxis, nNewVPs);
     if ~strcmp(myVaryAxesOptions.varyMethod,'saltelli')

@@ -41,7 +41,8 @@ if continueFlag
     myMnSDTable = myVPop.mnSDTable;
     myBinTable = myVPop.binTable;
     myDistTable = myVPop.distTable;	
-    myDistTable2D = myVPop.distTable2D;		
+    myDistTable2D = myVPop.distTable2D;	
+	myCorTable = myVPop.corTable;
     myBRTable = myVPop.brTableRECIST;
     myRTable = myVPop.rTableRECIST;
     
@@ -70,6 +71,11 @@ if continueFlag
     else
         indicesDist2D = [];
     end  	
+    if ~isempty(myCorTable)
+        indicesCor = find(myCorTable{:,'weight'} > 0);
+    else
+        indicesCor = [];
+    end 	
     if ~isempty(myBRTable)
         indicesBR = find(myBRTable{:,'weight'} > 0);
     else
@@ -80,7 +86,7 @@ if continueFlag
     else
         indicesR = [];
     end      
-    pVals = [myVPop.gofMn(indicesMn);myVPop.gofSD(indicesSD);myVPop.gofBin(indicesBin);myVPop.gofDist(indicesDist);myVPop.gofDist2D(indicesDist2D);myVPop.gofBR(indicesBR);myVPop.gofR(indicesR)];
+    pVals = [myVPop.gofMn(indicesMn);myVPop.gofSD(indicesSD);myVPop.gofBin(indicesBin);myVPop.gofDist(indicesDist);myVPop.gofDist2D(indicesDist2D);myVPop.gofCor(indicesCor);myVPop.gofBR(indicesBR);myVPop.gofR(indicesR)];
     dof = 2*length(pVals);
     fisherStat = -2*sum(log(pVals));
     myVPop.gof = chi2cdf(fisherStat,dof,'upper');
