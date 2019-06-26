@@ -130,16 +130,14 @@ if continueFlag
 		predInd = myDistTable.('simCombinedIndices');
 		expInd = myDistTable.('expCombinedIndices');
         expN = myDistTable.('expN');
-        predN = myDistTable.('predN');		
+        predN = myDistTable.('predN');	
+		SC = myDistTable.('combinedPoints');
         for rowCounter = 1 : nStatRows 
             % Custom KS test for weighted samples
             expW = 1./(expN(rowCounter)*ones(1,expN(rowCounter)));
-            expSample = myDistTable.('expSample'){rowCounter};
-            predSample = myDistTable.('predSample'){rowCounter};
-            SC = myDistTable.('combinedPoints'){rowCounter};            
-            ksPval = weightedKSPreGrid(SC, expInd{rowCounter}, predInd{rowCounter}, expW, predW{rowCounter}, expN(rowCounter), predN(rowCounter));
+            ksPval = weightedKSPreGrid(SC{rowCounter}, expInd{rowCounter}, predInd{rowCounter}, expW, predW{rowCounter}, expN(rowCounter), predN(rowCounter));
             ksPvals(rowCounter) = ksPval;
-        end		
+        end	
         % Write these pvals to the VPop before returning it.
         myVPop.gofDist = ksPvals;
     else

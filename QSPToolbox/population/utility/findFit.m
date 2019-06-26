@@ -20,6 +20,28 @@ function myVPop = findFit(myVPop)
 %          gof
 %
 optimizeType = myVPop.optimizeType;
+% We don't adjust the parallel pool status for simplex
+% since simplex cannot use parallel processing
+% we may want to use the parallel pool to run multiple
+% MAPEL runs in parallel.
+if sum(ismember({'simplex'},optimizeType)) < 1
+    if ~isempty(gcp('nocreate'))
+        delete(gcp);
+    end
+	% We will use default pool settings
+	mySimulateOptions = simulateOptions;
+	mySimulateOptions = checkNWorkers(mySimulateOptions);
+end
+
+% Create the pool early, there are a few processes that
+% may use it: both linearCalibraiton and the swarm optimization.
+if sum(ismember({'simplex'},optimizeType)) < 1
+    if ~isempty(gcp('nocreate'))
+        delete(gcp);
+    end    
+    myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
+end
+
 if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPop')
 	initialBinProbs = myVPop.binProbs;
 	[myNAxis, myNBins] = size(initialBinProbs);
@@ -42,20 +64,86 @@ elseif isa(myVPop,'VPopRECISTnoBin')
 		% without overly focusing on a few VPs
 		vpScores = scoreWorksheetVPs(myVPop,1:(nTransPWs+1),1:(nTransPWs+1));
 		vpScores = (vpScores + 1E-12)./sum((vpScores + 1E-12),2);
+		
+        % Get an initial point from linear calibrate.  First use a uniform
+        % assumption with bagging, optimize to get a prior
+        % prevalence weight assumption then re-optimize with bagging.
+        myOptimOptions = linearCalibrationOptions();
+        myOptimOptions.cdfProbsToFit = 0.05:0.05:0.95;
+        myOptimOptions.optimizationAlgorithm = "lsqnonneg";
+        myOptimOptions.priorPrevalenceWeightAssumption = "uniform";
+        myOptimOptions.nBootstrapIterations = mySimulateOptions.nWorkers*20;
+        myOptimOptions.fractionVPsPerBaggingIteration=.5;
+        myOptimOptions.method = "bagging";
+        linearCalibrationObject = linearCalibration(myVPop,'optimOptions',myOptimOptions);
+        try
+            linearCalibrationObject = linearCalibrationObject.run();
+            if isnumeric(linearCalibrationObject.OptimizedVPop.pws) && (min(linearCalibrationObject.OptimizedVPop.pws)>=0)
+                linearCalibrationPWs = linearCalibrationObject.OptimizedVPop.pws;
+            else
+                linearCalibrationPWs = '';
+            end
+        catch
+            % This will sometimes fail if all of the bagged
+            % trials don't run.
+            linearCalibrationPWs = '';
+        end
+        if isnumeric(linearCalibrationPWs)
+            myOptimOptions.priorPrevalenceWeightAssumption = "specified";		
+            myOptimOptions.nBootstrapIterations = mySimulateOptions.nWorkers*20;	
+            myOptimOptions.fractionVPsPerBaggingIteration=.5;
+            myOptimOptions.method = "bagging";
+            linearCalibrationObject = linearCalibration(linearCalibrationObject.OptimizedVPop,'optimOptions',myOptimOptions);
+            try
+                linearCalibrationObject = linearCalibrationObject.run();
+                if isnumeric(linearCalibrationObject.OptimizedVPop.pws) && (min(linearCalibrationObject.OptimizedVPop.pws)>=0)
+                    linearCalibrationPWs = linearCalibrationObject.OptimizedVPop.pws;
+                else
+                    % Dummy statement, keep the original
+                    linearCalibrationPWs = linearCalibrationPWs;
+                end
+            catch
+                % This will sometimes fail if all of the bagged 
+                % trials don't run.
+                % Dummy statement, keep the original
+                linearCalibrationPWs = linearCalibrationPWs;
+            end
+        end
+        
+        % We reserve about half of the allowed particles
+		% for fully random assignment
 		initialPWs = [initialPWs;vpScores];
+		if isnumeric(linearCalibrationPWs)
+			initialPWs = [initialPWs;linearCalibrationPWs];
+            [nTest, ~] = size(initialPWs);
+            nAddOld = max(floor(myVPop.optimizePopSize/4-nTest/2),0);
+            nAddLin = nAddOld;
+        else
+            [nTest, ~] = size(initialPWs);
+            nAddOld = floor(myVPop.optimizePopSize/2-nTest);
+            nAddLin = 0;
+        end
+		
 		[nTest, ~] = size(initialPWs);
+        % Proof again to make sure we don't exceed
+		% the allowed swarm size.
 		nTest = min(nTest,myVPop.optimizePopSize);
 		initialPWs = initialPWs(1:nTest,:);
 		% Try supplementing with initial guesses that weight VPs near
 		% the initial points
-        nAdd = floor(myVPop.optimizePopSize/2-nTest);
-		if (((myVPop.optimizePopSize-nTest-nAdd) > 0) && (nAdd>0))
-			vpScores = spreadPWsToNeighbors(initialPWs(1,:), myVPop.coeffsTable, nAdd);
-			initialPWs = [initialPWs;vpScores];
-			nTest = nTest + nAdd;
-		end
+		if (((myVPop.optimizePopSize-nTest-nAddOld) > 0) && (nAddOld>0))
+			vpScores = spreadPWsToNeighbors(initialPWs(1,:), myVPop.coeffsTable, nAddOld);
+			initialPWs = [initialPWs;vpScores(2:end,:)];
+        end
+        % Also try supplementing with PW solutions near the bagged linear
+        % calibrate optimal solution
+        if (((myVPop.optimizePopSize-nTest-nAddLin) > 0) && (nAddLin>0))
+			vpScores = spreadPWsToNeighbors(linearCalibrationObject.OptimizedVPop.pws, myVPop.coeffsTable, nAddLin);
+			initialPWs = [initialPWs;vpScores(2:end,:)];
+        end      
+        % Update again based on the additions.
+        [nTest, ~] = size(initialPWs);
 	end	
-	
     
 	myPWTrans = nan(nTest,nTransPWs);
 	for transCounter = 1 : nTest
@@ -63,28 +151,12 @@ elseif isa(myVPop,'VPopRECISTnoBin')
 	end
 end
 
-
 if isa(myVPop,'VPop')
     anonymousFunction = @(x)evaluateObjective(myVPop, x);
 elseif isa(myVPop,'VPopRECIST')
     anonymousFunction = @(x)evaluateObjectiveRECIST(myVPop, x);
 else
 	anonymousFunction = @(x)evaluateObjectiveRECISTnoBin(myVPop, x);
-end
-
-% We don't adjust the parallel pool status for simplex
-% since simplex cannot use parallel processing
-% we may want to use the parallel pool to run multiple
-% MAPEL runs in parallel.
-if sum(ismember({'simplex'},optimizeType)) < 1
-    if ~isempty(gcp('nocreate'))
-        delete(gcp);
-    end
-	% We will use default pool settings
-	mySimulateOptions = simulateOptions;
-	mySimulateOptions = checkNWorkers(mySimulateOptions);
-
-    myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
 end
 
 if sum(ismember({'simplex'},optimizeType)) > 0

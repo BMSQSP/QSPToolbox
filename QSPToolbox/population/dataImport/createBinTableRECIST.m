@@ -1,35 +1,41 @@
 function myBinTableRECIST = createBinTableRECIST(myWorksheet,myExpDataIDs,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar,myVars,myBinEdges,mySimVars,mySimVarTypes,timeVar,startTime,myInterventionIDs)
 % This function takes experimental data embedded in a worksheet and
-% converts it to a bin table, bypassing the "experimental data table"
-% directly accounting for whether patients should be excluded because of
-% CR, PD, or they are clearly off treatment.
+% converts it to a bin table, bypassing reading from a mapelOptions
+% "experimental data table" and directly taking data from the worksheet,
+% accounting for whether patients should be excluded because of prior
+% CR, PD, or they are clearly of treatment.
+%
+% Note the cell arrays below are based on calibration variable x interventionID
+% combinations.  That is, if multiple time points are available they will automatically be extracted.
+% You can go back and remove rows you do not want or set weights to 0.
 %
 % ARGUMENTS:
-%  myWorksheet:       a workshet with the experimental data
-%  myExpDataIDs:      a cell array, 1 x n time points and variables
-%                      with the experimental data IDs
-%  PatientIDVar:      variable with the patient IDs
-%  TRTVar:            a binary variable indicating whether a patient is on
-%                     treatment
-%  BRSCOREVar:        best overall response to date.
-%  RSCOREVar:         current response.
-%  myVars:            a cell array, 1 x n time points and variables
-%                      variables to get mean/SD data for.
-%  myBinEdges:    a cell array of length length(myVars),
-%                 with each entry containing a cutoff of 3.
-%                 if you want to set one atuomatically from data,
-%                 just leave the corresponding entry blank. i.e.
-%                 {[edge1,edge2,edge3], '', ...}
-%  mySimVars:         simulation variable names, map to myVars
-%  mySimVarTypes:     a cell array, 1 x n time points and variables
-%                     with values
-%                      'parameter', 'compartment', ''
-%  timeVar:           Variable with time, assumed start of therapy is t=startTime.
-%  startTime
-%  myInterventionIDs: a cell array, 1 x n time points and variables
+%  myWorksheet:       A worksheet with the experimental data attached
+%  myExpDataIDs:      A cell array, of length N intervention/var combinations
+%                      with the experimental dataset IDs
+%  PatientIDVar:      ID for the variable with the patient IDs
+%  TRTVar:            ID for the binary variable indicating whether 
+%                      a patient is on treatment
+%  BRSCOREVar:        ID for the best overall response to date variable.
+%  RSCOREVar:         ID for the current response variable.
+%  myVars:            A cell array, of length N intervention/var combinations
+%                      variables in the dataset to get mean/SD summary data for.
+%  mySimVars:         Simulation variable names, of length N intervention/var
+%                      combinations, map to myVars.
+%  myBinEdges         A cell array, of length N intervention/var combinations
+%  mySimVars:         simulation variable names, 1 x n calibration criteria, map to myVars
+%  mySimVarTypes:     A cell array, of length N intervention/var combinations
+%                      with values to indicate the type of simulation
+%                      variables, i.e.
+%                      'parameter', 'compartment', 'species'
+%  timeVar:           ID for the variable with time in the experimental dataset
+%                     NOTE: it is assumed start of therapy is t=startTime.
+%  startTime		  Time to start therapy.
+%  myInterventionIDs: A cell array, of length N intervention/var combinations
+%                      with all of the intervention names from the simulations
 %
 % RETURNS
-% myBinTableRECIST
+%  myBinTableRECIST
 
 % TODO: Add proofing of inputs
 continueFlag = true;

@@ -145,19 +145,25 @@ if continueFlag
 			if myInitialPWs < 0
 				% This implies we want to try starting from near an
 				% optimal solution to the linearized problem
-				myLinearCalibrateOptions = linearCalibrateOptions;
+				myOptimOptions = linearCalibrationOptions();
+				myOptimOptions.cdfProbsToFit = 0.05:0.05:0.95;
+				myOptimOptions.optimizationAlgorithm = "lsqnonneg";
+				myOptimOptions.priorPrevalenceWeightAssumption = 'specified';
                 % Need to add predTableVals to run.
                 myVPop = myVPop.startPWs(myWorksheet,0);
                 myVPop = myVPop.addPredTableVals();
-				[myVPopTest, myOptimResults] = linearCalibrate(myVPop,myLinearCalibrateOptions);
-				if myOptimResults.exitFlag == 1
+				
+				linearCalibrationObject = linearCalibration(myVPop,'optimOptions',myOptimOptions);
+				linearCalibrationObject = linearCalibrationObject.run();
+				
+				if linearCalibrationObject.OptimizationResults.exitFlag == 1
                     % Run 2x as results are sensitive to prior PW
                     % assumption
-                    myLinearCalibrateOptions.priorPrevalenceWeightAssumption = 'specified';
-					myInitialPWs = myVPopTest.pws;
-					[myVPopTest, myOptimResults] = linearCalibrate(myVPopTest,myLinearCalibrateOptions);
-					if myOptimResults.exitFlag == 1
-						myInitialPWs = myVPopTest.pws;
+					linearCalibrationObject = linearCalibration(linearCalibrationObject.OptimizedVPop,'optimOptions',myOptimOptions);
+					linearCalibrationObject = linearCalibrationObject.run();					
+					myInitialPWs = linearCalibrationObject.OptimizedVPop.pws;
+					if linearCalibrationObject.OptimizationResults.exitFlag == 1
+						myInitialPWs = linearCalibrationObject.OptimizedVPop.pws;
 					end
 				else
 					warning(['Unable to find optimal solution to linear problem in ',mfilename,'.  Proceeding with default options.'])

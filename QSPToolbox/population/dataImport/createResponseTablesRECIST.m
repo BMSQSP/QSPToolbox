@@ -1,26 +1,28 @@
 function [myBRTableRECIST, myRTableRECIST] = createResponseTablesRECIST(myWorksheet,myExpDataIDs,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar,timeVar,startTime,myInterventionIDs, prefixStopPairs)
 % This function takes experimental data embedded in a worksheet and
-% converts it to a bin table with BRSCORE data, so even
-% when patients drop off therapy their best scores are
-% recorded to guide VPop calibration.
+% converts it to bin tables with BRSCORE and RSCORE data
 %
 % ARGUMENTS:
-%  myWorksheet:       a workshet with the experimental data
-%  myExpDataIDs:      a cell array, 1 x n time points and variables
-%                      with the experimental data IDs
-%  PatientIDVar:      variable with the patient IDs
-%  TRTVar:            a binary variable indicating whether a patient is on
-%                     treatment
-%  BRSCOREVar:        variable with best overall response to date.
+%  myWorksheet:       A worksheet with the experimental data attached
+%  myExpDataIDs:      A cell array, of length N intervention combinations
+%                      with the experimental dataset IDs
+%  PatientIDVar:      ID for the variable with the patient IDs
+%  TRTVar:            ID for the binary variable indicating whether 
+%                      a patient is on treatment
+%  BRSCOREVar:        ID for the best overall response to date variable.
+%  RSCOREVar:         ID for the current response variable.
 %  RSCOREVar:         variable with current response.
 %  timeVar:           variable with time information
 %  startTime:         time in the data when treatment starts
-%  myInterventionIDs: a cell array, 1 x n time points and variables
-%  prefixStopPairs:   a cell array of cell arrays, i.e.:
-%                     {{prefix1, time1},{prefix2, time2} ...}
-%                     containing VP prefix and trial stop time.
-%                     This is included to correct for trials that
-%                      end early.  With USUBJID conventions, the prefix
+%  myInterventionIDs: A cell array, of length N intervention/var combinations
+%                      with all of the intervention names from the simulations
+%  prefixStopPairs:   (optional) A cell array of cell arrays, i.e.:
+%                      {{prefix1, time1},{prefix2, time2} ...}
+%                      containing VP prefix and trial stop time.
+%                      This is included to correct for trials that
+%                      end earlier and we want to avoid biasing results by
+%                      treating a large number of patients as toxicity-related
+%                      drop outs.  With USUBJID conventions, the prefix
 %                      generally matches a trial, i.e. CAXXXYYYY.
 %  
 % RETURNS
