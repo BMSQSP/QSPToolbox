@@ -32,7 +32,11 @@ Workflow Components for Deploying Multi-Scale Mechanistic Models.  AAPS J 19(4),
 -Please contact us to contribute, or with related inquiries.  The current contact is brian(dot)schmidt{at}bms{dot}com.
 
 ## Other notes for our development efforts:
+<<<<<<< HEAD
 -The current fully public version corresponds to rev1008 from the in-house development repository.
+=======
+-The current fully public version corresponds to rev1001 from the in-house development repository.
+>>>>>>> 916b5626d4d847bcfb6a77d6ed2a2eb03b2ec24f
 
 ## To install:
 -Once you download, add the root directory (QSPToolbox folder) to your MATLAB path.  
