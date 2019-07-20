@@ -36,9 +36,9 @@ myWorksheet.variantProps.typeValueSets
 % Interventions may be defined by both doses and variants.
 myWorksheet.interventions{3}.definition
 % Note that there may be variable variantTypes for each intervention.
-% When we go to simulate, the parameters will be comined at the level of
-% the individual VP and intervention.  Parameters will overwrite eachother
-% in a specific order, and this convention enables simulation the same
+% When we go to simulate, the parameters will be combined at the level of
+% the individual VP and intervention. Parameters will overwrite eachother
+% in a specific order, and this convention enables simulation of the same
 % VP over different interventions like cell culture where we may want to
 % set exchange with an allowable plasma compartment to zero, in contrast
 % with a xenograft simulation.  The order of assignment is:

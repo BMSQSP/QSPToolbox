@@ -1,12 +1,18 @@
 function medoidData = pickClusterVPs(myWorksheet, myClusterPickOptions)
-% Get information on which VPs to use
+% Run a clustering algorithm and propose VPs to keep.
+% This is done in two parts:
+% first "edge" VPs are picked, 
+% then remaining VPs are clustered.
 %
 % ARGUMENTS
-% myWorksheet:       starting worksheet
-% myClusterPickOptions:  optional, a cluster options object
+%  myWorksheet:           starting worksheet
+%  myClusterPickOptions:  optional, a cluster options object
+%                         if not provided, the function will attempt
+%                         to construct one based on the provided worksheet.
 %
 % RETURNS
-% medoidData:        a structure with the clustering results
+% medoidData:             a structure with the clustering results,
+%                          including the IDs of VPs to keep.
 %
 %
 medoidData = struct();
@@ -109,6 +115,8 @@ if continueFlag
     % the edges in case there are a few VPs that cover the same edges.
     % For now, just pick the edge VPs randomly; this will also influence
     % the other dimensions.
+    % I should write a better algorithm for getting
+    % the edge VPs and call that here, and also in clusterPickOptions
     nVPFromEdges = 0;
     edgeIndices = nan(0,1);
     if myClusterPickOptions.edgeVPFlag

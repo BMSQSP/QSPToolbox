@@ -66,11 +66,15 @@ if continueFlag
         curVar = myVars{varCounter};
         myExpDataID = myExpDataIDs{varCounter};
         interventionID = myInterventionIDs{varCounter};
-        
+  
         curIndex = find(ismember(allExpDataIDs,myExpDataID));
         curData = myWorksheet.expData{curIndex}.data;
         % First remove off treatment rows
         curData = curData(find(curData{:,TRTVar}==1),:);
+        [nRows,nCols] = size(curData);
+        if nRows < 1
+            warning(['No on treatment data for experiment variable ',curVar,' in dataset ',myExpDataID,'.'])
+        end
         % Need to make all table vars into string for this to work
         new_variable = arrayfun(@(value) cast(value{1}, 'char'), curData.(BRSCOREVar), 'uniform', 0);
         curData.(BRSCOREVar) = new_variable;

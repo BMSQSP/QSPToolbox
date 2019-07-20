@@ -44,5 +44,9 @@ else
     % We also normalize by the time interval
     myTimeInterval = max(myTimeVals) - min(myTimeVals);
     myPenaltyValues = (myYVals > upperBound) .* (myYVals-upperBound2) + (myYVals < lowerBound) .* (lowerBound2-myYVals);
-    objectiveValue = trapz(myTimeVals,myPenaltyValues)/myTimeInterval/rangeNorm;
+    if myTimeInterval > 0
+        objectiveValue = trapz(myTimeVals,myPenaltyValues)/myTimeInterval/rangeNorm;
+    else
+        objectiveValue = myPenaltyValues/rangeNorm;
+    end
 end

@@ -184,7 +184,7 @@ classdef clusterPickOptions
           passCheck = true;
           allVPIDs = getVPIDs(myWorksheet);
           nWshVPs = length(allVPIDs);
-          myNClusters = nWshVPs;
+          myNClusters = obj.nClusters;
           if myNClusters > nWshVPs
               warning(['Specified nClusters must be <=  in the number of worksheet VPs in ',mfilename,'.'])
               passCheck = false;
@@ -234,9 +234,14 @@ classdef clusterPickOptions
                   passCheck = false;
               end
               
+			  [nClusterElements, ~] = size(obj.clusterElement);
+              nClusterAxis = length(obj.clusterAxisIDs);
+              
               if obj.edgeVPFlag == true
-                  [nClusterElements, ~] = size(obj.clusterElement);
-                  nClusterAxis = length(obj.clusterAxisIDs);                  
+                  % I should write a better algorithm for getting
+                  % the edge VPs and call that here, then check
+                  % how big the edge VP set is against these
+                  % values.
                   if nWshVPs < 2 * (nClusterElements + nClusterAxis)
                     warning(['There are insufficient VPs in available to ensure enforcement of edgeVPFlag == true in ',mfilename,'.'])
                     passCheck = false;                      
@@ -245,7 +250,38 @@ classdef clusterPickOptions
                     warning(['When edgeVPFlag == true in ',mfilename,', the specified number of clusters includes the number of VPs from edge elements. At least 2x the number of elements and axis should be specified for nClusters.'])
                     passCheck = false;                      
                   end                  
-              end              
+              end     
+
+			  % Also check that all of the outputs are populated
+			  keepIndices = ones(nClusterAxis+nClusterElements,1);
+			  allInterventionIDs = getInterventionIDs(myWorksheet);
+			  for theElementCounter = 1 : nClusterElements
+				  theElementName = obj.clusterElement{theElementCounter, 1};
+				  theElementType = obj.clusterElement{theElementCounter, 2};
+				  theInterventionID = obj.clusterElement{theElementCounter, 3};
+				  theSampleTime = obj.clusterElement{theElementCounter, 4};
+				  theInterventionIndex = find(ismember(allInterventionIDs, theInterventionID));
+				  % All VPs should be run with the same model, with the same result
+				  % elements
+				  theVPCounter = 1;
+				  curResultStruct = myWorksheet.results{theInterventionIndex,theVPCounter};
+				  timeIndex = find(ismember(curResultStruct.Names, 'time'));
+				  % We assume element IDs are unique, even without type information.
+				  elementIndex = find(ismember(curResultStruct.Names, theElementName));
+				  for theVPCounter = 1 : nWshVPs
+					  curResultStruct = myWorksheet.results{theInterventionIndex,theVPCounter};
+					  curTime = curResultStruct.Data(:,timeIndex);
+					  curElement = curResultStruct.Data(:,elementIndex);
+					  y_new = interp1(curTime,curElement,theSampleTime,'linear');
+					  theMatrixToCluster(nClusterAxis+theElementCounter,theVPCounter)=y_new;
+				  end
+				  curNans = isnan(theMatrixToCluster(nClusterAxis+theElementCounter,:));
+				  if sum(curNans) > 0
+					  warning(['Unable to cluster element ',theElementName,' of type ',theElementType,' for intervention ',theInterventionID,' at time ',num2str(theSampleTime),' due to NaNs.'])
+					  keepIndices(nClusterAxis+theElementCounter) = nan;
+					  passCheck = false; 
+				  end
+			  end					  	  
           end
       end
 
