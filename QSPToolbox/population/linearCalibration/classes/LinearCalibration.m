@@ -1,6 +1,4 @@
-% !!! Need to add optimization tolerance as an option to lsqlin
-
-classdef linearCalibration
+classdef LinearCalibration
 % Performs fast linear least-squares optimization of prevalence weights for
 % data in a QSPToolbox, using the 'lsqlin' or 'lsqnonneg' function. Can
 % also perform bootstrapping to calculate confidence intervals, and bagging
@@ -10,8 +8,8 @@ classdef linearCalibration
 % -myVPop: (VPop object) Doesn't need to include the prevalence weights.
 %
 % PROPERTIES
-% -OptimOptions: (linearCalibrationObtions object) Specifies optimization parameters. 
-% Refer to the documentation in linearCalibrationObtions.m
+% -OptimOptions: (LinearCalibrationObtions object) Specifies optimization parameters. 
+% Refer to the documentation in LinearCalibrationObtions.m
 % -InputVPop: (VPop object) Equal to the 'myVPop' supplied by the user
 % -LinearProblemMatrices: (struct) Contains matrices and information
 % related to the weighted linear least-squares fitting problem w^(1/2)Ax=w^(1/2)b, where w is
@@ -47,7 +45,8 @@ classdef linearCalibration
 % based on the prevalence weights of the input VPop.
 % -RMSE: (scalar) Root-mean-squared error from the fitting (i.e., on the
 % training data set)
-
+% -FractionRunsConverged: (scalar) Fraction of runs which converged
+% !!! should make first character lower case
 properties
     OptimOptions
     InputVPop
@@ -58,6 +57,7 @@ properties
     IgnoredObservationsDescriptions
     InputVPopStatistics
     RMSE
+    FractionRunsConverged
 end
 
 % Hidden properties:
@@ -78,20 +78,20 @@ end
 %% PUBLIC METHODS
 
 methods
-    function Obj = linearCalibration(myVPop,varargin)
-    % Constructor for initializing a linearCalibration object.
+    function Obj = LinearCalibration(myVPop,varargin)
+    % Constructor for initializing a LinearCalibration object.
     %
     % INPUT ARGUMENTS
     % -myVPop: (VPop object) Used for extracting experimental and
     % simulation data. The prevalence weights do not need to be
     % specified.
-    % -optimOptions: (linearCalibrationOptions object) Optional argument
+    % -optimOptions: (LinearCalibrationOptions object) Optional argument
     % for customizing the optimization. Specified as a name-value pair.
     % 
     
         % Parse the optional function arguments:
         p = inputParser;
-        addOptional(p,'optimOptions',linearCalibrationOptions)
+        addOptional(p,'optimOptions',LinearCalibrationOptions)
         parse(p,varargin{:});
         Obj.OptimOptions = p.Results.optimOptions;
         
@@ -100,14 +100,38 @@ methods
         
         % Number of VPs:
         Obj.NumVPs = size(Obj.InputVPop.simData.Data,2);
+        
+        % add path to nnls function
+        % Change the current folder to the folder of this m-file.
+        % https://www.mathworks.com/matlabcentral/answers/72309-to-change-current-folder-to-the-folder-of-m-file#answer_82461
+        dirMem = pwd();
+        if(~isdeployed)
+          cd(fileparts(which(mfilename)));
+        end
+        nnlsDir = 'nnls';
+        exportFigDir = 'altmany-export_fig-b1a7288';
+        if exist(nnlsDir,'dir')
+            addpath(genpath(nnlsDir));
+        end
+        if exist(exportFigDir,'dir')
+            addpath(genpath(exportFigDir));
+        end
+        if(~isdeployed)
+        	cd(dirMem);
+        end
     end
     
-    function Obj = run(Obj)
+    function Obj = run(Obj,varargin)
     % Constructs the linear matrices, runs optimization, and constructs a
     % new VPop post-optimization.
     %
 
         timerTotal = tic();
+
+        % Parse the optional arguments:
+        p = inputParser;
+        addOptional(p,'closeParallelPoolWhenFinished',true,@islogical);
+        parse(p,varargin{:});
         
         % reset the optimization results
         Obj.OptimizationResults = [];
@@ -130,6 +154,10 @@ methods
         if strcmpi(Obj.OptimOptions.method,"bestFit")
         % Run a single best-fit optimization
             Obj = Obj.runOptimization();
+            Obj.FractionRunsConverged = 0;
+            if ~any(isnan(Obj.OptimizationResults.optimalPrevalenceWeightsNormalized))
+                Obj.FractionRunsConverged = 1;
+            end
                 
         elseif strcmpi(Obj.OptimOptions.method,"bootstrap")
         % Run a single best-fit optimization, and then calculate the
@@ -163,6 +191,7 @@ methods
             % Also initialize a cell array to store the optimal
             % prevalence weights calculated in each iteration:
             optimizationPrevalenceWeightsOrderedAccordingToSampledVPIndices = cell(1,Obj.OptimOptions.nBootstrapIterations);
+            runConverged = zeros(1,Obj.OptimOptions.nBootstrapIterations);
             parfor iBagging = 1:Obj.OptimOptions.nBootstrapIterations % parfor
                 % In case we want to be verbose:
                 % tictoc = tic();
@@ -192,10 +221,16 @@ methods
                 % (hence why above we also saved the ordering of the VP indices)
                 optimizationPrevalenceWeightsOrderedAccordingToSampledVPIndices{iBagging} = ObjParticular.OptimizationResults.optimalPrevalenceWeightsNormalized;
                 
+                if ~any(isnan(ObjParticular.OptimizationResults.optimalPrevalenceWeightsNormalized))
+                    runConverged(iBagging) = 1;
+                end
+                
                 % In case we want to be verbose:
                 % disp(['Time elapsed for Bagging Iteration ' num2str(iBootstrap) ' [seconds]: ' num2str(toc(tictoc))]);
             end
 
+            Obj.FractionRunsConverged = sum(runConverged)/Obj.OptimOptions.nBootstrapIterations;
+            
             % Consolidate the optimal prevalence weights into a matrix.
             % The matrix is initialized with zeros so that any VP not
             % included in an iteration is automatically assigned a
@@ -210,16 +245,11 @@ methods
                 optimalPrevalenceWeightsByIteration(includedVPIndices{iBagging},iBagging) = optimizationPrevalenceWeightsOrderedAccordingToSampledVPIndices{iBagging};
             end
 
-            % check that prevalence weights from each iteration summed to 1
-            if any(abs(sum(optimalPrevalenceWeightsByIteration,1)-1)>1e-9)
-                error('The bagging procedure did not result in prevalence weights which some to 1 in at least one of the iterations.')
-            end
-
             % Theory suggests that the mean of the predictions of each
             % iteration is the same as the prediction from the mean
             % prevalence weight. Thus, we can save only the mean
             % prevalence weight:
-            Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization = mean(optimalPrevalenceWeightsByIteration,2);
+            Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization = nanmean(optimalPrevalenceWeightsByIteration,2);
         
             % Normalize the optimal prevalence weights:
             Obj.OptimizationResults.optimalPrevalenceWeightsNormalized = ...
@@ -232,11 +262,11 @@ methods
         Obj = Obj.performPostOptimizationAnalysis();
         Obj.RMSE = Obj.OptimizationResults.rmseConsideringOptimalPrevalenceWeightsNormalized;
         
-        % Let's not delete the parallel pool here, since the 'parfor' doesn't
-        % take long to complete, and the bagging procedure may be called
-        % several times successively if we're doing cross-validation.
-%         poolobj = gcp('nocreate');
-%         delete(poolobj);
+        % delete the parallel pool unless specified not to do so
+        if p.Results.closeParallelPoolWhenFinished
+            poolobj = gcp('nocreate');
+            delete(poolobj);
+        end
         
         Obj.TimeElapsedMinutes.optimization = toc(timerOptimization)/60;
         
@@ -304,7 +334,7 @@ methods
             ObjParticular.LinearProblemMatrices = ObjParticular.LinearProblemMatricesParticular;
             
             % Run the fit:
-            ObjParticular = ObjParticular.run();
+            ObjParticular = ObjParticular.run('closeParallelPoolWhenFinished',false);
             
             % Calculate the training residuals:
             [trainingResiduals,~,~] = ObjParticular.calculateResidualsAndRootMeanSquaredErrorForSpecifiedPWs();
@@ -315,7 +345,7 @@ methods
             [testResiduals,~,~] = ObjParticular.evaluateDataGroupResponse(dataGroup);
             testResidualsSquared(iMaskDataGroup) = testResiduals.^2;
             
-            disp(['Time elapsed for Cross-Validating Data Group Index ' num2str(iDataGroup) ' [minutes]: ' num2str(toc(tictoc)/60)]);
+            disp(['Time elapsed for Cross-Validating Data Group Index ' num2str(iDataGroup) ' [seconds]: ' num2str(toc(tictoc))]);
         end
         % Delete fields which don't make sense for cross-validation:
         Obj.OptimizedVPop = [];
@@ -330,6 +360,10 @@ methods
         testMSE = sum(testResidualsSquared);
         Obj.CrossValidationResults.trainingRMSE = sqrt(trainingMSE);
         Obj.CrossValidationResults.testRMSE = sqrt(testMSE);
+        
+        % close the parallel pool
+        poolobj = gcp('nocreate');
+        delete(poolobj);
         
         % for debugging:
         % detect which data groups have smaller test residuals compared to
@@ -398,49 +432,27 @@ methods
         % The number of fractions to test:
         nFractions = length(p.Results.fractionVPsPerBaggingIterationToAnalyze);
         
-        % Before looping through the various fractions, initialize some
-        % vectors which will store the results of our analysis:
-        % fraction of VPs selected:
-        results.optimization.fractionVPsPerBaggingIteration = p.Results.fractionVPsPerBaggingIterationToAnalyze;
-        % RMSE calculated by fitting all of the data (i.e., not using
-        % cross-validation):
-        results.optimization.rmseWholeFit = nan(1,nFractions);
-        % RMSE of the training subset during cross-validation:
-        results.optimization.rmseTraining = nan(1,nFractions);
-        % RMSE of the test subset during cross-validation:
-        results.optimization.rmseTest = nan(1,nFractions);
-        % Prediction RMSE (if requested):
-        if ~isempty(p.Results.vPopToPredictAgainst)
-            results.optimization.rmsePrediction = nan(1,nFractions);
-        end
-        % goodness-of-fit, if requested:
-        if p.Results.calculateGOF
-            results.optimization.gofWholeFit = nan(1,nFractions);
-        end
-        % Effective N:
-        results.optimization.effNWholeFit = nan(1,nFractions);
-        % Time needed for a single run of bagging:
-        results.optimization.calibrationTimeForSingleNonCVRunMinutes = nan(1,nFractions);
-        
+        % Let's do a simple best-fit (with no bagging) run, so that we can
+        % compare against it:
         ObjNoBagging = Obj;
         ObjNoBagging.OptimOptions.method = "bestFit";
         outputDirParticular = [outputDir 'noBagging/'];
-        results.noBaggingOptimization = runCrossValidationWithComparisons(ObjNoBagging,outputDirParticular,p);
+        [results.noBaggingRMSE,results.noBaggingEffN,results.noBaggingGOF] = runCrossValidationWithComparisons(ObjNoBagging,outputDirParticular,p);
         
         % If adequate information is speified in the InputVPop, calculate
         % some statistics for comparison:
         if ~isempty(Obj.InputVPop.pws)
             % Effective N:
-            results.inputVPop.effN = 1/sum(Obj.InputVPop.pws.^2);
+            results.inputVPopEffN.effNWholeFit = Obj.calculateEffN(Obj.InputVPop.pws);
             % RMSE:
             Obj = Obj.calculateInputVPopStatistics('vPopToPredictAgainst',p.Results.vPopToPredictAgainst,'saveFigDir',[outputDir '/inputVPopPredictions/'],'closeFigsAutomatically',true);
-            results.inputVPop.rmseFit = Obj.InputVPopStatistics.rootMeanSquaredError;
+            results.inputVPopRMSE.rmseWholeFit = Obj.InputVPopStatistics.rootMeanSquaredError;
             if ~isempty(p.Results.vPopToPredictAgainst)
-                results.inputVPop.rmsePrediction = Obj.InputVPopStatistics.predictionRootMeanSquaredError;
+                results.inputVPopRMSE.rmsePrediction = Obj.InputVPopStatistics.predictionRootMeanSquaredError;
             end
             % Goodness of fit:
             if p.Results.calculateGOF && ~isempty(Obj.InputVPop.gof)
-                results.inputVPop.gof = Obj.InputVPop.gof;
+                results.inputVPopRMSE.gofWholeFit = Obj.InputVPop.gof;
             end
         else
             results.inputVPop = [];
@@ -453,35 +465,43 @@ methods
             
             disp(['------------- STARTING CROSS-VALIDATION FOR FRACTION INDEX ' num2str(iFraction) ' of ' num2str(nFractions) ' -------------']);
             
+            % Specify the fraction VPs parameter for this iteration:
             Obj.OptimOptions.fractionVPsPerBaggingIteration = p.Results.fractionVPsPerBaggingIterationToAnalyze(iFraction);
             
             % Make a directory specific to this fraction:
-            outputDirParticular = [outputDir 'fractionIndex_' num2str(iFraction) '/'];
+            fractionVPsStr = strrep(num2str(p.Results.fractionVPsPerBaggingIterationToAnalyze(iFraction)),'.','p');
+            outputDirParticular = [outputDir 'fractionIndex_' num2str(iFraction) '__fraction_' fractionVPsStr '/'];
 
-            resultsParticular = runCrossValidationWithComparisons(Obj,outputDirParticular,p);
-            fieldNames = fields(resultsParticular);
-            for iField = 1:length(fieldNames)
-                results.optimization.(fieldNames{iField})(iFraction) = resultsParticular.(fieldNames{iField});
-            end
+            % run the cross-validation:
+            [results.baggingRMSE(iFraction),results.baggingEffN(iFraction),results.baggingGOF(iFraction),results.baggingRunTime(iFraction)] = runCrossValidationWithComparisons(Obj,outputDirParticular,p);
+            
+
             
             disp(['Time elapsed [minutes] for Cross-Validation Fraction Index ' num2str(iFraction) ': ' num2str(toc(tictocParticularFraction)/60)]);
+        end
+        for iFraction = 1:nFractions
+            results.baggingRMSE(iFraction).fractionVPsPerBaggingIteration = p.Results.fractionVPsPerBaggingIterationToAnalyze(iFraction);
+            results.baggingEffN(iFraction).fractionVPsPerBaggingIteration = p.Results.fractionVPsPerBaggingIterationToAnalyze(iFraction);
+            results.baggingGOF(iFraction).fractionVPsPerBaggingIteration = p.Results.fractionVPsPerBaggingIterationToAnalyze(iFraction);
+            results.baggingRunTime(iFraction).fractionVPsPerBaggingIteration = p.Results.fractionVPsPerBaggingIterationToAnalyze(iFraction);
         end
 
         % Close the parallel pool
         poolobj = gcp('nocreate');
         delete(poolobj);
         
-        % Put the optimization results into a table
-        resultsOut.inputVPop = results.inputVPop;
-        resultsOut.noBaggingOptimization = results.noBaggingOptimization;
-        resultsFieldNames = fields(results.optimization);
-        resultsOut.optimizationResultsTable = table();
-        for iField = 1:length(resultsFieldNames)
-            resultsTableParticular = ...
-                table(results.optimization.(resultsFieldNames{iField})(:),'VariableNames',resultsFieldNames(iField));
-            resultsOut.optimizationResultsTable = [resultsOut.optimizationResultsTable resultsTableParticular];
+        % Put the results into a table
+        resultsFieldNamesTable = fields(results);
+        for iFieldTable = 1:length(resultsFieldNamesTable)
+            resultsFieldNamesCols = fields(results.(resultsFieldNamesTable{iFieldTable}));
+            resultsOut.(resultsFieldNamesTable{iFieldTable}) = table();
+            for iFieldCols = 1:length(resultsFieldNamesCols)
+                resultsTableParticular = ...
+                    table([results.(resultsFieldNamesTable{iFieldTable}).(resultsFieldNamesCols{iFieldCols})]','VariableNames',resultsFieldNamesCols(iFieldCols));
+                resultsOut.(resultsFieldNamesTable{iFieldTable}) = [resultsOut.(resultsFieldNamesTable{iFieldTable}) resultsTableParticular];
+            end
         end
-        
+
         % Save the results to the output directory
         save([outputDir 'results.mat'],'resultsOut');
         
@@ -492,25 +512,29 @@ methods
         disp(['Total time [hours] elapsed for the bagging optimization: ' num2str(totalTimeElapsedHours)]);
         fprintf(fid,'Total time [hours] elapsed for the bagging optimization: %f.\n\n', totalTimeElapsedHours);
 
-        function results = runCrossValidationWithComparisons(Obj,outputDir,p)
+        % internal function for running cross-validation:
+        function [resultsRMSE,resultsEffN,resultsGOF,resultsRunTime] = runCrossValidationWithComparisons(Obj,outputDir,p)
             
             if ~exist(outputDir,'dir')
                 mkdir(outputDir);
             end
             
+            if isempty(gcp('nocreate'))
+                parpool();
+            end
+            
             % First, run a fit on all of the data
- 
             tictocRun = tic();
-            Obj = Obj.run();
-            results.calibrationTimeForSingleNonCVRunMinutes = toc(tictocRun)/60;
-            results.rmseWholeFit = Obj.RMSE;
-            results.effNWholeFit = 1/sum(Obj.OptimizedVPop.pws.^2);
-            results.gofWholeFit = Obj.OptimizedVPop.gof;
+            Obj = Obj.run('closeParallelPoolWhenFinished',false);
+            resultsRunTime.calibrationTimeForSingleNonCVRunSeconds = toc(tictocRun);
+            resultsRMSE.rmseWholeFit = Obj.RMSE;
+            resultsEffN.effNWholeFit = Obj.calculateEffN(Obj.OptimizedVPop.pws);
+            resultsGOF.gofWholeFit = Obj.OptimizedVPop.gof;
             
             % Run the cross-validation:
             linearCalibrationObjectCrossValidation = Obj.runCrossValidation();
-            results.rmseTraining = linearCalibrationObjectCrossValidation.CrossValidationResults.trainingRMSE;
-            results.rmseTest = linearCalibrationObjectCrossValidation.CrossValidationResults.testRMSE;
+            resultsRMSE.rmseTraining = linearCalibrationObjectCrossValidation.CrossValidationResults.trainingRMSE;
+            resultsRMSE.rmseTest = linearCalibrationObjectCrossValidation.CrossValidationResults.testRMSE;
             
             % for debugging:
 %             if results.rmse.test < results.rmse.training
@@ -520,7 +544,7 @@ methods
             % Predict against the combo, using the whole-fit calibration
             if ~isempty(p.Results.vPopToPredictAgainst)
                 outputDirPrediction = outputDir;
-                results.rmsePrediction = Obj.predictAgainstSpecifiedVPop(p.Results.vPopToPredictAgainst,'saveFigDir',outputDirPrediction,'closeFigsAutomatically',true,'figFileNamePrefix','predictionVPop');
+                resultsRMSE.rmsePrediction = Obj.predictAgainstSpecifiedVPop(p.Results.vPopToPredictAgainst,'saveFigDir',outputDirPrediction,'closeFigsAutomatically',true,'figFileNamePrefix','predictionVPop');
             end
 
             % Save the objects:
@@ -565,7 +589,7 @@ methods
         % the "fit" of the prediction.
         
         % Instantiate an object corresponding to the specified VPop:
-        ObjNewVPop = linearCalibration(myVPop,'optimOptions',Obj.OptimOptions);
+        ObjNewVPop = LinearCalibration(myVPop,'optimOptions',Obj.OptimOptions);
         
         % Construct the matrices:
         ObjNewVPop = ObjNewVPop.constructLinearProblemMatrices();
@@ -595,6 +619,41 @@ methods
         ObjParticular = Obj.selectFromLinearProblemMatrices('includedDataGroups',dataGroup);
         [residuals,rmse,weights] = ...
             ObjParticular.calculateResidualsAndRootMeanSquaredErrorForSpecifiedPWs();
+    end
+    
+    
+    function Obj = calculateInputVPopStatistics(Obj,varargin)
+    % Computes the residuals and root-mean-squared error for the input VPop
+    % prevalence weights
+    
+        % Parse the optional arguments:
+        p = inputParser;
+        addOptional(p,'vPopToPredictAgainst',[]);
+        addOptional(p,'saveFigDir','inputVPopPredictions/');
+        addOptional(p,'closeFigsAutomatically',false);
+        parse(p,varargin{:});
+    
+        % Instantiate an object corresponding to the Input VPop:
+        ObjInputVPop = LinearCalibration(Obj.InputVPop,'optimOptions',Obj.OptimOptions);
+        
+        ObjInputVPop.OptimalPrevalenceWeightsNormalized = Obj.InputVPop.pws;
+        
+        % Construct the matrices:
+        if ~isempty(Obj.LinearProblemMatrices)
+            ObjInputVPop.LinearProblemMatrices = Obj.LinearProblemMatrices;
+        else
+            ObjInputVPop = ObjInputVPop.constructLinearProblemMatrices();
+        end
+        
+        % calculate residuals and RMSE:
+        [Obj.InputVPopStatistics.residuals,Obj.InputVPopStatistics.rootMeanSquaredError,~] = ...
+            ObjInputVPop.calculateResidualsAndRootMeanSquaredErrorForSpecifiedPWs();
+        
+        % If indicated, perform prediction against the specified VPop:
+        if ~isempty(p.Results.vPopToPredictAgainst)
+            Obj.InputVPopStatistics.predictionRootMeanSquaredError = ...
+                ObjInputVPop.predictAgainstSpecifiedVPop(p.Results.vPopToPredictAgainst,'saveFigDir',p.Results.saveFigDir,'closeFigsAutomatically',p.Results.closeFigsAutomatically,'figFileNamePrefix','predictionVPop');
+        end
     end
     
     function plotInputVPopFits(Obj,varargin)
@@ -688,7 +747,7 @@ methods
         xlabel('prevalence weights in input VPop');
         ylabel('optimal prevalence weights');
         ax = gca();
-        ax.FontSize = 16;
+        ax.FontSize = 20;
         ax.XGrid = 'on';
         ax.YGrid = 'on';
         linearCalibrationSaveFig(figHandle,[p.Results.saveFigDir p.Results.figFileNamePrefix]);
@@ -716,6 +775,7 @@ methods
         addOptional(p,'closeFigsAutomatically',false);
         parse(p,varargin{:});
     
+        % Make plot of confidence intervals:
         if ~isempty(p.Results.saveFigDir) && ~exist(p.Results.saveFigDir,'dir')
             mkdir(p.Results.saveFigDir);
         end
@@ -727,7 +787,7 @@ methods
         hold on;
         scatter(vpIndices,Obj.OptimalPrevalenceWeightsNormalized,[],lineColors);
         ax = gca();
-        ax.FontSize = 16;
+        ax.FontSize = 20;
 %         ax.YScale = 'log';
         ax.YGrid = 'on';
         xlabel('VP index');
@@ -743,13 +803,13 @@ methods
         ciWidth = Obj.OptimalPrevalenceWeightsNormalizedConfidenceIntervals(2,:) - Obj.OptimalPrevalenceWeightsNormalizedConfidenceIntervals(1,:);
         scatter(Obj.OptimalPrevalenceWeightsNormalized',ciWidth);
         ax = gca();
-        ax.FontSize = 16;
+        ax.FontSize = 20;
         ax.XScale = 'log';
 %         ax.YScale = 'log';
         ax.YGrid = 'on';
         xlabel('optimal prevalence weight');
         ylabel('width of 95% CI');
-        linearCalibrationSaveFig(figHandle,[p.Results.saveFigDir 'prevalenceWeightConfidenceIntervalWidths']);
+        linearCalibrationSaveFig(figHandle,[p.Results.saveFigDir 'prevalenceWeightConfidenceIntervalWidthsVsEstimate']);
         if p.Results.closeFigsAutomatically
             close(figHandle);
         end
@@ -757,6 +817,17 @@ methods
 
 end
 
+
+%% STATIC METHODS
+
+methods (Static)
+    function effN = calculateEffN(prevalenceWeights)
+        if abs(sum(prevalenceWeights)-1) > 1e-12
+            error('Prevalence weights must sum to 1.');
+        end
+        effN = 2^(-nansum(prevalenceWeights.*log2(prevalenceWeights)));
+    end
+end
 
 %% HIDDEN METHODS
 
@@ -843,6 +914,7 @@ methods (Hidden = true)
                 dataParticular.observationVals(iBin) = observationValParticularBin;
                 dataParticular.observationWeights(iBin) = Obj.InputVPop.binTable.weight(iBinTableRow);
                 dataParticular.observationDescriptions{iBin} = descriptionParticular;
+                dataParticular.expWeight(iBin) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.binTable.expN(iBinTableRow),nan,descriptionParticular);
             end
             dataConsolidated = [dataConsolidated dataParticular];
         end
@@ -903,6 +975,7 @@ methods (Hidden = true)
                 dataParticular.observationVals(iIncludedProbs) = observationValParticular;
                 dataParticular.observationWeights(iIncludedProbs) = Obj.InputVPop.distTable.weight(iDistTableRow);
                 dataParticular.observationDescriptions{iIncludedProbs} = descriptionParticular;
+                dataParticular.expWeight(iIncludedProbs) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.distTable.expN(iIncludedProbs),nan,descriptionParticular);
             end
             dataConsolidated = [dataConsolidated dataParticular];
         end
@@ -932,6 +1005,7 @@ methods (Hidden = true)
                 dataParticular.observationVals(iRECISTClass) = observationValParticular;
                 dataParticular.observationWeights(iRECISTClass) = Obj.InputVPop.brTableRECIST.weight(iBRTblRow);
                 dataParticular.observationDescriptions{iRECISTClass} = descriptionParticular;
+                dataParticular.expWeight(iRECISTClass) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.brTableRECIST.expN(iBRTblRow),nan,descriptionParticular);
             end
             dataConsolidated = [dataConsolidated dataParticular];
         end
@@ -954,6 +1028,7 @@ methods (Hidden = true)
                 dataParticular.observationVals(iRECISTClass) = observationValParticular;
                 dataParticular.observationWeights(iRECISTClass) = Obj.InputVPop.rTableRECIST.weight(iRTblRow);
                 dataParticular.observationDescriptions{iRECISTClass} = descriptionParticular;
+                dataParticular.expWeight(iRECISTClass) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.rTableRECIST.expN(iRTblRow),nan,descriptionParticular);
             end
             dataConsolidated = [dataConsolidated dataParticular];
         end
@@ -1002,15 +1077,17 @@ methods (Hidden = true)
             % zero (which shouldn't affect the calculation):
             dataParticular.independentVarVals(1,nanValsIndexMask) = 0;
             dataParticular.observationWeights(1) = Obj.InputVPop.mnSDTable.weightMean(iSumStatRow);
+            dataParticular.expWeight(1) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.mnSDTable.expN(iSumStatRow),Obj.InputVPop.mnSDTable.expSD(iSumStatRow),dataParticular.observationDescriptions{1});
 
             % Fit SD (actually, variance)
             % The response value will be the variance:
             dataParticular.observationVals(2) = Obj.InputVPop.mnSDTable.expSD(iSumStatRow)^2;
-            dataParticular.observationDescriptions{2} = ['mnSDTable; Row ' num2str(iSumStatRow) '; stdev'];
+            dataParticular.observationDescriptions{2} = ['mnSDTable; Row ' num2str(iSumStatRow) '; variance'];
             % The values for the independent variables are the individual
             % variances (i.e., 'residualsSquared'). We cannot yet know the
             % predicted mean, since that would require prior knowledge of the
             % optimal prevalence weights. But, since we are fitting the mean,
+            
             % let's assume that the predicted mean will be (approximately)
             % equal to the experimental mean.
             expMean = Obj.InputVPop.mnSDTable.expMean(iSumStatRow);
@@ -1024,6 +1101,7 @@ methods (Hidden = true)
             % zero (which shouldn't affect the calculation):
             dataParticular.independentVarVals(2,nanValsIndexMask) = 0;
             dataParticular.observationWeights(2) = Obj.InputVPop.mnSDTable.weightSD(iSumStatRow);
+            dataParticular.expWeight(2) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.mnSDTable.expN(iSumStatRow),Obj.InputVPop.mnSDTable.expSD(iSumStatRow),dataParticular.observationDescriptions{2});
 
             dataConsolidated = [dataConsolidated dataParticular];
         end
@@ -1057,6 +1135,7 @@ methods (Hidden = true)
                 dataConsolidated(iDataCons).observationVals(iMaskZeroObs) = [];
                 dataConsolidated(iDataCons).observationWeights(iMaskZeroObs) = [];
                 dataConsolidated(iDataCons).observationDescriptions(iMaskZeroObs) = [];
+                dataConsolidated(iDataCons).expWeight(iMaskZeroObs) = [];
             end
 
             numObservationsInEachDataGroup(iDataCons) = length(dataConsolidated(iDataCons).observationVals);
@@ -1093,6 +1172,8 @@ methods (Hidden = true)
         
         Obj.LinearProblemMatrices.numObservationsInDataGroup = nan(cumulativeNumObservations(end),1);
         
+        Obj.LinearProblemMatrices.expWeight = nan(cumulativeNumObservations(end),1);
+        
         % Now, construct the large matrices, consolidating all of the data groups:
         for iDataCons = 1:length(dataConsolidated)
             startRowIndex = cumulativeNumObservations(iDataCons)+1;
@@ -1104,6 +1185,7 @@ methods (Hidden = true)
             Obj.LinearProblemMatrices.dataGroup(startRowIndex:endRowIndex,:) = iDataCons;
             Obj.LinearProblemMatrices.observationDescriptions(startRowIndex:endRowIndex,:) = dataConsolidated(iDataCons).observationDescriptions;
             Obj.LinearProblemMatrices.numObservationsInDataGroup(startRowIndex:endRowIndex,:) = numObservationsInEachDataGroup(iDataCons);
+            Obj.LinearProblemMatrices.expWeight(startRowIndex:endRowIndex,:) = dataConsolidated(iDataCons).expWeight;
         end
 
         % Calculate and incorporate the observation weights:
@@ -1116,6 +1198,7 @@ methods (Hidden = true)
             dataParticular.dataGroupWeight = dataGroupWeight; % weight for the data group
             dataParticular.observationWeights = nan(nObservations,1); % weight for the observation (in addition to the data group)
             dataParticular.observationDescriptions = cell(nObservations,1); % description of the observation
+            dataParticular.expWeight = nan(nObservations,1); % experimental sample size
         end
     end
     
@@ -1140,9 +1223,11 @@ methods (Hidden = true)
             Obj.LinearProblemMatricesParticular = Obj.LinearProblemMatrices;
         else
             observationIndicesToInclude = [];
+            % Determine which observations to include:
             for iDataGrp = 1:length(in.Results.includedDataGroups)
                 observationIndicesToInclude = [observationIndicesToInclude; find(Obj.LinearProblemMatrices.dataGroup == in.Results.includedDataGroups(iDataGrp))];
             end
+            % Extract those observations:
             for iField = 1:nFields
                 Obj.LinearProblemMatricesParticular.(fieldNames{iField}) = Obj.LinearProblemMatrices.(fieldNames{iField})(observationIndicesToInclude,:); 
             end
@@ -1172,8 +1257,33 @@ methods (Hidden = true)
         
         % Run the optimization
         if strcmpi(Obj.OptimOptions.optimizationAlgorithm,"lsqnonneg")
+            % Set optimization options:
+            options = optimset('Display','none');
+            if isstruct(Obj.OptimOptions.optimizationAlgorithmOptions)
+                fieldNames = fields(Obj.OptimOptions.optimizationAlgorithmOptions);
+            else
+                fieldNames = {};
+            end
+            for iField = 1:length(fieldNames)
+                options.(fieldNames{iField}) = Obj.OptimOptions.optimizationAlgorithmOptions.(fieldNames{iField});
+            end
+            % Run the optimization:
             [Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization,Obj.OptimizationResults.normOfresidualsSquared,Obj.OptimizationResults.residuals,Obj.OptimizationResults.exitFlag,Obj.OptimizationResults.output,Obj.OptimizationResults.lagrangeMultipliers] = ...
-                lsqnonneg(Obj.LinearProblemMatricesParticular.independentVarValsWeighted,Obj.LinearProblemMatricesParticular.observationValsWeighted);
+                lsqnonneg(Obj.LinearProblemMatricesParticular.independentVarValsWeighted,Obj.LinearProblemMatricesParticular.observationValsWeighted,options);
+        elseif strcmpi(Obj.OptimOptions.optimizationAlgorithm,"nnls")
+            % For poor problems, the function will throw a bunch of
+            % warnings, despite still being able to converge. Let's turn
+            % off these warnings.
+            warning('off','MATLAB:nearlySingularMatrix');
+            warning('off','MATLAB:rankDeficientMatrix');
+            % Run the optimization. Note that this optimization function
+            % takes the options as a struct, so we can input them directly.
+            [Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization,Obj.OptimizationResults.lagrangeMultipliers,~] = ...
+                nnls(Obj.LinearProblemMatricesParticular.independentVarValsWeighted,Obj.LinearProblemMatricesParticular.observationValsWeighted,Obj.OptimOptions.optimizationAlgorithmOptions);
+            % turn the warnings back on:
+            warning('on','MATLAB:nearlySingularMatrix');
+            warning('off','MATLAB:rankDeficientMatrix');
+            Obj.OptimizationResults.exitFlag = 1;
         elseif strcmpi(Obj.OptimOptions.optimizationAlgorithm,"lsqlin")
             % Specifying an 'x0' would result in a warning that x0 gets ignored in
             % 'lsqlin'
@@ -1188,15 +1298,32 @@ methods (Hidden = true)
                 A = [];
                 b = [];
             end
+            % Constraint that sum of prevalence weights should be 1:
             Aeq = ones(1,nVPs);
             beq = 1;
-            lsqlinOptions = optimoptions('lsqlin','Display','none','OptimalityTolerance',1e-21);
+            % Set optimization options:
+            lsqlinOptions = optimoptions('lsqlin','Display','none');
+            if isstruct(Obj.OptimOptions.optimizationAlgorithmOptions)
+                fieldNames = fields(Obj.OptimOptions.optimizationAlgorithmOptions);
+            else
+                fieldNames = {};
+            end
+            for iField = 1:length(fieldNames)
+                lsqlinOptions.(fieldNames{iField}) = Obj.OptimOptions.optimizationAlgorithmOptions.(fieldNames{iField});
+            end
+            % Run the optimization:
             [Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization,Obj.OptimizationResults.normOfresidualsSquared,Obj.OptimizationResults.residuals,Obj.OptimizationResults.exitFlag,Obj.OptimizationResults.output,Obj.OptimizationResults.lagrangeMultipliers] = ...
                 lsqlin(Obj.LinearProblemMatricesParticular.independentVarValsWeighted,Obj.LinearProblemMatricesParticular.observationValsWeighted,A,b,Aeq,beq,lb,ub,x0,lsqlinOptions);
         else
             error('The specified optimization algorithm is not recognized.');
         end
         
+        % if the fit failed to converge, set the solution as NaN:
+        if Obj.OptimizationResults.exitFlag < 1
+            Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization = nan*Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization;
+        end
+        
+        % normalize the prevalence weights to sum to 1:
         Obj.OptimizationResults.optimalPrevalenceWeightsNormalized = ...
             Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization./sum(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization);
         
@@ -1216,7 +1343,7 @@ methods (Hidden = true)
 %         optimizationResults.lagrangeMultipliersAfterRenormalizationOfPrevalenceWeights = ...
 %             Obj.LinearProblemMatrices.independentVarVals'*optimizationResults.residualsAfterRenormalizationOfPrevalenceWeights;
         
-        Obj.OptimizationResults.effectiveN = 1/(sum(Obj.OptimizationResults.optimalPrevalenceWeightsNormalized.^2));
+        Obj.OptimizationResults.effectiveN = Obj.calculateEffN(Obj.OptimizationResults.optimalPrevalenceWeightsNormalized);
     end
     
     function Obj = constructNewVPopPostOptimization(Obj)
@@ -1234,40 +1361,6 @@ methods (Hidden = true)
         % recalculate the tables and goodness of fit 
         Obj.OptimizedVPop=addPredTableVals(Obj.OptimizedVPop);
         Obj.OptimizedVPop=evaluateGOF(Obj.OptimizedVPop);
-    end
-    
-    function Obj = calculateInputVPopStatistics(Obj,varargin)
-    % Computes the residuals and root-mean-squared error for the input VPop
-    % prevalence weights
-    
-    % !!! Need to comment
-    
-        % Parse the optional arguments:
-        p = inputParser;
-        addOptional(p,'vPopToPredictAgainst',[]);
-        addOptional(p,'saveFigDir','inputVPopPredictions/');
-        addOptional(p,'closeFigsAutomatically',false);
-        parse(p,varargin{:});
-    
-        % Instantiate an object corresponding to the Input VPop:
-        ObjInputVPop = linearCalibration(Obj.InputVPop,'optimOptions',Obj.OptimOptions);
-        
-        ObjInputVPop.OptimalPrevalenceWeightsNormalized = Obj.InputVPop.pws;
-        
-        % Construct the matrices:
-        if ~isempty(Obj.LinearProblemMatrices)
-            ObjInputVPop.LinearProblemMatrices = Obj.LinearProblemMatrices;
-        else
-            ObjInputVPop = ObjInputVPop.constructLinearProblemMatrices();
-        end
-        
-        [Obj.InputVPopStatistics.residuals,Obj.InputVPopStatistics.rootMeanSquaredError,~] = ...
-            ObjInputVPop.calculateResidualsAndRootMeanSquaredErrorForSpecifiedPWs();
-        
-        if ~isempty(p.Results.vPopToPredictAgainst)
-            Obj.InputVPopStatistics.predictionRootMeanSquaredError = ...
-                ObjInputVPop.predictAgainstSpecifiedVPop(p.Results.vPopToPredictAgainst,'saveFigDir',p.Results.saveFigDir,'closeFigsAutomatically',p.Results.closeFigsAutomatically,'figFileNamePrefix','predictionVPop');
-        end
     end
     
     function [residuals,rmse,weights] = calculateResidualsAndRootMeanSquaredErrorForSpecifiedPWs(Obj)
@@ -1364,9 +1457,11 @@ end
 
 function linearCalibrationSaveFig(figHandle,figFilepathWithoutExtension)
 % Internal helper function for saving figures
+    figure(figHandle);
     set(figHandle, 'Position', [1 1 1680 1050]); % make the figure large before saving
     savefig(figHandle, figFilepathWithoutExtension);
-    saveas(figHandle, [figFilepathWithoutExtension '.png']);
+    % export_fig figFilepathWithoutExtension -png -jpg -tif -transparent;
+    print(figHandle, [figFilepathWithoutExtension '.tif'],'-dtiff','-r300');
 end
 
 function linearProblemMatrices = incorporateLinearProblemMatricesWeights(linearProblemMatrices,optimOptions)
@@ -1379,10 +1474,12 @@ function linearProblemMatrices = incorporateLinearProblemMatricesWeights(linearP
     % get squared when the residuals are squared in the least
     % squares routine:
     linearProblemMatrices.ultimateWeights = ...
-        sqrt( linearProblemMatrices.observationWeights .* linearProblemMatrices.dataGroupWeights ./ linearProblemMatrices.numObservationsInDataGroup );
+        sqrt( linearProblemMatrices.expWeight .* linearProblemMatrices.observationWeights .* linearProblemMatrices.dataGroupWeights ./ linearProblemMatrices.numObservationsInDataGroup );
 
     % normalize so that the squared weights sum to 1
     normalizationDenominator = sqrt(sum(linearProblemMatrices.ultimateWeights.^2));
+	% !!! the sqrt can be taken in the following line instead, to be more
+	% efficient
     linearProblemMatrices.ultimateWeights = linearProblemMatrices.ultimateWeights/normalizationDenominator;
     
     % Relative transformation of response values, if performed, is performed after 
@@ -1407,32 +1504,60 @@ end
 function generateAndSaveCrossValidationPlots(outputDir,resultsOut,p)
 % Internal helper function for generating the cross-validation plots
 
+    %% Define plot visual parameters:
+    plotParameters.baggingRMSE.rmseWholeFit.displayName = 'whole-fit RMSE';
+    plotParameters.baggingRMSE.rmseWholeFit.lineStyle = '-';
+    plotParameters.baggingRMSE.rmseWholeFit.marker = 'o';
+    plotParameters.baggingRMSE.rmseWholeFit.color = [0 0 255]/255;
+    plotParameters.baggingRMSE.rmseTraining.displayName = 'CV training RMSE';
+    plotParameters.baggingRMSE.rmseTraining.lineStyle = ':';
+    plotParameters.baggingRMSE.rmseTraining.marker = '+';
+    plotParameters.baggingRMSE.rmseTraining.color = [0 147 147]/255;
+    plotParameters.baggingRMSE.rmseTest.displayName = 'CV test RMSE';
+    plotParameters.baggingRMSE.rmseTest.lineStyle = '--';
+    plotParameters.baggingRMSE.rmseTest.marker = 'square';
+    plotParameters.baggingRMSE.rmseTest.color = [0 255 255]/255;
+    plotParameters.baggingRMSE.rmsePrediction.displayName = 'prediction RMSE';
+    plotParameters.baggingRMSE.rmsePrediction.lineStyle = '-.';
+    plotParameters.baggingRMSE.rmsePrediction.marker = 'x';
+    plotParameters.baggingRMSE.rmsePrediction.color = [round(255/2) 0 255]/255;
+    plotParameters.baggingEffN.effNWholeFit.displayName = 'effective n';
+    plotParameters.baggingEffN.effNWholeFit.lineStyle = '-';
+    plotParameters.baggingEffN.effNWholeFit.marker = 'o';
+    plotParameters.baggingEffN.effNWholeFit.color = [255 0 0]/255;
+    plotParameters.baggingGOF.gofWholeFit.displayName = 'whole-fit GOF';
+    plotParameters.baggingGOF.gofWholeFit.lineStyle = '-';
+    plotParameters.baggingGOF.gofWholeFit.marker = 'o';
+    plotParameters.baggingGOF.gofWholeFit.color = [0 255 255]/255;
+    plotParameters.inputVPopRMSE = plotParameters.baggingRMSE;
+    plotParameters.inputVPopEffN = plotParameters.baggingEffN;
+    plotParameters.inputVPopGOF = plotParameters.baggingGOF;
+    plotParameters.noBaggingRMSE = plotParameters.baggingRMSE;
+    plotParameters.noBaggingEffN = plotParameters.baggingEffN;
+    plotParameters.noBaggingGOF = plotParameters.baggingGOF;
+    
+    
     %% Plot the results RMSE and effective N:
     figfilename = 'baggingCrossValidationRMSEAndEffN';
     figHandle = figure;
-    xlabel('fraction VPs per bagging iteration')
+    xlabel('fraction VPs per bagging sample')
     yyaxis left;
     hold on;
-    plot(resultsOut.optimizationResultsTable.fractionVPsPerBaggingIteration,resultsOut.optimizationResultsTable.rmseWholeFit,'LineStyle','-','Marker','o','MarkerSize',12,'LineWidth',1.5,'DisplayName','whole-fit RMSE');
-    plot(resultsOut.optimizationResultsTable.fractionVPsPerBaggingIteration,resultsOut.optimizationResultsTable.rmseTraining,'LineStyle',':','Marker','+','MarkerSize',12,'LineWidth',1.5,'DisplayName','training RMSE');
-    plot(resultsOut.optimizationResultsTable.fractionVPsPerBaggingIteration,resultsOut.optimizationResultsTable.rmseTest,'LineStyle','--','Marker','square','MarkerSize',12,'LineWidth',1.5,'DisplayName','test RMSE');
-    if any(strcmp(resultsOut.optimizationResultsTable.Properties.VariableNames,'rmsePrediction'))
-        plot(resultsOut.optimizationResultsTable.fractionVPsPerBaggingIteration,resultsOut.optimizationResultsTable.rmsePrediction,'LineStyle','-.','Marker','x','MarkerSize',12,'LineWidth',1.5,'DisplayName','external prediction RMSE');
-    end
-    ylabel('root-mean-squared error');
+    makeLinePlots(plotParameters.baggingRMSE,resultsOut.baggingRMSE);
+    ylabel('root-mean-squared error (RMSE)');
     % Place the bottom of the y-axis at the origin:
     yLimMem = ylim();
     ylim([0 yLimMem(2)]);
     yyaxis right;
     hold on;
-    plot(resultsOut.optimizationResultsTable.fractionVPsPerBaggingIteration,resultsOut.optimizationResultsTable.effNWholeFit,'LineStyle','-','Marker','o','MarkerSize',12,'LineWidth',1.5,'DisplayName','whole-fit N-eff');
-    ylabel('effective N');
+    makeLinePlots(plotParameters.baggingEffN,resultsOut.baggingEffN);
+    ylabel('effective num. virtual patients (n_{eff})');
     % Place the bottom of the y-axis at the origin:
     yLimMem = ylim();
     ylim([0 yLimMem(2)]);
     ax = gca();
     ax.XScale = 'log';
-    ax.FontSize = 16;
+    ax.FontSize = 20;
     grid on;
     figFilepathWithoutExtension = [outputDir figfilename 'WithoutLegend'];
     linearCalibrationSaveFig(figHandle,figFilepathWithoutExtension);
@@ -1440,45 +1565,154 @@ function generateAndSaveCrossValidationPlots(outputDir,resultsOut,p)
     figFilepathWithoutExtension = [outputDir figfilename 'WithLegend'];
     linearCalibrationSaveFig(figHandle,figFilepathWithoutExtension);
 
+    %% Make RMSE/EffN bar plot
     
-    %% Make RMSE bar plot
-    figfilename = 'barRMSE';
-    subgroupLabels = {'whole fit','training','test','prediction'};
+    % First, plot RMSE:
+    
+    figfilename = 'barRMSEandEffN';
+    
+    leftAxisDescription = 'baggingRMSE';
+    rightAxisDescription = 'baggingEffN';
+        
+    subgroupTable = constructSubGroupTable(plotParameters,{leftAxisDescription,rightAxisDescription});
+    [uniqueSubTypes,uniqueSubTypesIndices,~] = unique(subgroupTable.descriptionsSubType,'stable');
+    subgroupLabels = (subgroupTable.displayNames(uniqueSubTypesIndices))';
+    subgroupColors = subgroupTable.barColors(uniqueSubTypesIndices);
+    
     groupLabels = {};
-    barY = [];
-    
-    barYParticular = nan(1,4);
-    if isfield(resultsOut,'inputVPop') && isfield(resultsOut.inputVPop,'rmseFit')
-        barYParticular(1) = resultsOut.inputVPop.rmseFit;
-    end
-    if isfield(resultsOut,'inputVPop') && isfield(resultsOut.inputVPop,'rmsePrediction')
-        barYParticular(4) = resultsOut.inputVPop.rmsePrediction;
-    end
-    barY = [barY ; barYParticular];
+    barYLeft = [];
+
+    barYLeft = [barYLeft ; constructBarYRow(resultsOut,subgroupTable,uniqueSubTypes,'inputVPopRMSE',1)];
     groupLabels = [groupLabels ; {'input VPop'}];
     
-    barYParticular = [resultsOut.noBaggingOptimization.rmseWholeFit resultsOut.noBaggingOptimization.rmseTraining resultsOut.noBaggingOptimization.rmseTest resultsOut.noBaggingOptimization.rmsePrediction];
-    barY = [barY ; barYParticular];
+    barYLeft = [barYLeft ; constructBarYRow(resultsOut,subgroupTable,uniqueSubTypes,'noBaggingRMSE',1)];
     groupLabels = [groupLabels ; {'no bagging'}];
     
-    for iFraction = 1:length(resultsOut.optimizationResultsTable.fractionVPsPerBaggingIteration)
-        barYParticular = [resultsOut.optimizationResultsTable.rmseWholeFit(iFraction) resultsOut.optimizationResultsTable.rmseTraining(iFraction) resultsOut.optimizationResultsTable.rmseTest(iFraction) resultsOut.optimizationResultsTable.rmsePrediction(iFraction)];
-        barY = [barY ; barYParticular];
-        groupLabels = [groupLabels ; {['bagging with fraction: ' num2str(resultsOut.optimizationResultsTable.fractionVPsPerBaggingIteration(iFraction))]}];
+    for iFraction = 1:height(resultsOut.baggingRMSE)
+        barYLeft = [barYLeft ; constructBarYRow(resultsOut,subgroupTable,uniqueSubTypes,'baggingRMSE',iFraction)];
+        groupLabels = [groupLabels ; {['bagging with fraction: ' num2str(resultsOut.baggingRMSE.fractionVPsPerBaggingIteration(iFraction))]}];
     end
     
     figHandle = figure;
-    bar(barY);
+    yyaxis left;
+    barHandleLeft = bar(barYLeft);
+    for iBarLeft = 1:length(barHandleLeft)
+        barHandleLeft(iBarLeft).FaceColor = subgroupColors{iBarLeft};
+    end
     
-    ylabel('root-mean-squared error');
+    ylabel({'root-mean-squared'; 'error (RMSE)'});
+    
     % Place the bottom of the y-axis at the origin:
     yLimMem = ylim();
     ylim([0 yLimMem(2)]);
+    
+    % Second, plot EffN:
+    
+    barYRight = [];
+    
+    barYRight = [barYRight ; constructBarYRow(resultsOut,subgroupTable,uniqueSubTypes,'inputVPopEffN',1)];
+    
+    barYRight = [barYRight ; constructBarYRow(resultsOut,subgroupTable,uniqueSubTypes,'noBaggingEffN',1)];
+    
+    for iFraction = 1:height(resultsOut.baggingEffN)
+        barYRight = [barYRight ; constructBarYRow(resultsOut,subgroupTable,uniqueSubTypes,'baggingEffN',iFraction)];
+    end
+    
+    yyaxis right;
+    barHandleRight = bar(barYRight);
+    for iBarRight = 1:length(barHandleRight)
+        barHandleRight(iBarRight).FaceColor = subgroupColors{iBarRight};
+    end
+    
+    ylabel({'effective num. virtual patients';'(n_{eff}) for the whole-fit case'});
+    
+    % Place the bottom of the y-axis at the origin:
+    yLimMem = ylim();
+    ylim([0 yLimMem(2)]);
+    
     ax = gca();
     ax.XTick = 1:length(groupLabels);
     ax.XTickLabel = groupLabels';
     xtickangle(45);
-    ax.FontSize = 16;
+    ax.FontSize = 20;
+    ax.YGrid = 'on';
+    figFilepathWithoutExtension = [outputDir figfilename 'WithoutLegend'];
+    linearCalibrationSaveFig(figHandle,figFilepathWithoutExtension);
+    legend(subgroupLabels);
+    figFilepathWithoutExtension = [outputDir figfilename 'WithLegend'];
+    linearCalibrationSaveFig(figHandle,figFilepathWithoutExtension);
+    
+
+    %% Make GOF/EffN Bar plot
+    
+    % First, plot RMSE:
+    
+    figfilename = 'barGOFandEffN';
+
+    leftAxisDescription = 'baggingGOF';
+    rightAxisDescription = 'baggingEffN';
+    
+    subgroupTable = constructSubGroupTable(plotParameters,{leftAxisDescription,rightAxisDescription});
+    [uniqueSubTypes,uniqueSubTypesIndices,~] = unique(subgroupTable.descriptionsSubType,'stable');
+    subgroupLabels = (subgroupTable.displayNames(uniqueSubTypesIndices))';
+    subgroupColors = subgroupTable.barColors(uniqueSubTypesIndices);
+    
+    groupLabels = {};
+    barYLeft = [];
+    
+    barYLeft = [barYLeft ; constructBarYRow(resultsOut,subgroupTable,uniqueSubTypes,'inputVPopGOF',1)];
+    groupLabels = [groupLabels ; {'input VPop'}];
+    
+    barYLeft = [barYLeft ; constructBarYRow(resultsOut,subgroupTable,uniqueSubTypes,'noBaggingGOF',1)];
+    groupLabels = [groupLabels ; {'no bagging'}];
+    
+    for iFraction = 1:height(resultsOut.baggingGOF)
+        barYLeft = [barYLeft ; constructBarYRow(resultsOut,subgroupTable,uniqueSubTypes,'baggingGOF',iFraction)];
+        groupLabels = [groupLabels ; {['bagging with fraction: ' num2str(resultsOut.baggingGOF.fractionVPsPerBaggingIteration(iFraction))]}];
+    end
+    
+    figHandle = figure;
+    yyaxis left;
+    barHandleLeft = bar(barYLeft);
+    for iBarLeft = 1:length(barHandleLeft)
+        barHandleLeft(iBarLeft).FaceColor = subgroupColors{iBarLeft};
+    end
+    
+    ylabel({'goodness-of-fit (GOF) p-value';'for the whole-fit case'});
+    
+    % Place the bottom of the y-axis at the origin:
+    yLimMem = ylim();
+    ylim([0 yLimMem(2)]);
+    
+    % Second, plot EffN:
+    
+    barYRight = [];
+    
+    barYRight = [barYRight ; constructBarYRow(resultsOut,subgroupTable,uniqueSubTypes,'inputVPopEffN',1)];
+    
+    barYRight = [barYRight ; constructBarYRow(resultsOut,subgroupTable,uniqueSubTypes,'noBaggingEffN',1)];
+    
+    for iFraction = 1:height(resultsOut.baggingEffN)
+        barYRight = [barYRight ; constructBarYRow(resultsOut,subgroupTable,uniqueSubTypes,'baggingEffN',iFraction)];
+    end
+    
+    yyaxis right;
+    barHandleRight = bar(barYRight);
+    for iBarRight = 1:length(barHandleRight)
+        barHandleRight(iBarRight).FaceColor = subgroupColors{iBarRight};
+    end
+    
+    ylabel({'effective num. virtual patients (n_{eff})';'for the whole-fit case'});
+    
+    % Place the bottom of the y-axis at the origin:
+    yLimMem = ylim();
+    ylim([0 yLimMem(2)]);
+    
+    ax = gca();
+    ax.XTick = 1:length(groupLabels);
+    ax.XTickLabel = groupLabels';
+    xtickangle(45);
+    ax.FontSize = 20;
     ax.YGrid = 'on';
     figFilepathWithoutExtension = [outputDir figfilename 'WithoutLegend'];
     linearCalibrationSaveFig(figHandle,figFilepathWithoutExtension);
@@ -1487,109 +1721,28 @@ function generateAndSaveCrossValidationPlots(outputDir,resultsOut,p)
     linearCalibrationSaveFig(figHandle,figFilepathWithoutExtension);
     
     
-    %% Make EffN Bar plot
-    
-    figfilename = 'barEffN';
-    groupLabels = {};
-    barY = [];
-    
-    if isfield(resultsOut,'inputVPop') && isfield(resultsOut.inputVPop,'effN')
-        barYParticular = resultsOut.inputVPop.effN;
-    else
-        barYParticular = NaN;
-    end
-    barY = [barY ; barYParticular];
-    groupLabels = [groupLabels ; {'input VPop'}];
-    
-    barYParticular = resultsOut.noBaggingOptimization.effNWholeFit;
-    barY = [barY ; barYParticular];
-    groupLabels = [groupLabels ; {'no bagging'}];
-    
-    for iFraction = 1:length(resultsOut.optimizationResultsTable.fractionVPsPerBaggingIteration)
-        barYParticular = resultsOut.optimizationResultsTable.effNWholeFit(iFraction);
-        barY = [barY ; barYParticular];
-        groupLabels = [groupLabels ; {['bagging with fraction: ' num2str(resultsOut.optimizationResultsTable.fractionVPsPerBaggingIteration(iFraction))]}];
-    end
-    
-    figHandle = figure;
-    bar(barY);
-    
-    ylabel('effective N for the whole-fit case');
-    % Place the bottom of the y-axis at the origin:
-    yLimMem = ylim();
-    ylim([0 yLimMem(2)]);
-    ax = gca();
-    ax.XTick = 1:length(groupLabels);
-    ax.XTickLabel = groupLabels';
-    xtickangle(45);
-    ax.FontSize = 16;
-    ax.YGrid = 'on';
-    figFilepathWithoutExtension = [outputDir figfilename];
-    linearCalibrationSaveFig(figHandle,figFilepathWithoutExtension);
-    
-    
-    %% Make GOF Bar plot
-    
-    figfilename = 'barGOF';
-    groupLabels = {};
-    barY = [];
-    
-    if isfield(resultsOut,'inputVPop') && isfield(resultsOut.inputVPop,'gof')
-        barYParticular = resultsOut.inputVPop.gof;
-    else
-        barYParticular = NaN;
-    end
-    barY = [barY ; barYParticular];
-    groupLabels = [groupLabels ; {'input VPop'}];
-    
-    barYParticular = resultsOut.noBaggingOptimization.gofWholeFit;
-    barY = [barY ; barYParticular];
-    groupLabels = [groupLabels ; {'no bagging'}];
-    
-    for iFraction = 1:length(resultsOut.optimizationResultsTable.fractionVPsPerBaggingIteration)
-        barYParticular = resultsOut.optimizationResultsTable.gofWholeFit(iFraction);
-        barY = [barY ; barYParticular];
-        groupLabels = [groupLabels ; {['bagging with fraction: ' num2str(resultsOut.optimizationResultsTable.fractionVPsPerBaggingIteration(iFraction))]}];
-    end
-    
-    figHandle = figure;
-    bar(barY);
-    
-    ylabel('goodness-of-fit (p-value) for the whole-fit case');
-    % Place the bottom of the y-axis at the origin:
-    yLimMem = ylim();
-    ylim([0 yLimMem(2)]);
-    ax = gca();
-    ax.XTick = 1:length(groupLabels);
-    ax.XTickLabel = groupLabels';
-    xtickangle(45);
-    ax.FontSize = 16;
-    ax.YGrid = 'on';
-    figFilepathWithoutExtension = [outputDir figfilename];
-    linearCalibrationSaveFig(figHandle,figFilepathWithoutExtension);
-    
-    
     %%  Plot the GOF
     if p.Results.calculateGOF
         figfilename = 'baggingGOFAndEffN';
         figHandle = figure;
-        xlabel('fraction VPs per bagging iteration')
+        xlabel('fraction VPs per bagging sample')
         yyaxis left;
         hold on;
-        plot(resultsOut.optimizationResultsTable.fractionVPsPerBaggingIteration,resultsOut.optimizationResultsTable.gofWholeFit,'LineStyle','-','Marker','o','MarkerSize',12,'LineWidth',1.5,'DisplayName','whole-fit GOF');
-        ylabel('goodness-of-fit (p-value) for the whole-fit case');
+        makeLinePlots(plotParameters.baggingGOF,resultsOut.baggingGOF);
+        ylabel({'goodness-of-fit (GOF) p-value';'for the whole-fit case'});
         % Place the bottom of the y-axis at the origin:
         yLimMem = ylim();
         ylim([0 yLimMem(2)]);
         yyaxis right;
         hold on;
-        plot(resultsOut.optimizationResultsTable.fractionVPsPerBaggingIteration,resultsOut.optimizationResultsTable.effNWholeFit,'Marker','o','MarkerSize',12,'LineWidth',1.5,'DisplayName','whole-fit N-eff');
-        ylabel('effective N for the whole-fit case');
+        makeLinePlots(plotParameters.baggingEffN,resultsOut.baggingEffN);
+        ylabel({'effective num. virtual patients';'(n_{eff}) for the whole-fit case'});
         % Place the bottom of the y-axis at the origin:
         yLimMem = ylim();
         ylim([0 yLimMem(2)]);
         ax = gca();
-        ax.FontSize = 16;
+        ax.XScale = 'log';
+        ax.FontSize = 20;
         grid on;
         figFilepathWithoutExtension = [outputDir figfilename];
         linearCalibrationSaveFig(figHandle,figFilepathWithoutExtension);
@@ -1599,17 +1752,58 @@ function generateAndSaveCrossValidationPlots(outputDir,resultsOut,p)
     %%  Plot the time taken for a single bagging run:
     figfilename = 'timeForSingleBaggingRun';
     figHandle = figure;
-    xlabel('fraction VPs per bagging iteration')
+    xlabel('fraction VPs per bagging sample')
     hold on;
-    plot(resultsOut.optimizationResultsTable.fractionVPsPerBaggingIteration,resultsOut.optimizationResultsTable.calibrationTimeForSingleNonCVRunMinutes,'Marker','o','MarkerSize',12,'LineWidth',2,'DisplayName','training RMSE');
-    ylabel('time for single run of bagging [minutes]');
+    plot(resultsOut.baggingRunTime.fractionVPsPerBaggingIteration,resultsOut.baggingRunTime.calibrationTimeForSingleNonCVRunSeconds,'Marker','o','MarkerSize',12,'LineWidth',2,'DisplayName','run time');
+    ylabel('run time for bagging [seconds]');
     % Place the bottom of the y-axis at the origin:
     yLimMem = ylim();
     ylim([0 yLimMem(2)]);
     ax = gca();
     ax.XScale = 'log';
-    ax.FontSize = 16;
+    ax.FontSize = 20;
     grid on;
     figFilepathWithoutExtension = [outputDir figfilename];
     linearCalibrationSaveFig(figHandle,figFilepathWithoutExtension);
+
+    
+    %% Nested functions
+    
+    function makeLinePlots(plotParameters,resultsOutTable)
+        fieldNamesInternal = fields(plotParameters);
+        for iFieldInternal = 1:length(fieldNamesInternal)
+            if any(strcmp(resultsOutTable.Properties.VariableNames,fieldNamesInternal{iFieldInternal}))
+                plot(resultsOutTable.fractionVPsPerBaggingIteration,resultsOutTable.(fieldNamesInternal{iFieldInternal}),'LineStyle',plotParameters.(fieldNamesInternal{iFieldInternal}).lineStyle,'Marker',plotParameters.(fieldNamesInternal{iFieldInternal}).marker,'Color',plotParameters.(fieldNamesInternal{iFieldInternal}).color,'MarkerSize',12,'LineWidth',1.5,'DisplayName',plotParameters.(fieldNamesInternal{iFieldInternal}).displayName);
+            end
+        end
+    end
+    
+    function subgroupTable = constructSubGroupTable(plotParameters,axisDescriptions)
+        descriptionsMain = {};
+        descriptionsSubType = {};
+        displayNames = {};
+        barColors = {};
+        for iDescription = 1:length(axisDescriptions)
+            fieldNamesInternal = fields(plotParameters.(axisDescriptions{iDescription}));
+            for iFieldInternal = 1:length(fieldNamesInternal)
+                descriptionsMain = [descriptionsMain ; axisDescriptions{iDescription}];
+                descriptionsSubType =  [descriptionsSubType ; fieldNamesInternal{iFieldInternal}];
+                displayNames = [displayNames ; plotParameters.(axisDescriptions{iDescription}).(fieldNamesInternal{iFieldInternal}).displayName];
+                barColors = [barColors ; plotParameters.(axisDescriptions{iDescription}).(fieldNamesInternal{iFieldInternal}).color];
+            end
+        end
+        subgroupTable = table(descriptionsMain,descriptionsSubType,displayNames,barColors);
+    end
+    
+    function barYParticularRow = constructBarYRow(resultsOut,subgroupTable,uniqueSubTypes,descriptionMain,iResult)
+        iMaskDescriptionMain = strcmp(subgroupTable.descriptionsMain,descriptionMain);
+        descriptionSubTypes = subgroupTable.descriptionsSubType(iMaskDescriptionMain);
+        barYParticularRow = nan(1,length(uniqueSubTypes));
+        
+        for iSubType = 1:length(uniqueSubTypes)
+            if isfield(resultsOut,descriptionMain) && any(strcmp(resultsOut.(descriptionMain).Properties.VariableNames,uniqueSubTypes{iSubType}))
+                barYParticularRow(iSubType) = resultsOut.(descriptionMain).(uniqueSubTypes{iSubType})(iResult);
+            end
+        end
+    end
 end

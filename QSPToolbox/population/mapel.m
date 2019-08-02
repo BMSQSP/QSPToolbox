@@ -145,21 +145,22 @@ if continueFlag
 			if myInitialPWs < 0
 				% This implies we want to try starting from near an
 				% optimal solution to the linearized problem
-				myOptimOptions = linearCalibrationOptions();
+				myOptimOptions = LinearCalibrationOptions();
 				myOptimOptions.cdfProbsToFit = 0.05:0.05:0.95;
-				myOptimOptions.optimizationAlgorithm = "lsqnonneg";
+				myOptimOptions.optimizationAlgorithm = "nnls";
+				myOptimOptions.optimizationAlgorithmOptions.Accy = 0;
 				myOptimOptions.priorPrevalenceWeightAssumption = 'specified';
                 % Need to add predTableVals to run.
                 myVPop = myVPop.startPWs(myWorksheet,0);
                 myVPop = myVPop.addPredTableVals();
 				
-				linearCalibrationObject = linearCalibration(myVPop,'optimOptions',myOptimOptions);
+				linearCalibrationObject = LinearCalibration(myVPop,'optimOptions',myOptimOptions);
 				linearCalibrationObject = linearCalibrationObject.run();
 				
 				if linearCalibrationObject.OptimizationResults.exitFlag == 1
                     % Run 2x as results are sensitive to prior PW
                     % assumption
-					linearCalibrationObject = linearCalibration(linearCalibrationObject.OptimizedVPop,'optimOptions',myOptimOptions);
+					linearCalibrationObject = LinearCalibration(linearCalibrationObject.OptimizedVPop,'optimOptions',myOptimOptions);
 					linearCalibrationObject = linearCalibrationObject.run();					
 					myInitialPWs = linearCalibrationObject.OptimizedVPop.pws;
 					if linearCalibrationObject.OptimizationResults.exitFlag == 1

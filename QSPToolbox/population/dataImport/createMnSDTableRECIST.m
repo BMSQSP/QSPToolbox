@@ -35,7 +35,6 @@ function myMnSDTableRECIST = createMnSDTableRECIST(myWorksheet,myExpDataIDs,Pati
 % RETURNS
 %  myMnSDTableRECIST
 
-% TODO: Add proofing of inputs
 continueFlag = true;
 
 tableVariableNamesFixed = {'time', 'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID','PatientIDVar','TRTVar','BRSCOREVar','RSCOREVar'};
@@ -43,9 +42,47 @@ tableVariableNames = [tableVariableNamesFixed,{'weightMean', 'weightSD', 'expN',
 myMnSDTableRECIST = cell2table(cell(0,length(tableVariableNames)));
 myMnSDTableRECIST.Properties.VariableNames = tableVariableNames;
 
+% Proofing of the input
+% variables starts here
 if continueFlag
     
     allExpDataIDs = getExpDataIDs(myWorksheet);
+    allInterventionIDs = getInterventionIDs(myWorksheet);
+    
+    for varCounter = 1 : length(myVars)
+    
+        curVar = myVars{varCounter};
+        myExpDataID = myExpDataIDs{varCounter};
+        interventionID = myInterventionIDs{varCounter};
+  
+        curIndex = find(ismember(allExpDataIDs,myExpDataID));
+        
+        if isempty(curIndex)
+            warning(['Not able to find experimental dataset ',myExpDataID,' in ',mfilename,'.'])
+            continueFlag = false;
+        else        
+            curData = myWorksheet.expData{curIndex}.data;
+            % First remove off treatment rows
+            curData = curData(find(curData{:,TRTVar}==1),:);
+            [nRows,nCols] = size(curData);
+            if nRows < 1
+                warning(['Not able to find on treatment data for experimental dataset ',myExpDataID,' in ',mfilename,'.'])
+                continueFlag = false;
+            else
+                if sum(ismember(curData.Properties.VariableNames,myVars{varCounter})) < 1
+                    warning(['Not able to find experimental variable ',myVars{varCounter},' in dataset ',myExpDataID,' in ',mfilename,'.'])
+                    continueFlag = false;
+                end
+                if sum(ismember(allInterventionIDs,interventionID)) < 1
+                    warning(['Not able to find intervention ID ',interventionID,' associated with variable ',myVars{varCounter},' in dataset ',myExpDataID,' in ',mfilename,'.'])
+                    continueFlag = false;                
+                end
+            end
+        end
+    end
+end
+
+if continueFlag
     expN = nan(0,1);
     expMean = nan(0,1);
     expSD = nan(0,1);
@@ -62,7 +99,6 @@ if continueFlag
     RSCORECell = cell(0,1);
     
     for varCounter = 1 : length(myVars)
-    
         curVar = myVars{varCounter};
         myExpDataID = myExpDataIDs{varCounter};
         interventionID = myInterventionIDs{varCounter};
@@ -71,10 +107,7 @@ if continueFlag
         curData = myWorksheet.expData{curIndex}.data;
         % First remove off treatment rows
         curData = curData(find(curData{:,TRTVar}==1),:);
-        [nRows,nCols] = size(curData);
-        if nRows < 1
-            warning(['No on treatment data for experiment variable ',curVar,' in dataset ',myExpDataID,'.'])
-        end
+        
         % Need to make all table vars into string for this to work
         new_variable = arrayfun(@(value) cast(value{1}, 'char'), curData.(BRSCOREVar), 'uniform', 0);
         curData.(BRSCOREVar) = new_variable;
@@ -172,6 +205,6 @@ if continueFlag
     % the baseline value to zero.
     myMnSDTableRECIST.Properties.VariableNames = tableVariableNames;
     myMnSDTableRECIST = myMnSDTableRECIST(find(myMnSDTableRECIST{:,'expSD'}>0),:);
-    end
-        
+else
+    warning(['Unable to complete ',mfilename,', exiting.'])    
 end    

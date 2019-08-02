@@ -127,7 +127,12 @@ if continueFlag
 	end	
 
     while curEffN <= targetEffN
-        bestPVal = 0;
+		% Set the initial best p value to a negative
+		% number to force the algorithm to record
+		% and write out the first VPop calibration
+		% attempt, especially to aid troubleshooting
+		% if calibrations fail.
+        bestPVal = -1;
         myMapelOptions.minEffN = curEffN;
         myTestCounter = 0;
         while bestPVal < minPVal

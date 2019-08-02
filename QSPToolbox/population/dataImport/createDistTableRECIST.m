@@ -43,17 +43,55 @@ tableVariableNames = [tableVariableNamesFixed,{'weight','expN', 'expSample', 'pr
 myDistTableRECIST = cell2table(cell(0,length(tableVariableNames)));
 myDistTableRECIST.Properties.VariableNames = tableVariableNames;
 
+% Proofing of the input
+% variables starts here
 if continueFlag
     
     allExpDataIDs = getExpDataIDs(myWorksheet);
+    allInterventionIDs = getInterventionIDs(myWorksheet);
     
+    for varCounter = 1 : length(myVars)
+    
+        curVar = myVars{varCounter};
+        myExpDataID = myExpDataIDs{varCounter};
+        interventionID = myInterventionIDs{varCounter};
+  
+        curIndex = find(ismember(allExpDataIDs,myExpDataID));
+        
+        if isempty(curIndex)
+            warning(['Not able to find experimental dataset ',myExpDataID,' in ',mfilename,'.'])
+            continueFlag = false;
+        else        
+            curData = myWorksheet.expData{curIndex}.data;
+            % First remove off treatment rows
+            curData = curData(find(curData{:,TRTVar}==1),:);
+            [nRows,nCols] = size(curData);
+            if nRows < 1
+                warning(['Not able to find on treatment data for experimental dataset ',myExpDataID,' in ',mfilename,'.'])
+                continueFlag = false;
+            else
+                if sum(ismember(curData.Properties.VariableNames,myVars{varCounter})) < 1
+                    warning(['Not able to find experimental variable ',myVars{varCounter},' in dataset ',myExpDataID,' in ',mfilename,'.'])
+                    continueFlag = false;
+                end
+                if sum(ismember(allInterventionIDs,interventionID)) < 1
+                    warning(['Not able to find intervention ID ',interventionID,' associated with variable ',myVars{varCounter},' in dataset ',myExpDataID,' in ',mfilename,'.'])
+                    continueFlag = false;                
+                end
+            end
+        end
+    end
+end
+     
+
+if continueFlag
     for varCounter = 1 : length(myVars)
         curVar = myVars{varCounter};
         myExpDataID = myExpDataIDs{varCounter};
         interventionID = myInterventionIDs{varCounter};
-    
         curIndex = find(ismember(allExpDataIDs,myExpDataID));
-        curData = myWorksheet.expData{curIndex}.data;
+        curData = myWorksheet.expData{curIndex}.data;        
+        
         % First remove off treatment rows
         curData = curData(find(curData{:,TRTVar}==1),:);
         % Need to make all table vars into string for this to work
@@ -131,6 +169,6 @@ if continueFlag
             end
         end
     end
-end
-        
-end
+else
+    warning(['Unable to complete ',mfilename,', exiting.'])    
+end    

@@ -1,10 +1,10 @@
-classdef linearCalibrationOptions
-% Here, we define the linearCalibrationOptions class to run a VPopOptimization
+classdef LinearCalibrationOptions
+% Here, we define the LinearCalibrationOptions class to run a VPopOptimization
 %
 %  Properties%  
 %  optimizationAlgorithm: 	(string) Specifies which Matlab optimization
-%                           function to use. Options are "lsqlin" and
-%                           "lsqnonneg". Default is "lsqnonneg".
+%                           function to use. Options are "nnls", "lsqlin" and
+%                           "lsqnonneg". Default is "nnls".
 %  method:                  (string) Specifies whether to do a single,
 %                           best-fit optimization, or to use use an
 %                           iterative technique (either bootstrapping or
@@ -72,10 +72,21 @@ classdef linearCalibrationOptions
 %                                   per bagging iteration. This option is
 %                                   only used if 'method' is "bootstrap" or
 %                                   "bagging". Default is 0.9.
+%  optimizationAlgorithmOptions:    (struct) Changes the options of the
+%                                   'optimizationAlgorithm' from their
+%                                   default values to the values specified
+%                                   here.
+% expWeightFuncHandle:     (function handle). Specifies a weight for a
+%                           group based on the experimental sample size and
+%                           standard deviation. The function should take
+%                           three arguments, in the following order: (1, scalar)
+%                           experimental sample size; (2, scalar)
+%                           experimental standard deviation; and (3, char
+%                           vector) description of the data group.
 %
 
    properties
-      optimizationAlgorithm = "lsqnonneg"
+      optimizationAlgorithm = "nnls"
       method = "bestFit"
       cdfProbsToFit = "all"
 	  binTableGroupWeight = 1
@@ -88,11 +99,14 @@ classdef linearCalibrationOptions
       maxPrevalenceWeight = Inf
       nBootstrapIterations = 1000
       fractionVPsPerBaggingIteration = 0.9
+      optimizationAlgorithmOptions = []
+      expWeightFuncHandle = @(expN,expSTD,expDataGrp) sqrt(expN)
    end
    methods
       function obj = set.optimizationAlgorithm(obj,myValue)
           if (strcmpi(myValue,"lsqlin") ||...
-               strcmpi(myValue,"lsqnonneg"))
+               strcmpi(myValue,"lsqnonneg") ||...
+               strcmpi(myValue,"nnls"))
             obj.optimizationAlgorithm = myValue;
           else
             error(['Invalid optimizationAlgorithm setting in ',mfilename,', allowed setting: "lsqlin," "lsqnonneg."'])
@@ -181,6 +195,12 @@ classdef linearCalibrationOptions
             error(['Invalid fractionVPsPerBaggingIteration value in ',mfilename,', expecting a numeric value'])
           end
       end
+      function obj = set.optimizationAlgorithmOptions(obj,myValue)
+          obj.optimizationAlgorithmOptions = myValue;
+      end
+      function obj = set.expWeightFuncHandle(obj,myValue)
+          obj.expWeightFuncHandle = myValue;
+      end
                 
       function value = get(obj,propName)
           switch propName
@@ -210,13 +230,17 @@ classdef linearCalibrationOptions
                   value = obj.maxPrevalenceWeight;	
               case 'fractionVPsPerBaggingIteration'
                   value = obj.maxPrevalenceWeight;	
+              case 'optimizationAlgorithmOptions'
+                  value = obj.optimizationAlgorithmOptions;	
+              case 'expWeightFuncHandle'
+                  value = obj.expWeightFuncHandle;	
               otherwise
                   error(['Error: ',propName ,' is not a valid ',mfilename,' property.'])
           end
       end      
 
       % The constructor method must have the same name as the class
-      function obj = linearCalibrationOptions()
+      function obj = LinearCalibrationOptions()
 			
       end
    end

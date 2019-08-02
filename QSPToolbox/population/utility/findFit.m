@@ -68,14 +68,15 @@ elseif isa(myVPop,'VPopRECISTnoBin')
         % Get an initial point from linear calibrate.  First use a uniform
         % assumption with bagging, optimize to get a prior
         % prevalence weight assumption then re-optimize with bagging.
-        myOptimOptions = linearCalibrationOptions();
+        myOptimOptions = LinearCalibrationOptions;
         myOptimOptions.cdfProbsToFit = 0.05:0.05:0.95;
-        myOptimOptions.optimizationAlgorithm = "lsqnonneg";
+        myOptimOptions.optimizationAlgorithm = "nnls";
+		myOptimOptions.optimizationAlgorithmOptions.Accy = 0;
         myOptimOptions.priorPrevalenceWeightAssumption = "uniform";
         myOptimOptions.nBootstrapIterations = mySimulateOptions.nWorkers*20;
         myOptimOptions.fractionVPsPerBaggingIteration=.5;
         myOptimOptions.method = "bagging";
-        linearCalibrationObject = linearCalibration(myVPop,'optimOptions',myOptimOptions);
+        linearCalibrationObject = LinearCalibration(myVPop,'optimOptions',myOptimOptions);
         try
             linearCalibrationObject = linearCalibrationObject.run();
             if isnumeric(linearCalibrationObject.OptimizedVPop.pws) && (min(linearCalibrationObject.OptimizedVPop.pws)>=0)
@@ -93,7 +94,7 @@ elseif isa(myVPop,'VPopRECISTnoBin')
             myOptimOptions.nBootstrapIterations = mySimulateOptions.nWorkers*20;	
             myOptimOptions.fractionVPsPerBaggingIteration=.5;
             myOptimOptions.method = "bagging";
-            linearCalibrationObject = linearCalibration(linearCalibrationObject.OptimizedVPop,'optimOptions',myOptimOptions);
+            linearCalibrationObject = LinearCalibration(linearCalibrationObject.OptimizedVPop,'optimOptions',myOptimOptions);
             try
                 linearCalibrationObject = linearCalibrationObject.run();
                 if isnumeric(linearCalibrationObject.OptimizedVPop.pws) && (min(linearCalibrationObject.OptimizedVPop.pws)>=0)
