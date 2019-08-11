@@ -45,11 +45,73 @@ tableVariableNames = [tableVariableNamesFixed,{'weight','binEdge1','binEdge2','b
 myBinTableRECIST = cell2table(cell(0,length(tableVariableNames)));
 myBinTableRECIST.Properties.VariableNames = tableVariableNames;
 
+
+% Proofing of the input
+% variables starts here
+if continueFlag
+	testN = length(myExpDataIDs);
+	if sum([length(myExpDataIDs),length(myVars),length(mySimVars),length(mySimVarTypes),length(myInterventionIDs)] ~= testN) > 0
+		continueFlag = false;
+		warning(['Not all input cell array arguments are of consistent length in ',mfilename,'.  Exiting.'])
+	end
+end
+
+if continueFlag
+    
+    allExpDataIDs = getExpDataIDs(myWorksheet);
+    allInterventionIDs = getInterventionIDs(myWorksheet);
+    
+    for varCounter = 1 : testN
+    
+        curVar = myVars{varCounter};
+        myExpDataID = myExpDataIDs{varCounter};
+        interventionID = myInterventionIDs{varCounter};
+  
+        curIndex = find(ismember(allExpDataIDs,myExpDataID));
+        
+        if isempty(curIndex)
+            warning(['Not able to find experimental dataset ',myExpDataID,' in ',mfilename,'.'])
+            continueFlag = false;
+        else        
+            curData = myWorksheet.expData{curIndex}.data;
+            % First remove off treatment rows
+            curData = curData(find(curData{:,TRTVar}==1),:);
+            [nRows,nCols] = size(curData);
+            if nRows < 1
+                warning(['Not able to find on treatment data for experimental dataset ',myExpDataID,' in ',mfilename,'.'])
+                continueFlag = false;
+            else
+                if sum(ismember(curData.Properties.VariableNames,myVars{varCounter})) < 1
+                    warning(['Not able to find experimental variable ',myVars{varCounter},' in dataset ',myExpDataID,' in ',mfilename,'.'])
+                    continueFlag = false;
+                end
+                if sum(ismember(allInterventionIDs,interventionID)) < 1
+                    warning(['Not able to find intervention ID ',interventionID,' associated with variable ',myVars{varCounter},' in dataset ',myExpDataID,' in ',mfilename,'.'])
+                    continueFlag = false;                
+                end
+            end
+        end
+    end
+	
+	% Also proof whether the intervention/model variable inputs are unique.
+	% Non-uniqueness would suggest mapping the same model/intervention
+	% combination onto multiple outputs, which should not be allowed	
+	mySimVars = reshape(mySimVars,testN,1);
+	mySimVarTypes = reshape(mySimVarTypes,testN,1);
+	myInterventionIDs = reshape(myInterventionIDs,testN,1);
+	combineRows = [mySimVars,mySimVarTypes,myInterventionIDs];
+	combineRows = cell2table(combineRows);
+	[nRows,~] = size(unique(combineRows,'rows'));
+	if nRows ~= testN
+		warning(['Not all model variables, variable types, intervention sets are unique in call to ',mfilename,'.  Exiting.'])
+		continueFlag = false;    
+	end
+end
+
+
 if continueFlag
 
-    allExpDataIDs = getExpDataIDs(myWorksheet);
-
-    for varCounter = 1 : length(myVars)
+    for varCounter = 1 : testN
 
         curVar = myVars{varCounter};
         myExpDataID = myExpDataIDs{varCounter};

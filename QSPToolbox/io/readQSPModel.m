@@ -87,8 +87,7 @@ end
 if continueFlag
     switch fileType
         case 'SB'
-             addpath(filePath);
-             temp = sbioloadproject(noPathName);
+             temp = sbioloadproject([filePath,filesep,noPathName,'.',fileTypeExt]);
              modelNames = fields(temp);
              modelPos = find(ismember(modelNames,modelname));
              if length(modelPos) < 1

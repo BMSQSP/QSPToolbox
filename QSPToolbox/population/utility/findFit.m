@@ -19,6 +19,7 @@ function myVPop = findFit(myVPop)
 %          gofDist
 %          gof
 %
+
 optimizeType = myVPop.optimizeType;
 % We don't adjust the parallel pool status for simplex
 % since simplex cannot use parallel processing
@@ -54,98 +55,16 @@ if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPop')
 elseif isa(myVPop,'VPopRECISTnoBin')
 	initialPWs=myVPop.pws;
 	nTransPWs=length(initialPWs)-1;
-	[nTest, ~] = size(initialPWs);
 	
 	if ~(ismember({'simplex'},optimizeType))
-		% We will also try supplementing the VP scores scaled into PWs.  This
-		% likely won't be very effective at finding optimal solutions but will add
-		% points where VPs in sparser regions of the distributions relative to the data 
-		% are more highly weighted which could help to weight to where it is needed
-		% without overly focusing on a few VPs
-		vpScores = scoreWorksheetVPs(myVPop,1:(nTransPWs+1),1:(nTransPWs+1));
-		vpScores = (vpScores + 1E-12)./sum((vpScores + 1E-12),2);
-		
-        % Get an initial point from linear calibrate.  First use a uniform
-        % assumption with bagging, optimize to get a prior
-        % prevalence weight assumption then re-optimize with bagging.
-        myOptimOptions = LinearCalibrationOptions;
-        myOptimOptions.cdfProbsToFit = 0.05:0.05:0.95;
-        myOptimOptions.optimizationAlgorithm = "nnls";
-		myOptimOptions.optimizationAlgorithmOptions.Accy = 0;
-        myOptimOptions.priorPrevalenceWeightAssumption = "uniform";
-        myOptimOptions.nBootstrapIterations = mySimulateOptions.nWorkers*20;
-        myOptimOptions.fractionVPsPerBaggingIteration=.5;
-        myOptimOptions.method = "bagging";
-        linearCalibrationObject = LinearCalibration(myVPop,'optimOptions',myOptimOptions);
-        try
-            linearCalibrationObject = linearCalibrationObject.run();
-            if isnumeric(linearCalibrationObject.OptimizedVPop.pws) && (min(linearCalibrationObject.OptimizedVPop.pws)>=0)
-                linearCalibrationPWs = linearCalibrationObject.OptimizedVPop.pws;
-            else
-                linearCalibrationPWs = '';
-            end
-        catch
-            % This will sometimes fail if all of the bagged
-            % trials don't run.
-            linearCalibrationPWs = '';
-        end
-        if isnumeric(linearCalibrationPWs)
-            myOptimOptions.priorPrevalenceWeightAssumption = "specified";		
-            myOptimOptions.nBootstrapIterations = mySimulateOptions.nWorkers*20;	
-            myOptimOptions.fractionVPsPerBaggingIteration=.5;
-            myOptimOptions.method = "bagging";
-            linearCalibrationObject = LinearCalibration(linearCalibrationObject.OptimizedVPop,'optimOptions',myOptimOptions);
-            try
-                linearCalibrationObject = linearCalibrationObject.run();
-                if isnumeric(linearCalibrationObject.OptimizedVPop.pws) && (min(linearCalibrationObject.OptimizedVPop.pws)>=0)
-                    linearCalibrationPWs = linearCalibrationObject.OptimizedVPop.pws;
-                else
-                    % Dummy statement, keep the original
-                    linearCalibrationPWs = linearCalibrationPWs;
-                end
-            catch
-                % This will sometimes fail if all of the bagged 
-                % trials don't run.
-                % Dummy statement, keep the original
-                linearCalibrationPWs = linearCalibrationPWs;
-            end
-        end
-        
-        % We reserve about half of the allowed particles
-		% for fully random assignment
-		initialPWs = [initialPWs;vpScores];
-		if isnumeric(linearCalibrationPWs)
-			initialPWs = [initialPWs;linearCalibrationPWs];
-            [nTest, ~] = size(initialPWs);
-            nAddOld = max(floor(myVPop.optimizePopSize/4-nTest/2),0);
-            nAddLin = nAddOld;
-        else
-            [nTest, ~] = size(initialPWs);
-            nAddOld = floor(myVPop.optimizePopSize/2-nTest);
-            nAddLin = 0;
-        end
-		
 		[nTest, ~] = size(initialPWs);
-        % Proof again to make sure we don't exceed
-		% the allowed swarm size.
-		nTest = min(nTest,myVPop.optimizePopSize);
-		initialPWs = initialPWs(1:nTest,:);
-		% Try supplementing with initial guesses that weight VPs near
-		% the initial points
-		if (((myVPop.optimizePopSize-nTest-nAddOld) > 0) && (nAddOld>0))
-			vpScores = spreadPWsToNeighbors(initialPWs(1,:), myVPop.coeffsTable, nAddOld);
-			initialPWs = [initialPWs;vpScores(2:end,:)];
-        end
-        % Also try supplementing with PW solutions near the bagged linear
-        % calibrate optimal solution
-        if (((myVPop.optimizePopSize-nTest-nAddLin) > 0) && (nAddLin>0))
-			vpScores = spreadPWsToNeighbors(linearCalibrationObject.OptimizedVPop.pws, myVPop.coeffsTable, nAddLin);
-			initialPWs = [initialPWs;vpScores(2:end,:)];
-        end      
-        % Update again based on the additions.
-        [nTest, ~] = size(initialPWs);
+		nAdd = floor(myVPop.optimizePopSize/2-nTest);
+		if nAdd > 0
+			initialPWs = getInitialPWs(myVPop, initialPWs, nAdd, mySimulateOptions.nWorkers*20);
+		end
 	end	
     
+	[nTest, ~] = size(initialPWs);
 	myPWTrans = nan(nTest,nTransPWs);
 	for transCounter = 1 : nTest
 		myPWTrans(transCounter,:)=hyperTransform(initialPWs(transCounter,:));
@@ -223,7 +142,6 @@ if ~isa(myVPop,'VPopRECISTnoBin')
 	for axisCounter = 1 : myNAxis
 		myBinProbs(axisCounter,:) = invHyperTransform(myProbTrans(axisCounter,:));
 	end
-
 	myVPop.binProbs = myBinProbs;
 	myVPop = myVPop.assignPWs();
 else

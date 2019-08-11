@@ -30,6 +30,8 @@ function [myBRTableRECIST, myRTableRECIST] = createResponseTablesRECIST(myWorksh
 %  myRTableRECIST
 %
 
+% TODO: might want to add more proofing for prefixStopPairs
+
 continueFlag = false;
 if nargin > 10
     warning(['Too many input arguments to ',mfilename, '. Arguments should be: myWorksheet,myExpDataIDs,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar,timeVar,startTime,myInterventionIDs, optionally prefixStopPairs.'])
@@ -44,7 +46,62 @@ else
     continueFlag = false;
 end
 
-% TODO: Could add more proofing to createResponseTablesRECIST
+% Proofing of the input
+% variables starts here
+if continueFlag
+	testN = length(myExpDataIDs);
+	if sum([length(myExpDataIDs),length(myInterventionIDs)] ~= testN) > 0
+		continueFlag = false;
+		warning(['myExpDataIDs and myInterventionIDs are not of consistent length in ',mfilename,'.  Exiting.'])
+	end
+end
+
+if continueFlag
+    
+    allExpDataIDs = getExpDataIDs(myWorksheet);
+    allInterventionIDs = getInterventionIDs(myWorksheet);
+    
+    for varCounter = 1 : testN
+    
+        myExpDataID = myExpDataIDs{varCounter};
+        interventionID = myInterventionIDs{varCounter};
+  
+        curIndex = find(ismember(allExpDataIDs,myExpDataID));
+        
+        if isempty(curIndex)
+            warning(['Not able to find experimental dataset ',myExpDataID,' in ',mfilename,'.'])
+            continueFlag = false;
+        else        
+            curData = myWorksheet.expData{curIndex}.data;
+            % First remove off treatment rows
+            curData = curData(find(curData{:,TRTVar}==1),:);
+            [nRows,nCols] = size(curData);
+            if nRows < 1
+                warning(['Not able to find on treatment data for experimental dataset ',myExpDataID,' in ',mfilename,'.'])
+                continueFlag = false;
+            else
+                if sum(ismember(allInterventionIDs,interventionID)) < 1
+                    warning(['Not able to find intervention ID ',interventionID,' associated with dataset ',myExpDataID,' in ',mfilename,'.'])
+                    continueFlag = false;                
+                end
+            end
+        end
+    end
+	
+	% Also proof whether the intervention/dataset inputs are unique.
+	% Non-uniqueness would suggest a redundancy in specification
+	% which could be a mistake
+	myInterventionIDs = reshape(myInterventionIDs,testN,1);
+	myExpDataIDs = reshape(myExpDataIDs,testN,1);
+	combineRows = [myInterventionIDs,myExpDataIDs];
+	combineRows = cell2table(combineRows);
+	[nRows,~] = size(unique(combineRows,'rows'));
+	if nRows ~= testN
+		warning(['The experimental datasets and intervention sets are not uniquely paired in call to ',mfilename,'.  Exiting.'])
+		continueFlag = false;    
+	end
+end
+
 nStopTrials = length(prefixStopPairs);
 prefixes = cell(1,nStopTrials);
 stopTimes = nan(1,nStopTrials);
@@ -64,11 +121,7 @@ myRTableRECIST.Properties.VariableNames = tableVariableNames;
 
 if continueFlag
 
-
-    
-    allExpDataIDs = getExpDataIDs(myWorksheet);
-
-    for varCounter = 1 : length(myExpDataIDs)
+    for varCounter = 1 : testN
         
         myExpDataID = myExpDataIDs{varCounter};
         interventionID = myInterventionIDs{varCounter};            

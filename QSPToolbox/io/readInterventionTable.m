@@ -93,9 +93,8 @@ if continueFlag
             % wanted to note this erroneous warning and 
             % in case we write our own table reading script that
             % doesn't have a similar issue.
-            addpath(filePath);
             warning('off','all');
-            unformatInterventionTable = tdfread([noPathName,'.txt'],'\t');
+            unformatInterventionTable = tdfread([filePath,filesep,noPathName,'.',fileTypeExt],'\t');
             warning('on','all');
             if ~(strcmp(class(unformatInterventionTable),'struct'))
                 warning(['Cannot read specified file in ', mfilename, '.'])

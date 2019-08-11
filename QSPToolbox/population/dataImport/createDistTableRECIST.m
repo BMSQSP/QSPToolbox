@@ -35,7 +35,6 @@ function myDistTableRECIST = createDistTableRECIST(myWorksheet,myExpDataIDs,Pati
 % RETURNS
 %  myDistTableRECIST
 
-% TODO: Add proofing of inputs
 continueFlag = true;
 
 tableVariableNamesFixed = {'time', 'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID', 'PatientIDVar', 'TRTVar', 'BRSCOREVar', 'RSCOREVar'};
@@ -46,11 +45,19 @@ myDistTableRECIST.Properties.VariableNames = tableVariableNames;
 % Proofing of the input
 % variables starts here
 if continueFlag
+	testN = length(myExpDataIDs);
+	if sum([length(myExpDataIDs),length(myVars),length(mySimVars),length(mySimVarTypes),length(myInterventionIDs)] ~= testN) > 0
+		continueFlag = false;
+		warning(['Not all input cell array arguments are of consistent length in ',mfilename,'.  Exiting.'])
+	end
+end
+
+if continueFlag
     
     allExpDataIDs = getExpDataIDs(myWorksheet);
     allInterventionIDs = getInterventionIDs(myWorksheet);
     
-    for varCounter = 1 : length(myVars)
+    for varCounter = 1 : testN
     
         curVar = myVars{varCounter};
         myExpDataID = myExpDataIDs{varCounter};
@@ -81,11 +88,25 @@ if continueFlag
             end
         end
     end
+	
+	% Also proof whether the intervention/model variable inputs are unique.
+	% Non-uniqueness would suggest mapping the same model/intervention
+	% combination onto multiple outputs, which should not be allowed	
+	mySimVars = reshape(mySimVars,testN,1);
+	mySimVarTypes = reshape(mySimVarTypes,testN,1);
+	myInterventionIDs = reshape(myInterventionIDs,testN,1);
+	combineRows = [mySimVars,mySimVarTypes,myInterventionIDs];
+	combineRows = cell2table(combineRows);
+	[nRows,~] = size(unique(combineRows,'rows'));
+	if nRows ~= testN
+		warning(['Not all model variables, variable types, intervention sets are unique in call to ',mfilename,'.  Exiting.'])
+		continueFlag = false;    
+	end
 end
      
 
 if continueFlag
-    for varCounter = 1 : length(myVars)
+    for varCounter = 1 : testN
         curVar = myVars{varCounter};
         myExpDataID = myExpDataIDs{varCounter};
         interventionID = myInterventionIDs{varCounter};

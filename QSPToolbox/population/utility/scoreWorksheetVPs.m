@@ -89,7 +89,7 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
 			[~,simValsSortIndices] = sort(curSimVals,'ascend');
 			
 			originalRange = originalValsSort(length(originalValsSort)) - originalValsSort(1);
-			[~, ~, SCall] = alignSamples(sort(curExpVals,'ascend'), sort(curSimVals,'ascend'));
+            [~, ~, SCall] = alignSamples(sort(curExpVals,'ascend'), sort(curSimVals,'ascend'));
 
 			curBandWidth = (max(SCall) - min(SCall))/10;
 			% Calculate VP scores

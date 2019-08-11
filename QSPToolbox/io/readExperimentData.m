@@ -95,10 +95,9 @@ if continueFlag
             % For reading experimental data, readtable is being used.
             % We may need to switch if the variable names are too long,
             % but there haven't been any issues so far.
-            addpath(filePath);
             warning('off','all');
             %unformatTable = tdfread([fileName,'.txt'],'\t');
-            unformatTable = readtable([noPathName,'.',fileTypeExt],'Delimiter','\t');
+            unformatTable = readtable([filePath,filesep,noPathName,'.',fileTypeExt],'Delimiter','\t');
             warning('on','all');
             if ~(strcmp(class(unformatTable),'table'))
                 warning(['Cannot read specified file in ',mfilename,'.'])

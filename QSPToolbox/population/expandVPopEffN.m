@@ -237,7 +237,7 @@ if continueFlag
             newVPop = evaluateGOF(newVPop);
             curVPopEffN = 1/sum(newVPop.pws.^2);
             if verbose
-                disp(['Previous best pvalue ',num2str(bestPVal),' with effN ',num2str(curEffN),'.'])
+                disp(['Previous best pvalue ',num2str(max(0,bestPVal)),' with effN ',num2str(curEffN),'.'])
                 disp(['Current solution effN ', num2str(curVPopEffN), ' with pvalue ',num2str(newVPop.gof),' in ',mfilename,'.'])
                 disp(['Current iteration ', num2str(myTestCounter),'.'])
             end
@@ -269,7 +269,7 @@ if continueFlag
                     restartVPop = evaluateGOF(restartVPop);				
                     restartVPopEffN = 1/sum(restartVPop.pws.^2);
                     if verbose
-                        disp(['Previous best pvalue ',num2str(bestPVal),' with effN ',num2str(curEffN),'.'])
+                        disp(['Previous best pvalue ',num2str(max(0,bestPVal)),' with effN ',num2str(curEffN),'.'])
                         disp(['Current restart solution effN ', num2str(restartVPopEffN), ' with pvalue ',num2str(restartVPop.gof),' in ',mfilename,'.'])
                         disp(['Current restart iteration ', num2str(restartCounter),'.'])
                     end
