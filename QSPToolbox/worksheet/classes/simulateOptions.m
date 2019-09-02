@@ -196,6 +196,48 @@ classdef simulateOptions
           %               options were successfully verified.
           %
           passCheck = false;
+		  
+		  % Remind the user if intervention definitions 
+		  % will overwrite axis parameters.
+		  % This is allowed and intended, but seems to
+		  % be something modelers sometimes overlook
+		  allInterventionIDs = getInterventionIDs(myWorksheet);
+		  nInterventions = length(allInterventionIDs);
+		  allAxisDefIDs = getAxisDefIDs(myWorksheet);
+		  nAxis = length(allAxisDefIDs);
+		  axisDefs = cell(0,4);
+		  addCounter = 0;
+		  for axisCounter = 1: nAxis
+			axisDef = myWorksheet.axisProps.axisDef{axisCounter};
+			nElements = length(axisDef.elementNames);
+			for elementCounter = 1 : nElements
+				addCounter = addCounter + 1;
+				axisDefs(addCounter,:) = {axisCounter,axisDef.id,axisDef.elementNames{elementCounter},axisDef.elementTypes{elementCounter}};
+			end
+		  end
+		  
+		  for interventionCounter = 1: nInterventions
+			curIntervention = myWorksheet.interventions{interventionCounter};
+			variantRows = find(ismember(curIntervention.definition(:,1),{'VARIANT'}));
+			nVariantRows = length(variantRows);
+			for rowCounter = 1:length(variantRows)
+				%curVariant = getvariant(myWorksheet.model,'antibody_ADCC___ipi_free_cellbinding')
+				curVariant = getvariant(myWorksheet.model,curIntervention.definition{variantRows(rowCounter),2});
+				[nElements, ~] = size(curVariant.Content);
+				for elementCounter = 1 : nElements
+					curRow = find(ismember(axisDefs(:,4),curVariant.Content{elementCounter}(1)) & ismember(axisDefs(:,3),curVariant.Content{elementCounter}(2)));
+					if length(curRow) > 0
+						disp(['Overwriting an axis specification for element ',axisDefs{curRow,3},', a ',axisDefs{curRow,4},'.  Element is in axis ',num2str(axisDefs{curRow,1}),', named ',axisDefs{curRow,2},' and being overwritten by intervention: ',allInterventionIDs{interventionCounter},', variant ',curVariant.Name,'.  This may be the intent, just issuing a notice in case not.'])
+                        % Additional quantiative information could be
+                        % returned, for example the default value
+                        % and bounds.
+                        % myWorksheet.axisProps.axisDef{axisDefs{curRow,1}}
+                        % curVariant.Content{elementCounter}
+					end
+				end
+			end
+		end
+		  
           if strcmp(obj.optimizeType,'none')
               if length(obj.optimizeAxisIDs) < 1
                   if length(obj.responseTypeID) < 1

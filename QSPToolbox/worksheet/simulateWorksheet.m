@@ -41,14 +41,14 @@ end
 if flagContinue
     % We will assume compiled models are still valid.
     if ~(isequal(class(myWorksheet.compiled.model),'SimBiology.export.Model'))
-        warning(['No exported model associated with myWorksheet prior to ',mfilename,', exporting and accelerating.'])
+        disp(['No exported model associated with myWorksheet prior to ',mfilename,', exporting and accelerating.'])
         myWorksheet = compileModel(myWorksheet,true);
         if ~(isequal(class(myWorksheet.compiled.model),'SimBiology.export.Model'))
              warning(['Unable to compile (export & accelerate) model associated with myWorksheet in ',mfilename,'.'])
              flagContinue = false;
         end
     elseif ~myWorksheet.compiled.model.isAccelerated
-        warning(['No accelerated model associated with myWorksheet prior to ',mfilename,', accelerating.'])        
+        disp(['No accelerated model associated with myWorksheet prior to ',mfilename,', accelerating.'])        
         myWorksheet = compileModel(myWorksheet,true);
         if ~(isequal(class(myWorksheet.compiled.model),'SimBiology.export.Model'))
              warning(['Unable to compile (export & accelerate) model associated with myWorksheet in ',mfilename,'.'])

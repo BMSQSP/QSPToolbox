@@ -87,7 +87,7 @@ if ~(failFlag)
     if ~(isequal(class(myWorksheet.compiled.model),'SimBiology.export.Model'))
         % We'll compile the model but we won't trigger acceleration until
         % absolute needed
-        warning(['No exported model associated with myWorksheet prior to ',mfilename,', exporting and getting elements but not accelerating.'])
+        disp(['No exported model associated with myWorksheet prior to ',mfilename,', exporting and getting elements but not accelerating.'])
         myWorksheet = compileModel(myWorksheet, false);
         if ~(isequal(class(myWorksheet.compiled.model),'SimBiology.export.Model'))
             warning(['Unable to compile model associated with myWorksheet in ',mfilename,'.'])

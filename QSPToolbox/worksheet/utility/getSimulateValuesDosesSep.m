@@ -159,7 +159,7 @@ if flagContinue
     updateNames = myWorksheet.compiled.elements(updateIndices,1);  
     
     if length(fixIndices) > 0
-        warning(['Note simulation definitions are not all varying the same parameters in call to ', mfilename,'.  This can happen with VPs that have different variant types, or if interventions do not use the same variant types.  Patching with base model values as needed.'])
+        disp(['Note: simulation definitions are not all varying the same parameters in call to ', mfilename,'.  This can happen with VPs that have different variant types, or if interventions do not use the same variant types.  There are cases where this is OK, but if defining all model susbystem parameters with VP and intervention variants it generally will not occur.  Proceeding by using the base model values as needed.'])
         nanInd = isnan(updateValues);
         baseValuesRep = baseValues(updateIndices);
         baseValuesRep = reshape(baseValuesRep,1,1,length(baseValuesRep));
