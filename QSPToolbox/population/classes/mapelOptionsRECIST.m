@@ -150,7 +150,7 @@ classdef mapelOptionsRECIST
           if mod(myNBins,1) == 0
               obj.nBins = myNBins;
           else
-              error(['Invalid nBins in ',milename,'.'])
+              error(['Invalid nBins in ',mfilename,'.'])
           end
       end      
 
@@ -162,7 +162,7 @@ classdef mapelOptionsRECIST
           if (myRandomStart >= 0)
                obj.randomStart = myRandomStart;
           else
-               error(['Property randomStart in ',milename,' must be > 0.'])
+               error(['Property randomStart in ',mfilename,' must be > 0.'])
           end
       end  
       
@@ -170,7 +170,7 @@ classdef mapelOptionsRECIST
           if (myNIters > 0) && (mod(myNIters,1) == 0)
                obj.nIters = myNIters;
           else
-               error(['Property nIters in ',milename,' must be a positive integer.'])
+               error(['Property nIters in ',mfilename,' must be a positive integer.'])
           end
       end            
 
@@ -178,7 +178,7 @@ classdef mapelOptionsRECIST
           if islogical(myEqualBinBreaks)
                obj.equalBinBreaks = myEqualBinBreaks;
           else
-               error(['Property equalBinBreaks in ',milename,' must be true or false.'])
+               error(['Property equalBinBreaks in ',mfilename,' must be true or false.'])
           end
       end  
       
@@ -186,7 +186,7 @@ classdef mapelOptionsRECIST
           if (myTol > 0)
                obj.tol = myTol;
           else
-               error(['Property tol in ',milename,' must be > 0.'])
+               error(['Property tol in ',mfilename,' must be > 0.'])
           end
       end      
        
@@ -194,7 +194,7 @@ classdef mapelOptionsRECIST
           if (mySpreadOut >= 0)
                obj.spreadOut = mySpreadOut;
           else
-               error(['Property spreadOut in ',milename,' must be >= 0.'])
+               error(['Property spreadOut in ',mfilename,' must be >= 0.'])
           end
       end  
 	  
@@ -202,7 +202,7 @@ classdef mapelOptionsRECIST
           if (myMinIndPVal >= 0) & (myMinIndPVal <= 1)
                obj.minIndPVal = myMinIndPVal;
           else
-               error(['Property minIndPVal in ',milename,' must be between 0 and 1.'])
+               error(['Property minIndPVal in ',mfilename,' must be between 0 and 1.'])
           end
       end 			  
 
@@ -210,7 +210,7 @@ classdef mapelOptionsRECIST
           if islogical(myUseEffN)
                obj.useEffN = myUseEffN;
           else
-               error(['Property useEffN in ',milename,' must be logical.'])
+               error(['Property useEffN in ',mfilename,' must be logical.'])
           end
       end  
 
@@ -218,7 +218,7 @@ classdef mapelOptionsRECIST
           if islogical(myFlag)
                obj.exactFlag = myFlag;
           else
-               error(['Property exactFlag in ',milename,' must be logical.'])
+               error(['Property exactFlag in ',mfilename,' must be logical.'])
           end
       end   
       
@@ -230,7 +230,7 @@ classdef mapelOptionsRECIST
           if sum(ismember({'pso','ga','simplex'},lower(myOptimizeType))) == 1
               obj.optimizeType = lower(myOptimizeType);
           else
-              error(['Property optimizeType in ',milename,' must be "ga," "pso," or "simplex."'])
+              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," or "simplex."'])
           end
       end        
       

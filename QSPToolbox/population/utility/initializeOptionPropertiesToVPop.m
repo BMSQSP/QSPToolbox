@@ -34,13 +34,12 @@ myVPop.expData = myMapelOptions.expData;
 myVPop.mnSDTable = myMapelOptions.mnSDTable;
 myVPop.binTable = myMapelOptions.binTable;
 myVPop.distTable = myMapelOptions.distTable; 
-% Multivariate only implemented for VPopRECIST so far
-% see below
+myVPop.distTable2D = myMapelOptions.distTable2D;
+myVPop.corTable = myMapelOptions.corTable;
 myVPop.minEffN = myMapelOptions.minEffN;
 
 if isa(myVPop,'VPopRECIST')
-        myVPop.distTable2D = myMapelOptions.distTable2D;
-		myVPop.corTable = myMapelOptions.corTable;
+
 		myVPop.brTableRECIST = myMapelOptions.brTableRECIST;
 		myVPop.rTableRECIST = myMapelOptions.rTableRECIST;        
         myVPop.relSLDvar = myMapelOptions.relSLDvar;

@@ -421,7 +421,11 @@ methods
               case 'gofBin'
                   value = obj.gofBin;   
               case 'gofDist'
-                  value = obj.gofDist;                				  
+                  value = obj.gofDist;   
+              case 'gofDist2D'
+                  value = obj.gofDist2D;   
+              case 'gofCor'
+                  value = obj.gofCor;   
               case 'gofBR'
                   value = obj.gofBR;   
               case 'gofR'
@@ -559,6 +563,8 @@ methods
           %  mnSDTable
           %  binTable
 		  %  distTable
+		  %  distTable2D
+		  %  corTable		  
           %  brTableRECIST
           %  rTableRECIST          
           %
@@ -567,6 +573,8 @@ methods
           %  gofSD
           %  gofBin
 		  %  gofDist
+		  %  gofDist2D
+		  %  gofCor		  
           %  gofBR
           %  gofR          
           %  gof
@@ -646,6 +654,46 @@ methods
 				myDistTable{1 : nRows,nanifyVars} = {nan};               
            end
            obj.distTable = myDistTable;   
+		   
+           myTable = obj.distTable2D;
+		   if ~isempty(myTable)
+			   [nRows, nCols] = size(myTable);
+			   if nRows > 0
+					myNanStrings = {'predN'};
+					varNames = myTable.Properties.VariableNames;
+					myPos = find(ismember(varNames,myNanStrings));
+					nanifyVars = varNames(myPos);
+					for varCounter = 1 : length(nanifyVars)
+						myTable.(nanifyVars{varCounter}) = nan(nRows,1);
+					end
+					myNanStrings = {'predProbs'};
+					varNames = myTable.Properties.VariableNames;
+					myPos = find(ismember(varNames,myNanStrings));
+					nanifyVars = varNames(myPos);
+					myTable{1 : nRows,nanifyVars} = {nan};               
+			   end
+			   obj.distTable2D = myTable; 
+		   end	
+
+           myTable = obj.corTable;
+		   if ~isempty(myTable)
+			   [nRows, nCols] = size(myTable);
+			   if nRows > 0
+					myNanStrings = {'predN','predCor'};
+					varNames = myTable.Properties.VariableNames;
+					myPos = find(ismember(varNames,myNanStrings));
+					nanifyVars = varNames(myPos);
+					for varCounter = 1 : length(nanifyVars)
+						myTable.(nanifyVars{varCounter}) = nan(nRows,1);
+					end
+					myNanStrings = {'predProbs'};
+					varNames = myTable.Properties.VariableNames;
+					myPos = find(ismember(varNames,myNanStrings));
+					nanifyVars = varNames(myPos);
+					myTable{1 : nRows,nanifyVars} = {nan};               
+			   end
+			   obj.corTable = myTable; 
+		   end			   
            
            myBRTable = obj.brTableRECIST;
            [nRows, nCols] = size(myBRTable);
@@ -677,6 +725,8 @@ methods
            obj.gofSD = '';
            obj.gofBin = '';
 		   obj.gofDist = '';	
+		   obj.gofDist2D = '';		   
+		   obj.gofCor = '';		   
 		   obj.gofBR = '';				
 		   obj.gofR = '';				           
            obj.gof = '';
@@ -1218,7 +1268,8 @@ methods
           %                distTable
           %                distTable2D
           %                corTable		  
-		  %				   brTableRECIST		  
+		  %				   brTableRECIST
+		  %				   rTableRECIST		  
           %                simData
           %
           % RETURNS
@@ -1227,8 +1278,10 @@ methods
           %                mnSDTable
           %                binTable
           %                distTable
+          %                distTable2D
+          %                corTable	
 		  %				   brTableRECIST		  
-
+		  %				   rTableRECIST
           
           myMnSdData = obj.mnSDTable;
           myBinTable = obj.binTable;
@@ -1392,7 +1445,7 @@ methods
               myDistTable.('predN') = (assignN);
 			  myDistTable.('predProbs') = (assignPWs);
               obj.distTable = myDistTable;														
-          end 		  
+         end 		  
          if ~isempty(myDistTable2D)
 			  distRowsTarget1 = obj.simData.distRows2D(:,1);
 			  distRowsTarget2 = obj.simData.distRows2D(:,2);
@@ -1427,7 +1480,7 @@ methods
               myDistTable2D.('predN') = (assignN);
 			  myDistTable2D.('predProbs') = (assignPWs);
               obj.distTable2D = myDistTable2D;														
-          end 		
+         end 		
          if ~isempty(myCorTable)
 			  corRowsTarget1 = obj.simData.corRows(:,1);
 			  corRowsTarget2 = obj.simData.corRows(:,2);

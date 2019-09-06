@@ -77,7 +77,7 @@ if continueFlag
                 myVPop.coeffsDist = single(pdist2(myVPop.coeffsTable',myVPop.coeffsTable'));
             end
         end
-    else %'VPopRECISTnoBin')
+    else %'VPopRECISTnoBin'
         if ~isa(myWorksheet,'VPopRECISTnoBin')
             myVPop = myVPop.getSimData(myWorksheet);
             myVPop = myVPop.assignCoeffs(myWorksheet);
@@ -102,10 +102,10 @@ if continueFlag
     % rather than during execution to reduce table assignments and
     % recalculating the 1D mesh.
     myVPop = myVPop.addDistTableSimVals();
-    if ~isa(myVPop,'VPop')
-        myVPop = myVPop.addDistTable2DSimVals();
-		myVPop = myVPop.addCorTableSimVals();
-    end	
+    
+    myVPop = myVPop.addDistTable2DSimVals();
+	myVPop = myVPop.addCorTableSimVals();
+    	
     
     if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPop')
         % We adopt the index table convention from the original MAPEL paper

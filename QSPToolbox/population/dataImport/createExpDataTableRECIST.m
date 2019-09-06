@@ -193,26 +193,16 @@ if continueFlag
         originalRowIndices = find(expDataTime == curTime);
         allValues = (expDataVar(originalRowIndices));
 		allIDs = (expDataPatientID(originalRowIndices));
+        % Enforce converting any numeric IDs to strings.
+        if isnumeric(allIDs)
+            [nIDs, ~] = size(allIDs);
+            allIDsold = allIDs;
+            allIDs=cell(nIDs,1);
+            for idCounter = 1 : nIDs
+                allIDs{idCounter} = num2str(allIDsold(idCounter));
+            end
+        end        
         curN = length(originalRowIndices);
-        %if curN > existingN
-        %    newNames = cell(1,0);
-        %    for newNCounter = (existingN + 1) : curN
-        %        newNames = [newNames,['expVal',num2str(newNCounter)]];
-        %    end
-        %    [curNRows, curNCols] = size(myExpDataTable);
-        %    appendTable = nan(curNRows,curN-existingN);
-        %    appendTable = array2table(appendTable,'VariableNames',newNames);
-        %    myExpDataTable = [myExpDataTable, appendTable];
-        %    existingN = curN;
-        %    curRow = [{curTime, myInterventionID, elementID, elementType, expDataID, expTimeVarID, expVarID,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar},num2cell(transpose(allValues))];
-        %elseif curN < existingN
-        %    paddingValues = nan(1,existingN-curN);
-        %    curRow = [{curTime, myInterventionID, elementID, elementType, expDataID, expTimeVarID, expVarID,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar},num2cell(transpose(allValues)),num2cell(paddingValues)];
-        %else
-        %    curRow = [{curTime, myInterventionID, elementID, elementType, expDataID, expTimeVarID, expVarID,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar},num2cell(transpose(allValues))];
-        %end
-		
-		% Find the index of previous IDs that are in the new list
 		
 		% Find the indices for pre-existing Patient IDs in the current row
 		% TODO: expect this is slow, try to speed up

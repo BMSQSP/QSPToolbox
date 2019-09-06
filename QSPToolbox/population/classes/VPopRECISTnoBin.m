@@ -372,6 +372,10 @@ methods
                   value = obj.gofBin;   
               case 'gofDist'
                   value = obj.gofDist;                				  
+              case 'gofDist2D'
+                  value = obj.gofDist2D;   
+              case 'gofCor'
+                  value = obj.gofCor; 
               case 'gofBR'
                   value = obj.gofBR;   
               case 'gofR'
@@ -983,6 +987,7 @@ methods
           %                distTable2D
           %                corTable		  
 		  %				   brTableRECIST		  
+		  %				   rTableRECIST		
           %                simData
           %
           % RETURNS
@@ -991,8 +996,10 @@ methods
           %                mnSDTable
           %                binTable
           %                distTable
+          %                distTable2D
+          %                corTable	
 		  %				   brTableRECIST		  
-
+		  %				   rTableRECIST
           myMnSdData = obj.mnSDTable;
           myBinTable = obj.binTable;
           myDistTable = obj.distTable; 
@@ -1152,7 +1159,7 @@ methods
               myDistTable.('predN') = (assignN);
 			  myDistTable.('predProbs') = (assignPWs);
               obj.distTable = myDistTable;														
-          end 		
+         end 		
 
          if ~isempty(myDistTable2D)
 			  distRowsTarget1 = obj.simData.distRows2D(:,1);
@@ -1188,7 +1195,7 @@ methods
               myDistTable2D.('predN') = (assignN);
 			  myDistTable2D.('predProbs') = (assignPWs);
               obj.distTable2D = myDistTable2D;														
-          end 		  		  
+         end 		  		  
          if ~isempty(myCorTable)
 			  corRowsTarget1 = obj.simData.corRows(:,1);
 			  corRowsTarget2 = obj.simData.corRows(:,2);

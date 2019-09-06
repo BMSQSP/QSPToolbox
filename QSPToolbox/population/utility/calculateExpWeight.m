@@ -23,24 +23,30 @@ function w = calculateExpWeight(expN, expSTD, dataGroupDescription, simN)
 % points where VPs in sparser regions of the distributions relative to the data 
 % are more highly weighted which could help to weight to where it is needed
 % without overly focusing on a few VPs
-if strcmp(dataGroupDescription (1:length('binTable'), 'binTable'))
+if strcmp(dataGroupDescription(1:length('binTable')), 'binTable')
                 w = sqrt((expN*simN)/(expN+simN));
  
-elseif strcmp(dataGroupDescription (1:length('distTable'), 'distTable'))
+elseif strcmp(dataGroupDescription(1:length('distTable')), 'distTable')
                 w = sqrt((expN*simN)/(expN+simN));
  
-elseif strcmp(dataGroupDescription (1:length('brTableRECIST'), 'brTableRECIST'))
+elseif strcmp(dataGroupDescription(1:length('brTableRECIST')), 'brTableRECIST')
                 w = sqrt((expN*simN)/(expN+simN));
  
-elseif strcmp(dataGroupDescription (1:length('TableRECIST'), 'rTableRECIST'))
+elseif strcmp(dataGroupDescription(1:length('rTableRECIST')), 'rTableRECIST')
                 w = sqrt((expN*simN)/(expN+simN));
  
-elseif strcmp(dataGroupDescription (1:length('mnSDTable'), 'mnSDTable')) && strcmp(dataGroupDescription (end-length('mean')+1:end, 'mean'))
+elseif strcmp(dataGroupDescription(1:length('mnSDTable')), 'mnSDTable') && strcmp(dataGroupDescription(end-length('mean')+1:end), 'mean')
                 w = 1/(expSTD*sqrt(1/expN+1/simN));
  
-elseif strcmp(dataGroupDescription (1:length('mnSDTable'), 'mnSDTable')) && strcmp(dataGroupDescription (end-length('variance')+1:end, 'variance'))
+elseif strcmp(dataGroupDescription(1:length('mnSDTable')), 'mnSDTable') && strcmp(dataGroupDescription(end-length('variance')+1:end), 'variance')
                 w = 1/(expSTD*sqrt(1/expN+1/simN));
- 
+elseif strcmp(dataGroupDescription(1:length('corTable')), 'corTable')
+    if expN>3 && simN>3
+        w = 1/sqrt(1/(expN-3)+1/(simN-3));
+    else
+        warning(['Either expN or simN is less than or equal to 3, modify weight calculation in ' mfilename ' to avoid NaN'])
+        w = 1/sqrt(1/(expN)+1/(simN));
+    end
 else
                 error('data group not supported');
 end

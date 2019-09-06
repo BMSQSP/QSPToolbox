@@ -41,7 +41,7 @@ if nAdd >= 1
    myOptimOptions.fractionVPsPerBaggingIteration=.5;
    myOptimOptions.method = "bagging";
    simN = 1;
-   optimOptions.expWeightFuncHandle = @(expN, expSTD, dataGroupDescription) calculateExpWeight(expN, expSTD, dataGroupDescription, simN);
+   myOptimOptions.expWeightFuncHandle = @(expN, expSTD, dataGroupDescription) calculateExpWeight(expN, expSTD, dataGroupDescription, simN);
    linearCalibrationObject = LinearCalibration(testVPop,'optimOptions',myOptimOptions);
    try
       linearCalibrationObject = linearCalibrationObject.run('closeParallelPoolWhenFinished',false);
@@ -62,7 +62,7 @@ if nAdd >= 1
 end
 if nAdd >= 1
    simN = 10;
-   optimOptions.expWeightFuncHandle = @(expN, expSTD, dataGroupDescription) calculateExpWeight(expN, expSTD, dataGroupDescription, simN);
+   myOptimOptions.expWeightFuncHandle = @(expN, expSTD, dataGroupDescription) calculateExpWeight(expN, expSTD, dataGroupDescription, simN);
    linearCalibrationObject = LinearCalibration(testVPop,'optimOptions',myOptimOptions);
    try
       linearCalibrationObject = linearCalibrationObject.run('closeParallelPoolWhenFinished',false);
@@ -83,7 +83,7 @@ if nAdd >= 1
 end
 if nAdd >= 1
    simN = 100;
-   optimOptions.expWeightFuncHandle = @(expN, expSTD, dataGroupDescription) calculateExpWeight(expN, expSTD, dataGroupDescription, simN);
+   myOptimOptions.expWeightFuncHandle = @(expN, expSTD, dataGroupDescription) calculateExpWeight(expN, expSTD, dataGroupDescription, simN);
    linearCalibrationObject = LinearCalibration(testVPop,'optimOptions',myOptimOptions);
    try
       linearCalibrationObject = linearCalibrationObject.run('closeParallelPoolWhenFinished',false);
@@ -104,7 +104,7 @@ if nAdd >= 1
 end
 if nAdd >= 1
    simN = 1000;
-   optimOptions.expWeightFuncHandle = @(expN, expSTD, dataGroupDescription) calculateExpWeight(expN, expSTD, dataGroupDescription, simN);
+   myOptimOptions.expWeightFuncHandle = @(expN, expSTD, dataGroupDescription) calculateExpWeight(expN, expSTD, dataGroupDescription, simN);
    linearCalibrationObject = LinearCalibration(testVPop,'optimOptions',myOptimOptions);
    try
       linearCalibrationObject = linearCalibrationObject.run('closeParallelPoolWhenFinished',false);

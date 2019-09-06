@@ -18,7 +18,7 @@ myMapelOptions = mapelOptions;
 
 % First we need to calculate the summary statistics.  In the published
 % MAPEL version, we matched mean, standard deviation, and binned data.
-myMapelOptions.expData = convertResponseTypeToExpDataTable(myWorksheet, 'N87_agx');
+myMapelOptions.expData = convertResponseTypeToExpDataTable(myWorksheet, 'N87_agx', 'USUBJID');
 myMapelOptions.mnSDTable = convertExpDataToMnSDTable(myMapelOptions);
 % Note that this will automatically generate the bin table for now.
 % Sometimes, we may want to create our own bin tables rather than using the

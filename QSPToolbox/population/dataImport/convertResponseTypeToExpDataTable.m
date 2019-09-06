@@ -1,21 +1,27 @@
-function myExpDataTable = convertMapelOptionsToExpDataTable(myWorksheet, myResponseTypeID)
+function myExpDataTable = convertMapelOptionsToExpDataTable(myWorksheet, myResponseTypeID, patientIDVar)
 % This function takes experimental data embedded in a worksheet and
 % converts it to a data table format for use in MAPEL, guided by a
 % response type
 %
 % ARGUMENTS:
-% myWorksheet
-% myResponseTypeID
+%  myWorksheet:       A worksheet with the experimental data and response
+%                      type attached
+%  myResponseTypeID:  The response type to gather experimental data for
+%  patientIDVar:      The patient ID variable.  This must be specified,
+%                      and enables calibrating multivariate relationships
+%                      later.  Note that in the current version, the same
+%                      ID variable name must be used in all experimental
+%                      datasets referenced.
 %
 % RETURNS
 % myExpDataTable
 
 continueFlag = true;
-if nargin > 2
+if nargin > 3
     continueFlag = false;
-    warning(['Too many input arguments for ',mfilename,'. Should provide: myWorksheet, myResponseTypeID.'])
+    warning(['Too many input arguments for ',mfilename,'. Should provide: myWorksheet, myResponseTypeID, patientIDVar.'])
     continueFlag = false;
-elseif nargin > 1
+elseif nargin > 2
     continueFlag = true;
 else
     warning(['Insufficient input arguments for ',mfilename,'. Should provide: myWorksheet, myResponseTypeID.'])
@@ -56,9 +62,9 @@ if continueFlag
         myExpTimeVarID = myRTE.expDataTimeVar;
         myExpVarID = myRTE.expDataYVar;
         if responseTypeElementCounter == 1
-            myExpDataTable = createExpDataTable(myWorksheet, myInterventionID, myElementID, myElementType, myExpDataID, myExpTimeVarID, myExpVarID);
+            myExpDataTable = createExpDataTable(myWorksheet, myInterventionID, myElementID, myElementType, myExpDataID, myExpTimeVarID, myExpVarID, patientIDVar);
         else
-            myExpDataTable = createExpDataTable(myWorksheet, myInterventionID, myElementID, myElementType, myExpDataID, myExpTimeVarID, myExpVarID, myExpDataTable);
+            myExpDataTable = createExpDataTable(myWorksheet, myInterventionID, myElementID, myElementType, myExpDataID, myExpTimeVarID, myExpVarID, patientIDVar, myExpDataTable);
         end
     end
 else

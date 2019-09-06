@@ -39,7 +39,7 @@ end
 if continueFlag
     [nRows, ~] = size(myVPop.expData);
     if isa(myVPop,'VPop') || isa(myVPop,'mapelOptions')
-        nDataHeaderCols = 7;
+        nDataHeaderCols = 8;
     else
         nDataHeaderCols = 11;
     end

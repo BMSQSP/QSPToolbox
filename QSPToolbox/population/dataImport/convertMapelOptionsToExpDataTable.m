@@ -6,8 +6,7 @@ function myExpDataTable = convertMapelOptionsToExpDataTable(myWorksheet, myMapel
 % ARGUMENTS:
 % myWorksheet:           a worksheet containing the data
 % myMapelOptions
-% patientIDVar:          variable with the patient IDs.  Currently only
-%                        supported with RECIST calibrations
+% patientIDVar:          variable with the patient IDs
 %
 % RETURNS
 % myExpDataTable
@@ -15,13 +14,11 @@ function myExpDataTable = convertMapelOptionsToExpDataTable(myWorksheet, myMapel
 continueFlag = true;
 if nargin > 3
     continueFlag = false;
-    warning(['Too many input arguments for ',mfilename,'. Should provide: myWorksheet, myMapelOptions, and patientIDVar if RECIST-based.'])
+    warning(['Too many input arguments for ',mfilename,'. Should provide: myWorksheet, myMapelOptions, and patientIDVar.'])
     continueFlag = false;
-elseif ((nargin < 2) || ((nargin < 3)&&(isa(myMapelOptions,'mapelOptions'))))
-    warning(['Insufficient input arguments for ',mfilename,'. Should provide: myWorksheet, myMapelOptions, and patientIDVar if RECIST-based.'])
-    continueFlag = false;
-else
-    continueFlag = true;    
+elseif nargin < 3
+    warning(['Insufficient input arguments for ',mfilename,'. Should provide: myWorksheet, myMapelOptions, and patientIDVar.'])
+    continueFlag = false;   
 end
 
 if continueFlag
@@ -37,7 +34,7 @@ if continueFlag
     if isa(myMapelOptions, 'mapelOptions')
 		%not yet supported
         %lookupRows  = cell2table(cell(0,7), 'VariableNames', {'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID', 'PatientIDVar'});
-		lookupRows  = cell2table(cell(0,6), 'VariableNames', {'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID'});
+		lookupRows  = cell2table(cell(0,7), 'VariableNames', {'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID', 'PatientIDVar'});
     else
         lookupRows  = cell2table(cell(0,10), 'VariableNames', {'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID', 'PatientIDVar', 'TRTVar', 'BRSCOREVar', 'RSCOREVar'});
     end
@@ -46,7 +43,7 @@ if continueFlag
         curTable = get(myMapelOptions,tablesToCheck{tableCounter});
         if isa(myMapelOptions, 'mapelOptions')
             %lookupRows = [lookupRows;curTable(:,{'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID', 'PatientIDVar'})];
-			lookupRows = [lookupRows;curTable(:,{'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID'})];
+			lookupRows = [lookupRows;curTable(:,{'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID', 'PatientIDVar'})];
         else
             lookupRows = [lookupRows;curTable(:,{'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID', 'PatientIDVar', 'TRTVar', 'BRSCOREVar', 'RSCOREVar'})];
         end
@@ -57,14 +54,14 @@ if continueFlag
         if rowCounter == 1
             if isa(myMapelOptions, 'mapelOptions')
                 %myExpDataTable = createExpDataTable(myWorksheet, lookupRows{rowCounter,'interventionID'}{1}, lookupRows{rowCounter,'elementID'}{1}, lookupRows{rowCounter,'elementType'}{1}, lookupRows{rowCounter,'expDataID'}{1}, lookupRows{rowCounter,'expTimeVarID'}{1}, lookupRows{rowCounter,'expVarID'}{1}, lookupRows{rowCounter,'PatientIDVar'}{1});
-				myExpDataTable = createExpDataTable(myWorksheet, lookupRows{rowCounter,'interventionID'}{1}, lookupRows{rowCounter,'elementID'}{1}, lookupRows{rowCounter,'elementType'}{1}, lookupRows{rowCounter,'expDataID'}{1}, lookupRows{rowCounter,'expTimeVarID'}{1}, lookupRows{rowCounter,'expVarID'}{1});
+				myExpDataTable = createExpDataTable(myWorksheet, lookupRows{rowCounter,'interventionID'}{1}, lookupRows{rowCounter,'elementID'}{1}, lookupRows{rowCounter,'elementType'}{1}, lookupRows{rowCounter,'expDataID'}{1}, lookupRows{rowCounter,'expTimeVarID'}{1}, lookupRows{rowCounter,'expVarID'}{1}, lookupRows{rowCounter,'PatientIDVar'}{1});
             else
                 myExpDataTable = createExpDataTableRECIST(myWorksheet, lookupRows{rowCounter,'interventionID'}{1}, lookupRows{rowCounter,'elementID'}{1}, lookupRows{rowCounter,'elementType'}{1}, lookupRows{rowCounter,'expDataID'}{1}, lookupRows{rowCounter,'expTimeVarID'}{1}, lookupRows{rowCounter,'expVarID'}{1}, lookupRows{rowCounter,'PatientIDVar'}{1}, lookupRows{rowCounter,'TRTVar'}, lookupRows{rowCounter,'BRSCOREVar'}{1}, lookupRows{rowCounter,'RSCOREVar'}{1});
             end
         else
             if isa(myMapelOptions, 'mapelOptions')
                 %myExpDataTable = createExpDataTable(myWorksheet, lookupRows{rowCounter,'interventionID'}{1}, lookupRows{rowCounter,'elementID'}{1}, lookupRows{rowCounter,'elementType'}{1}, lookupRows{rowCounter,'expDataID'}{1}, lookupRows{rowCounter,'expTimeVarID'}{1}, lookupRows{rowCounter,'expVarID'}{1}, lookupRows{rowCounter,'PatientIDVar'}{1}, myExpDataTable);
-				myExpDataTable = createExpDataTable(myWorksheet, lookupRows{rowCounter,'interventionID'}{1}, lookupRows{rowCounter,'elementID'}{1}, lookupRows{rowCounter,'elementType'}{1}, lookupRows{rowCounter,'expDataID'}{1}, lookupRows{rowCounter,'expTimeVarID'}{1}, lookupRows{rowCounter,'expVarID'}{1}, myExpDataTable);
+				myExpDataTable = createExpDataTable(myWorksheet, lookupRows{rowCounter,'interventionID'}{1}, lookupRows{rowCounter,'elementID'}{1}, lookupRows{rowCounter,'elementType'}{1}, lookupRows{rowCounter,'expDataID'}{1}, lookupRows{rowCounter,'expTimeVarID'}{1}, lookupRows{rowCounter,'expVarID'}{1}, lookupRows{rowCounter,'PatientIDVar'}{1}, myExpDataTable);
             else
                 myExpDataTable = createExpDataTableRECIST(myWorksheet, lookupRows{rowCounter,'interventionID'}{1}, lookupRows{rowCounter,'elementID'}{1}, lookupRows{rowCounter,'elementType'}{1}, lookupRows{rowCounter,'expDataID'}{1}, lookupRows{rowCounter,'expTimeVarID'}{1}, lookupRows{rowCounter,'expVarID'}{1}, lookupRows{rowCounter,'PatientIDVar'}{1}, lookupRows{rowCounter,'TRTVar'}, lookupRows{rowCounter,'BRSCOREVar'}{1}, lookupRows{rowCounter,'RSCOREVar'}{1}, myExpDataTable);
             end

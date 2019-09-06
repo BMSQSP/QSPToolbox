@@ -31,6 +31,7 @@ classdef LinearCalibrationOptions
 %  brTableRECISTGroupWeight:			(scalar) Weight for data in myVPop.brTableRECIST
 %  rTableRECISTGroupWeight: 			(scalar) Weight for data in myVPop.rTableRECIST
 %  mnSDTableGroupWeight:				(scalar) Weight for data in myVPop.mnSDTable
+%  corTableGroupWeight:                 (scalar) Weight for data in myVPop.corTable
 %										GroupWeights Specify fitting weights for each of the
 % 										different types of data. Default is to set all of the weights equal to 1,
 % 										so that all of the different data groups are weighed equally.
@@ -94,6 +95,7 @@ classdef LinearCalibrationOptions
 	  brTableRECISTGroupWeight = 1
 	  rTableRECISTGroupWeight = 1
       mnSDTableGroupWeight = 1
+      corTableGroupWeight = 1
 	  priorPrevalenceWeightAssumption = "uniform"
 	  responseValTransformation = "relative";
       maxPrevalenceWeight = Inf
@@ -156,6 +158,20 @@ classdef LinearCalibrationOptions
             error(['Invalid rTableRECISTGroupWeight value in ',mfilename,', expecting a numeric value'])
           end
       end	
+      function obj = set.mnSDTableGroupWeight(obj,myValue)
+          if isnumeric(myValue) 
+              obj.mnSDTableGroupWeight = myValue;
+          else
+            error(['Invalid mnSDTableGroupWeight value in ',mfilename,', expecting a numeric value'])
+          end
+      end
+      function obj = set.corTableGroupWeight(obj,myValue)
+          if isnumeric(myValue) 
+              obj.corTableGroupWeight = myValue;
+          else
+            error(['Invalid corTableGroupWeight value in ',mfilename,', expecting a numeric value'])
+          end
+      end
       function obj = set.priorPrevalenceWeightAssumption(obj,myValue)
           if (strcmpi(myValue,"uniform") ||...
                strcmpi(myValue,"specified") ||...
@@ -220,6 +236,8 @@ classdef LinearCalibrationOptions
                   value = obj.rTableRECISTGroupWeight;
               case 'mnSDTableGroupWeight'
                   value = obj.mnSDTableGroupWeight;
+              case 'corTableGroupWeight'
+                  value = obj.corTableGroupWeight;
               case 'priorPrevalenceWeightAssumption'
                   value = obj.priorPrevalenceWeightAssumption;
               case 'responseValTransformation'

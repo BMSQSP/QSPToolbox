@@ -80,9 +80,9 @@ if continueFlag
     myMapelOptions.randomStart = myRandomStart;
     myMapelOptions.intSeed = myVPop.intSeed;
 	myMapelOptions.useEffN = myVPop.useEffN;
-	if strcmp(class(myVPop),'VPopRECIST') | strcmp(class(myVPop),'VPopRECISTnoBin')
-        myMapelOptions.distTable2D = myVPop.distTable2D;
-		myMapelOptions.corTable = myVPop.corTable;
+    myMapelOptions.distTable2D = myVPop.distTable2D;
+	myMapelOptions.corTable = myVPop.corTable;
+	if strcmp(class(myVPop),'VPopRECIST') | strcmp(class(myVPop),'VPopRECISTnoBin')		
 		myMapelOptions.brTableRECIST = myVPop.brTableRECIST;
 		myMapelOptions.rTableRECIST = myVPop.rTableRECIST;        
         myMapelOptions.relSLDvar = myVPop.relSLDvar;

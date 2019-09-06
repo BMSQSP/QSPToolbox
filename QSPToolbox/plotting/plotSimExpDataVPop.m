@@ -91,7 +91,7 @@ if (flagContinue)
         simRow = rowMap(rowCounter,1);
         expRow = rowMap(rowCounter,2);
         curVPData = myVPop.simData.Data(simRow, :);
-        curExpData = myVPop.expData{expRow, 8:end};
+        curExpData = myVPop.expData{expRow, 9:end};
         curExpData = curExpData(~isnan(curExpData));
         simToPlot(rowCounter,:) = curVPData;
         expToPlot{rowCounter} = curExpData;

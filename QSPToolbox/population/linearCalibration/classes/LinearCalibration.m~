@@ -864,124 +864,120 @@ methods (Hidden = true)
         dataConsolidated = [];
 
         % Extract data for 'binTable'
-        if istable(Obj.InputVPop.binTable)
-            for iBinTableRow = 1:height(Obj.InputVPop.binTable)
-            % Loop through rows in table
+        for iBinTableRow = 1:height(Obj.InputVPop.binTable)
+        % Loop through rows in table
 
-                % Determine the index of the row in the simData table that corresponds
-                % to this particular 'binTable' row:
-                iMaskSimDataRow = ...
-                    simDataRowInfoTbl.time == Obj.InputVPop.binTable.time(iBinTableRow) & ...
-                    strcmp(simDataRowInfoTbl.interventionID,Obj.InputVPop.binTable.interventionID{iBinTableRow}) & ...
-                    strcmp(simDataRowInfoTbl.elementID,Obj.InputVPop.binTable.elementID{iBinTableRow}) & ...
-                    strcmp(simDataRowInfoTbl.elementType,Obj.InputVPop.binTable.elementType{iBinTableRow}) & ...
-                    strcmp(simDataRowInfoTbl.expVarID,Obj.InputVPop.binTable.expVarID{iBinTableRow});
+            % Determine the index of the row in the simData table that corresponds
+            % to this particular 'binTable' row:
+            iMaskSimDataRow = ...
+                simDataRowInfoTbl.time == Obj.InputVPop.binTable.time(iBinTableRow) & ...
+                strcmp(simDataRowInfoTbl.interventionID,Obj.InputVPop.binTable.interventionID{iBinTableRow}) & ...
+                strcmp(simDataRowInfoTbl.elementID,Obj.InputVPop.binTable.elementID{iBinTableRow}) & ...
+                strcmp(simDataRowInfoTbl.elementType,Obj.InputVPop.binTable.elementType{iBinTableRow}) & ...
+                strcmp(simDataRowInfoTbl.expVarID,Obj.InputVPop.binTable.expVarID{iBinTableRow});
 
-                % extract bin edges
-                binTableVariableNames = Obj.InputVPop.binTable.Properties.VariableNames;
-                binEdges = -Inf;
-                iBinEdge = 1;
-                while true
-                    variableNameParticular = ['binEdge' num2str(iBinEdge)];
-                    variableIndex = strcmp(binTableVariableNames,variableNameParticular);
-                    if ~any(variableIndex)
-                        break;
-                    end
-                    binEdges = [binEdges Obj.InputVPop.binTable.(variableNameParticular)(iBinTableRow)];
-                    iBinEdge = iBinEdge + 1;
+            % extract bin edges
+            binTableVariableNames = Obj.InputVPop.binTable.Properties.VariableNames;
+            binEdges = -Inf;
+            iBinEdge = 1;
+            while true
+                variableNameParticular = ['binEdge' num2str(iBinEdge)];
+                variableIndex = strcmp(binTableVariableNames,variableNameParticular);
+                if ~any(variableIndex)
+                    break;
                 end
-                binEdges = [binEdges Inf];
-
-                % Extract the simulation values, and bin them according to the binEdges
-                % determined above
-                simVals = Obj.InputVPop.simData.Data(iMaskSimDataRow,:);
-                simValsBinned = arrayfun(@(x) find(binEdges<x,1,'last'),simVals);
-
-                nObservations = length(binEdges)-1;
-                dataParticular = initDataParticular(Obj.NumVPs,nObservations,Obj.OptimOptions.binTableGroupWeight);
-                % Loop through bins and define an observation row for each bin
-                for iBin = 1:nObservations
-                    % The observed response is taken to be the experimentally observed
-                    % probability of this bin
-                    observationValParticularBin = Obj.InputVPop.binTable.(['expBin' num2str(iBin)])(iBinTableRow);
-                    % Description of this observation:
-                    descriptionParticular = ['binTable; Row ' num2str(iBinTableRow) '; Bin ' num2str(iBin)];
-                    % The values for the independent variables will be set to 1 for
-                    % VPs in the bin, and 0 for those outside the bin:
-                    independentVarValsParticularBin = simValsBinned;
-                    independentVarValsParticularBin(independentVarValsParticularBin~=iBin) = 0;
-                    independentVarValsParticularBin(independentVarValsParticularBin==iBin) = 1;
-                    dataParticular.independentVarVals(iBin,:) = independentVarValsParticularBin;
-                    dataParticular.observationVals(iBin) = observationValParticularBin;
-                    dataParticular.observationWeights(iBin) = Obj.InputVPop.binTable.weight(iBinTableRow);
-                    dataParticular.observationDescriptions{iBin} = descriptionParticular;
-                    dataParticular.expWeight(iBin) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.binTable.expN(iBinTableRow),nan,descriptionParticular);
-                end
-                dataConsolidated = [dataConsolidated dataParticular];
+                binEdges = [binEdges Obj.InputVPop.binTable.(variableNameParticular)(iBinTableRow)];
+                iBinEdge = iBinEdge + 1;
             end
+            binEdges = [binEdges Inf];
+
+            % Extract the simulation values, and bin them according to the binEdges
+            % determined above
+            simVals = Obj.InputVPop.simData.Data(iMaskSimDataRow,:);
+            simValsBinned = arrayfun(@(x) find(binEdges<x,1,'last'),simVals);
+
+            nObservations = length(binEdges)-1;
+            dataParticular = initDataParticular(Obj.NumVPs,nObservations,Obj.OptimOptions.binTableGroupWeight);
+            % Loop through bins and define an observation row for each bin
+            for iBin = 1:nObservations
+                % The observed response is taken to be the experimentally observed
+                % probability of this bin
+                observationValParticularBin = Obj.InputVPop.binTable.(['expBin' num2str(iBin)])(iBinTableRow);
+                % Description of this observation:
+                descriptionParticular = ['binTable; Row ' num2str(iBinTableRow) '; Bin ' num2str(iBin)];
+                % The values for the independent variables will be set to 1 for
+                % VPs in the bin, and 0 for those outside the bin:
+                independentVarValsParticularBin = simValsBinned;
+                independentVarValsParticularBin(independentVarValsParticularBin~=iBin) = 0;
+                independentVarValsParticularBin(independentVarValsParticularBin==iBin) = 1;
+                dataParticular.independentVarVals(iBin,:) = independentVarValsParticularBin;
+                dataParticular.observationVals(iBin) = observationValParticularBin;
+                dataParticular.observationWeights(iBin) = Obj.InputVPop.binTable.weight(iBinTableRow);
+                dataParticular.observationDescriptions{iBin} = descriptionParticular;
+                dataParticular.expWeight(iBin) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.binTable.expN(iBinTableRow),nan,descriptionParticular);
+            end
+            dataConsolidated = [dataConsolidated dataParticular];
         end
 
         % Extract data from distTable
-        if istable(Obj.InputVPop.distTable)
-            nRows = height(Obj.InputVPop.distTable);
-            for iDistTableRow = 1:nRows
-            % loop through table rows
-                % Some of the code below is adapted from the QSP Toolbox function
-                % 'plotDistCDFVPop.m':
-                myTable = Obj.InputVPop.distTable;
-                expN = myTable{iDistTableRow,'expN'};
-            %     predN = myTable{iDistTableRow,'predN'};
-                expW = 1./(expN*ones(1,expN));
-                predW = myTable{iDistTableRow,'predProbs'}{1};
-            %     expSample = myTable{iDistTableRow,'expSample'}{1};
-            %     predSample = myTable{iDistTableRow,'predSample'}{1};
-                SC = myTable{iDistTableRow,'combinedPoints'}{1};
-                expInd = myTable{iDistTableRow,'expCombinedIndices'}{1};
-                predInd = myTable{iDistTableRow,'simCombinedIndices'}{1};		
-                [CDFexp, ~] = alignCDFsPreGrid(SC, expInd, predInd, expW, predW);
-                % If the user hasn't specified to fit only certain probabilities on the
-                % CDF curve, then fit all of the probabilities. This may take a very
-                % long time if the CDF contains many points.
-                if isstring(Obj.OptimOptions.cdfProbsToFit) && strcmpi(Obj.OptimOptions.cdfProbsToFit,"all")
-                    cdfProbsToFit = CDFexp;
-                elseif isnumeric(Obj.OptimOptions.cdfProbsToFit)
-                    cdfProbsToFit = Obj.OptimOptions.cdfProbsToFit;
-                else
-                    error('Unsupported specification for Obj.OptimOptions.cdfProbsToFit');
-                end
-                nObservations = length(cdfProbsToFit);
-                dataParticular = initDataParticular(Obj.NumVPs,nObservations,Obj.OptimOptions.distTableGroupWeight);
-                for iIncludedProbs = 1:nObservations
-                % loop through the probabilities to fit
-                    targetProb = cdfProbsToFit(iIncludedProbs);
-                    % find the index that corresponds to the closest probability to the
-                    % target probability:
-                    closestIndicesToTargetProb = find(abs(CDFexp-targetProb) == min(abs(CDFexp-targetProb)));
-                    % In case there are multiple closest indices, take the middle of
-                    % the indices:
-                    middleClosestIndexToTargetProb = round(closestIndicesToTargetProb(1) + (closestIndicesToTargetProb(end)-closestIndicesToTargetProb(1))/2);
-                    % The response value is the experimentally observed CDF
-                    % probability:
-                    observationValParticular = CDFexp(middleClosestIndexToTargetProb);
-                    descriptionParticular = ['distTable; Row ' num2str(iDistTableRow) '; Included Prob ' num2str(iIncludedProbs)];
-                    % The values of the independent variables will be set to 1 for
-                    % VPs that contribute to the particular point on the CDF, and
-                    % to 0 for VPs that don't contribute to that point:
-                    if isnan(Obj.InputVPop.distTable.simCombinedIndices{iDistTableRow}(middleClosestIndexToTargetProb))
-                        vpIndicesInBin = [];
-                    else
-                        vpIndicesInBin = Obj.InputVPop.distTable.predIndices{iDistTableRow}(1:Obj.InputVPop.distTable.simCombinedIndices{iDistTableRow}(middleClosestIndexToTargetProb));
-                    end
-                    independentVarValParticular = zeros(1,Obj.NumVPs);
-                    independentVarValParticular(vpIndicesInBin) = 1;
-                    dataParticular.independentVarVals(iIncludedProbs,:) = independentVarValParticular;
-                    dataParticular.observationVals(iIncludedProbs) = observationValParticular;
-                    dataParticular.observationWeights(iIncludedProbs) = Obj.InputVPop.distTable.weight(iDistTableRow);
-                    dataParticular.observationDescriptions{iIncludedProbs} = descriptionParticular;
-                    dataParticular.expWeight(iIncludedProbs) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.distTable.expN(iIncludedProbs),nan,descriptionParticular);
-                end
-                dataConsolidated = [dataConsolidated dataParticular];
+        nRows = height(Obj.InputVPop.distTable);
+        for iDistTableRow = 1:nRows
+        % loop through table rows
+            % Some of the code below is adapted from the QSP Toolbox function
+            % 'plotDistCDFVPop.m':
+            myTable = Obj.InputVPop.distTable;
+            expN = myTable{iDistTableRow,'expN'};
+        %     predN = myTable{iDistTableRow,'predN'};
+            expW = 1./(expN*ones(1,expN));
+            predW = myTable{iDistTableRow,'predProbs'}{1};
+        %     expSample = myTable{iDistTableRow,'expSample'}{1};
+        %     predSample = myTable{iDistTableRow,'predSample'}{1};
+            SC = myTable{iDistTableRow,'combinedPoints'}{1};
+            expInd = myTable{iDistTableRow,'expCombinedIndices'}{1};
+            predInd = myTable{iDistTableRow,'simCombinedIndices'}{1};		
+            [CDFexp, ~] = alignCDFsPreGrid(SC, expInd, predInd, expW, predW);
+            % If the user hasn't specified to fit only certain probabilities on the
+            % CDF curve, then fit all of the probabilities. This may take a very
+            % long time if the CDF contains many points.
+            if isstring(Obj.OptimOptions.cdfProbsToFit) && strcmpi(Obj.OptimOptions.cdfProbsToFit,"all")
+                cdfProbsToFit = CDFexp;
+            elseif isnumeric(Obj.OptimOptions.cdfProbsToFit)
+                cdfProbsToFit = Obj.OptimOptions.cdfProbsToFit;
+            else
+                error('Unsupported specification for Obj.OptimOptions.cdfProbsToFit');
             end
+            nObservations = length(cdfProbsToFit);
+            dataParticular = initDataParticular(Obj.NumVPs,nObservations,Obj.OptimOptions.distTableGroupWeight);
+            for iIncludedProbs = 1:nObservations
+            % loop through the probabilities to fit
+                targetProb = cdfProbsToFit(iIncludedProbs);
+                % find the index that corresponds to the closest probability to the
+                % target probability:
+                closestIndicesToTargetProb = find(abs(CDFexp-targetProb) == min(abs(CDFexp-targetProb)));
+                % In case there are multiple closest indices, take the middle of
+                % the indices:
+                middleClosestIndexToTargetProb = round(closestIndicesToTargetProb(1) + (closestIndicesToTargetProb(end)-closestIndicesToTargetProb(1))/2);
+                % The response value is the experimentally observed CDF
+                % probability:
+                observationValParticular = CDFexp(middleClosestIndexToTargetProb);
+                descriptionParticular = ['distTable; Row ' num2str(iDistTableRow) '; Included Prob ' num2str(iIncludedProbs)];
+                % The values of the independent variables will be set to 1 for
+                % VPs that contribute to the particular point on the CDF, and
+                % to 0 for VPs that don't contribute to that point:
+                if isnan(Obj.InputVPop.distTable.simCombinedIndices{iDistTableRow}(middleClosestIndexToTargetProb))
+                    vpIndicesInBin = [];
+                else
+                    vpIndicesInBin = Obj.InputVPop.distTable.predIndices{iDistTableRow}(1:Obj.InputVPop.distTable.simCombinedIndices{iDistTableRow}(middleClosestIndexToTargetProb));
+                end
+                independentVarValParticular = zeros(1,Obj.NumVPs);
+                independentVarValParticular(vpIndicesInBin) = 1;
+                dataParticular.independentVarVals(iIncludedProbs,:) = independentVarValParticular;
+                dataParticular.observationVals(iIncludedProbs) = observationValParticular;
+                dataParticular.observationWeights(iIncludedProbs) = Obj.InputVPop.distTable.weight(iDistTableRow);
+                dataParticular.observationDescriptions{iIncludedProbs} = descriptionParticular;
+                dataParticular.expWeight(iIncludedProbs) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.distTable.expN(iIncludedProbs),nan,descriptionParticular);
+            end
+            dataConsolidated = [dataConsolidated dataParticular];
         end
 
         % Extract data related to the 'brTable'
@@ -989,57 +985,54 @@ methods (Hidden = true)
         % 0 = CR, 1 = PR, 2 = SD, 3 = PD
         recistClassStr = {'CR','PR','SD','PD'};
         resistClassNum = [0 1 2 3];
-        if istable(Obj.InputVPop.brTableRECIST)
-            for iBRTblRow = 1:height(Obj.InputVPop.brTableRECIST)
-            % Loop through table rows
-                % Extract the simulation data:
-                iMaskSimDataRow = Obj.InputVPop.simData.brRows == iBRTblRow;
-                brDataParticular = Obj.InputVPop.simData.brData(iMaskSimDataRow,:);
-                nObservations = length(resistClassNum);
-                dataParticular = initDataParticular(Obj.NumVPs,nObservations,Obj.OptimOptions.brTableRECISTGroupWeight);
-                for iRECISTClass = 1:nObservations
-                % loop through RECIST classes
-                    % The response value is the experimentally observed probability for
-                    % this RECIST class:
-                    observationValParticular = Obj.InputVPop.brTableRECIST.(['exp' recistClassStr{iRECISTClass}])(iBRTblRow);
-                    descriptionParticular = ['brTableRECIST; Row ' num2str(iBRTblRow) '; RECIST Class ' num2str(iRECISTClass)];
-                    % The values of the independent variables will be set to 1 for
-                    % VPs that are in the RECIST class, and 0 for those that aren't
-                    vpsInClass = brDataParticular == resistClassNum(iRECISTClass);
-                    dataParticular.independentVarVals(iRECISTClass,:) = vpsInClass;
-                    dataParticular.observationVals(iRECISTClass) = observationValParticular;
-                    dataParticular.observationWeights(iRECISTClass) = Obj.InputVPop.brTableRECIST.weight(iBRTblRow);
-                    dataParticular.observationDescriptions{iRECISTClass} = descriptionParticular;
-                    dataParticular.expWeight(iRECISTClass) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.brTableRECIST.expN(iBRTblRow),nan,descriptionParticular);
-                end
-                dataConsolidated = [dataConsolidated dataParticular];
+        for iBRTblRow = 1:height(Obj.InputVPop.brTableRECIST)
+        % Loop through table rows
+            % Extract the simulation data:
+            iMaskSimDataRow = Obj.InputVPop.simData.brRows == iBRTblRow;
+            brDataParticular = Obj.InputVPop.simData.brData(iMaskSimDataRow,:);
+            nObservations = length(resistClassNum);
+            dataParticular = initDataParticular(Obj.NumVPs,nObservations,Obj.OptimOptions.brTableRECISTGroupWeight);
+            for iRECISTClass = 1:nObservations
+            % loop through RECIST classes
+                % The response value is the experimentally observed probability for
+                % this RECIST class:
+                observationValParticular = Obj.InputVPop.brTableRECIST.(['exp' recistClassStr{iRECISTClass}])(iBRTblRow);
+                descriptionParticular = ['brTableRECIST; Row ' num2str(iBRTblRow) '; RECIST Class ' num2str(iRECISTClass)];
+                % The values of the independent variables will be set to 1 for
+                % VPs that are in the RECIST class, and 0 for those that aren't
+                vpsInClass = brDataParticular == resistClassNum(iRECISTClass);
+                dataParticular.independentVarVals(iRECISTClass,:) = vpsInClass;
+                dataParticular.observationVals(iRECISTClass) = observationValParticular;
+                dataParticular.observationWeights(iRECISTClass) = Obj.InputVPop.brTableRECIST.weight(iBRTblRow);
+                dataParticular.observationDescriptions{iRECISTClass} = descriptionParticular;
+                dataParticular.expWeight(iRECISTClass) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.brTableRECIST.expN(iBRTblRow),nan,descriptionParticular);
             end
+            dataConsolidated = [dataConsolidated dataParticular];
         end
-        
-        if istable(Obj.InputVPop.rTableRECIST)
-            for iRTblRow = 1:height(Obj.InputVPop.rTableRECIST)
-                iMaskSimDataRow = Obj.InputVPop.simData.rRows == iRTblRow;
-                rDataParticular = Obj.InputVPop.simData.rData(iMaskSimDataRow,:);
-                nObservations = length(resistClassNum);
-                dataParticular = initDataParticular(Obj.NumVPs,nObservations,Obj.OptimOptions.rTableRECISTGroupWeight);
-                for iRECISTClass = 1:nObservations
-                % loop through RECIST classes
-                    % The response value is the experimentally observed probability for
-                    % this RECIST class:
-                    observationValParticular = Obj.InputVPop.rTableRECIST.(['exp' recistClassStr{iRECISTClass}])(iRTblRow);
-                    descriptionParticular = ['rTableRECIST; Row ' num2str(iRTblRow) '; RECIST Class ' num2str(iRECISTClass)];
-                    % The values of the independent variables will be set to 1 for
-                    % VPs that are in the RECIST class, and 0 for those that aren't
-                    vpsInClass = rDataParticular == resistClassNum(iRECISTClass);
-                    dataParticular.independentVarVals(iRECISTClass,:) = vpsInClass;
-                    dataParticular.observationVals(iRECISTClass) = observationValParticular;
-                    dataParticular.observationWeights(iRECISTClass) = Obj.InputVPop.rTableRECIST.weight(iRTblRow);
-                    dataParticular.observationDescriptions{iRECISTClass} = descriptionParticular;
-                    dataParticular.expWeight(iRECISTClass) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.rTableRECIST.expN(iRTblRow),nan,descriptionParticular);
-                end
-                dataConsolidated = [dataConsolidated dataParticular];
+
+        for iRTblRow = 1:height(Obj.InputVPop.rTableRECIST)
+            iMaskSimDataRow = Obj.InputVPop.simData.rRows == iRTblRow;
+            rDataParticular = Obj.InputVPop.simData.rData(iMaskSimDataRow,:);
+            nObservations = length(resistClassNum);
+            dataParticular = initDataParticular(Obj.NumVPs,nObservations,Obj.OptimOptions.rTableRECISTGroupWeight);
+            for iRECISTClass = 1:nObservations
+            % loop through RECIST classes
+                % The response value is the experimentally observed probability for
+                % this RECIST class:
+                observationValParticular = Obj.InputVPop.rTableRECIST.(['exp' recistClassStr{iRECISTClass}])(iRTblRow);
+                descriptionParticular = ['rTableRECIST; Row ' num2str(iRTblRow) '; RECIST Class ' num2str(iRECISTClass)];
+                % The values of the independent variables will be set to 1 for
+                % VPs that are in the RECIST class, and 0 for those that aren't
+                vpsInClass = rDataParticular == resistClassNum(iRECISTClass);
+                dataParticular.independentVarVals(iRECISTClass,:) = vpsInClass;
+                dataParticular.observationVals(iRECISTClass) = observationValParticular;
+                dataParticular.observationWeights(iRECISTClass) = Obj.InputVPop.rTableRECIST.weight(iRTblRow);
+                dataParticular.observationDescriptions{iRECISTClass} = descriptionParticular;
+                dataParticular.expWeight(iRECISTClass) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.rTableRECIST.expN(iRTblRow),nan,descriptionParticular);
             end
+            dataConsolidated = [dataConsolidated dataParticular];
         end
+    end
 
         % Extract data for mean and standard deviation
         if istable(Obj.InputVPop.mnSDTable)
@@ -1387,7 +1380,7 @@ methods (Hidden = true)
                 nnls(Obj.LinearProblemMatricesParticular.independentVarValsWeighted,Obj.LinearProblemMatricesParticular.observationValsWeighted,Obj.OptimOptions.optimizationAlgorithmOptions);
             % turn the warnings back on:
             warning('on','MATLAB:nearlySingularMatrix');
-            warning('off','MATLAB:rankDeficientMatrix');
+            warning('on','MATLAB:rankDeficientMatrix');
             Obj.OptimizationResults.exitFlag = 1;
         elseif strcmpi(Obj.OptimOptions.optimizationAlgorithm,"lsqlin")
             % Specifying an 'x0' would result in a warning that x0 gets ignored in

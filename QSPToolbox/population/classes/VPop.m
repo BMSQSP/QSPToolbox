@@ -3,7 +3,7 @@ classdef VPop
 % to MAPEL.  There should be too much here to that needs to
 % be changed directly, with the biggest possible exception being adjusting 
 % useEffN before re-evaluating the GOF.  However, there is a substantial
-% amound of customization possible by resuming fits with an existing
+% amount of customization possible by resuming fits with an existing
 % VPop so you may find reasons to modify the properties.
 %
 % PROPERTIES:
@@ -49,6 +49,8 @@ classdef VPop
 %                the weighted simulation results from the VPop fitting.
 %                If you want to adjust a fit and restart, you may want to 
 %                adjust some of the weights here. 
+%  distTable2D:	 (Don't manipulate) A table to enable calibrating 2D distributions
+%  corTable:	 (Don't manipulate) A table to enable calibrating pairwise correlations																				  
 %  gofMn:        (Don't manipulate) Goodness of fit statistics for 
 %                individual endpoint/time mean comparisons between data
 %                and virtual population.  Usually calcualated by the
@@ -119,10 +121,14 @@ properties
     mnSDTable
     binTable
     distTable
+	distTable2D
+	corTable			
     gofMn
     gofSD
     gofBin
     gofDist
+	gofDist2D
+	gofCor		  
     gof
     useEffN  
     exactFlag
@@ -189,6 +195,12 @@ methods
       function obj = set.distTable(obj,myDistTable)
           obj.distTable = myDistTable;
       end      
+      function obj = set.distTable2D(obj,myDistTable)
+          obj.distTable2D = myDistTable;
+      end     													 						
+      function obj = set.corTable(obj,myCorTable)
+          obj.corTable = myCorTable;
+      end													 
       
       function obj = set.expData(obj,myExpData)
           obj.expData = myExpData;
@@ -214,6 +226,14 @@ methods
           obj.gofDist = myGOF;
       end          
       
+      function obj = set.gofDist2D(obj,myGOF)
+          obj.gofDist2D = myGOF;
+      end 
+
+      function obj = set.gofCor(obj,myGOF)
+          obj.gofCor = myGOF;
+      end 
+	  
       function obj = set.gof(obj,myGOF)
           obj.gof = myGOF;
       end          
@@ -328,6 +348,10 @@ methods
                   value = obj.binTable; 
               case 'distTable'
                   value = obj.distTable;                   
+              case 'distTable2D'
+                  value = obj.distTable2D;
+              case 'corTable'
+                  value = obj.corTable;									
               case 'expData'
                   value = obj.expData;                   
               case 'simData'
@@ -340,6 +364,10 @@ methods
                   value = obj.gofBin;   
               case 'gofDist'
                   value = obj.gofDist;                     
+              case 'gofDist2D'
+                  value = obj.gofDist2D;   
+              case 'gofCor'
+                  value = obj.gofCor; 							  
               case 'gof'
                   value = obj.gof;   
               case 'spreadOut'
@@ -465,12 +493,16 @@ methods
           %  mnSDTable
           %  binTable
           %  distTable
+		  %  distTable2D
+		  %  corTable	
           %
           % And also the following properties will be reset:
           %  gofMn
           %  gofSD
           %  gofBin
           %  gofDist
+		  %  gofDist2D
+		  %  gofCor					   
           %  gof
           %
           % ARGUMENTS:
@@ -548,11 +580,53 @@ methods
                 myDistTable{1 : nRows,nanifyVars} = {nan};            
            end
            obj.distTable = myDistTable;           
+		   
+           myTable = obj.distTable2D;
+		   if ~isempty(myTable)
+			   [nRows, nCols] = size(myTable);
+			   if nRows > 0
+					myNanStrings = {'predN'};
+					varNames = myTable.Properties.VariableNames;
+					myPos = find(ismember(varNames,myNanStrings));
+					nanifyVars = varNames(myPos);
+					for varCounter = 1 : length(nanifyVars)
+						myTable.(nanifyVars{varCounter}) = nan(nRows,1);
+					end
+					myNanStrings = {'predProbs'};
+					varNames = myTable.Properties.VariableNames;
+					myPos = find(ismember(varNames,myNanStrings));
+					nanifyVars = varNames(myPos);
+					myTable{1 : nRows,nanifyVars} = {nan};               
+			   end
+			   obj.distTable2D = myTable; 
+		   end	
+
+           myTable = obj.corTable;
+		   if ~isempty(myTable)
+			   [nRows, nCols] = size(myTable);
+			   if nRows > 0
+					myNanStrings = {'predN','predCor'};
+					varNames = myTable.Properties.VariableNames;
+					myPos = find(ismember(varNames,myNanStrings));
+					nanifyVars = varNames(myPos);
+					for varCounter = 1 : length(nanifyVars)
+						myTable.(nanifyVars{varCounter}) = nan(nRows,1);
+					end
+					myNanStrings = {'predProbs'};
+					varNames = myTable.Properties.VariableNames;
+					myPos = find(ismember(varNames,myNanStrings));
+					nanifyVars = varNames(myPos);
+					myTable{1 : nRows,nanifyVars} = {nan};               
+			   end
+			   obj.corTable = myTable; 
+           end
            
            obj.gofMn = '';
            obj.gofSD = '';
            obj.gofBin = '';
            obj.gofDist = '';
+		   obj.gofDist2D = '';		   
+		   obj.gofCor = '';		   						
            obj.gof = '';
       end
 
@@ -567,6 +641,8 @@ methods
            %                mnSDTable
            %                binTable
            %                distTable
+		   %                distTable2D
+		   %				corTable								 
            %  myWorksheet: A worksheet with the simulation results.
            %
            % RETURNS
@@ -578,13 +654,18 @@ methods
            mnsdDataFlag = false;
            binDataFlag = false;
            distDataFlag = false;
+           distData2DFlag = false;	
+		   corDataFlag = false;								   
            myMnSdData = obj.mnSDTable;
            myBinTable = obj.binTable;
            myDistTable = obj.distTable;
+		   myDistTable2D = obj.distTable2D;	  
+		   myCorTable = obj.corTable;										
            % We want the {expVarID, element, elementType, time} sets
            % from the experimental summaries that will be paired
            % with real data.
            rowInfoNames = {'expVarID','interventionID','elementID','elementType','time'};
+		   rowInfoNames2D = {'expVarID1','expVarID2','interventionID1','interventionID2','elementID1','elementID2','elementType1','elementType2','time1','time2'};																																							
            myDataSource = cell2table(cell(0,5), 'VariableNames', rowInfoNames);
            if ~isempty(myMnSdData)
                myDataSource = [myDataSource; myMnSdData(:,rowInfoNames)];
@@ -598,6 +679,12 @@ methods
                myDataSource = [myDataSource; myDistTable(:,rowInfoNames)];
                distDataFlag = true;
            end              
+           if ~isempty(myDistTable2D)
+               distData2DFlag = true;
+		   end
+           if ~isempty(myCorTable)
+               corDataFlag = true;			   
+           end									 
            [nrows,ncols] = size(myDataSource);
            if nrows < 1
                warning(['No mnSDTable, binTable, or distTable assigned before calling getSimData in ',mfilename,'. The data to get is not known. Exiting.'])
@@ -634,6 +721,8 @@ methods
                mnSDRows = nan(nEntries,1);
                binRows = nan(nEntries,1);
                distRows = nan(nEntries,1);
+			   distRows2D = cell(nEntries,2);
+			   corRows = cell(nEntries,2);									
 
                for rowCounter = 1 : nEntries
                     interventionID = simData.rowInfo{rowCounter,interventionIDIndex};
@@ -661,6 +750,30 @@ methods
                             distRows(rowCounter) = temp;
                         end
                     end                    
+                    if distData2DFlag
+                        % One row of source data may be involved in
+                        % multiple 2D distributions
+                        temp = find((ismember(myDistTable2D{:,'interventionID1'},interventionID)) & ((myDistTable2D{:,'time1'})==expTime) & (ismember(myDistTable2D{:,'elementID1'},elementID)) & (ismember(myDistTable2D{:,'elementType1'},elementType)));
+                        if ~isempty(temp)
+                            distRows2D{rowCounter,1} = temp;
+                        end
+                        temp = find((ismember(myDistTable2D{:,'interventionID2'},interventionID)) & ((myDistTable2D{:,'time2'})==expTime) & (ismember(myDistTable2D{:,'elementID2'},elementID)) & (ismember(myDistTable2D{:,'elementType2'},elementType)));
+                        if ~isempty(temp)
+                            distRows2D{rowCounter,2} = temp;
+                        end						
+                    end
+                    if corDataFlag
+                        % One row of source data may be involved in
+                        % multiple 2D distributions
+                        temp = find((ismember(myCorTable{:,'interventionID1'},interventionID)) & ((myCorTable{:,'time1'})==expTime) & (ismember(myCorTable{:,'elementID1'},elementID)) & (ismember(myCorTable{:,'elementType1'},elementType)));
+                        if ~isempty(temp)
+                            corRows{rowCounter,1} = temp;
+                        end
+                        temp = find((ismember(myCorTable{:,'interventionID2'},interventionID)) & ((myCorTable{:,'time2'})==expTime) & (ismember(myCorTable{:,'elementID2'},elementID)) & (ismember(myCorTable{:,'elementType2'},elementType)));
+                        if ~isempty(temp)
+                            corRows{rowCounter,2} = temp;
+                        end						
+                    end 
                     % I don't see how to avoid looping this, given the way
                     % the data is structured.  Luckily we just get the data
                     % once
@@ -693,6 +806,8 @@ methods
                simData.binRows = binRows;
                simData.mnSDRows = mnSDRows;
                simData.distRows = distRows;
+               simData.distRows2D = distRows2D;
+			   simData.corRows = corRows;							
                obj.simData = simData;
            end
       end
@@ -745,8 +860,6 @@ methods
               for rowCounter = 1 : nDistRows
                   % There should not be nan's here (without a dropout simfilter)
                   keepIndices = find(~isnan(curSimValues(rowCounter,:)));
-				  
-				  
                   curVals = curSimValues(rowCounter,keepIndices);                 
                   myDistTable.('predSample'){rowCounter} = curVals(keepIndices);
 				  myDistTable.('predIndices'){rowCounter} = I(rowCounter,keepIndices);
@@ -762,6 +875,154 @@ methods
 
       end
 
+      function obj = addDistTable2DSimVals(obj)   
+          % Here we simply get sim values that are
+          % fixed during optimization and add them to the 
+          % dist table.  This is done at initialization to speed
+          % execution.
+          %
+          % ARGUMENTS
+          %  (self):      Note that the following properties should be
+          %               initialized (experimental and simulation data) 
+          %               before calling this method:
+          %                distTable2D
+          %                simData
+          %
+          % RETURNS
+          %  (self):      The VPop object is returned, but with updated
+          %               properties:
+          %                distTable2D	
+
+          myDistTable = obj.distTable2D;          		  
+          
+          mySimData = obj.simData.Data;
+          
+          mySimRowInfo = obj.simData.rowInfo;
+          
+          mySimColNames = obj.simData.rowInfoNames;
+          distRowsTarget1 = obj.simData.distRows2D(:,1);
+		  distRowsTarget2 = obj.simData.distRows2D(:,2);
+          distRowsSource1 = find(~cellfun(@isempty,distRowsTarget1));
+          distRowsSource2 = find(~cellfun(@isempty,distRowsTarget2));		  
+          
+          simInterventionIDCol = find(ismember(mySimColNames, 'interventionID'));
+          simTimeCol = find(ismember(mySimColNames, 'time'));
+          simElementIDCol = find(ismember(mySimColNames, 'elementID'));
+          simElementTypeCol = find(ismember(mySimColNames, 'elementType'));                        
+		  
+          if ~isempty(distRowsSource1)
+              distRowsTarget1 = distRowsTarget1(distRowsSource1);
+			  distRowsTarget2 = distRowsTarget2(distRowsSource2);
+              % 2 step assignment to speed execution
+              % first to matrix, then convert back to table.
+              [nDistRows, nDistCols] = size(myDistTable);
+              curSimValues1 = nan(nDistRows,  size(mySimData,2));
+              curSimValues2 = nan(nDistRows,  size(mySimData,2));
+              % We need a loop for the assignment
+              for target1counter = 1 :length(distRowsTarget1)
+                  targetRows = distRowsTarget1{target1counter};
+                  for target1repCounter = 1 :length(targetRows)
+                    curSimValues1(targetRows(target1repCounter),:) = (mySimData(distRowsSource1(target1counter), :));
+                  end
+              end
+              for target2counter = 1 :length(distRowsTarget2)
+                  targetRows = distRowsTarget2{target2counter};
+                  for target2repCounter = 1 :length(targetRows)
+                    curSimValues2(targetRows(target2repCounter),:) = (mySimData(distRowsSource2(target2counter), :));
+                  end                  
+              end              		  
+			  % Unlike the 1D case we won't pre-sort
+              %[curSimValues1, I] = sort(curSimValues1, 2, 'ascend');
+			  %curSimValues2 = curSimValues2(:,I);
+              for rowCounter = 1 : nDistRows
+                  keepIndices = find(~isnan(curSimValues1(rowCounter,:)) & ~isnan(curSimValues2(rowCounter,:)));
+                  curVals = [curSimValues1(rowCounter,keepIndices); curSimValues2(rowCounter,keepIndices)];          
+                  myDistTable.('predSample'){rowCounter} = curVals;
+				  myDistTable.('predIndices'){rowCounter} = keepIndices;
+                  % Also get the quadrant measures
+                  sample1 = myDistTable.('expSample'){rowCounter};
+				  quadrantCounts1c = quadrantCount(sample1, curVals);
+				  quadrantCounts1s = quadrantCount(sample1, sample1);
+				  quadrantCounts2c = quadrantCount(curVals, sample1);
+				  quadrantCounts2s = quadrantCount(curVals, curVals);
+                  %myDistTable.('expCombinedIndices'){rowCounter} = sample1Ind;
+                  %myDistTable.('simCombinedIndices'){rowCounter} = sample2Ind;
+                  myDistTable.('combinedQuadrants')(rowCounter,:) = {quadrantCounts1c,quadrantCounts1s,quadrantCounts2c,quadrantCounts2s};
+              end
+              obj.distTable2D = myDistTable;												
+          end   
+
+      end	  
+
+      function obj = addCorTableSimVals(obj)   
+          % Here we simply get sim values that are
+          % fixed during optimization and add them to the 
+          % correlation table.  This is done at initialization to speed
+          % execution.
+          %
+          % ARGUMENTS
+          %  (self):      Note that the following properties should be
+          %               initialized (experimental and simulation data) 
+          %               before calling this method:
+          %                corTable
+          %                simData
+          %
+          % RETURNS
+          %  (self):      The VPop object is returned, but with updated
+          %               properties:
+          %                corTable	
+
+          myCorTable = obj.corTable;          		  
+          
+          mySimData = obj.simData.Data;
+          
+          mySimRowInfo = obj.simData.rowInfo;
+          
+          mySimColNames = obj.simData.rowInfoNames;
+          corRowsTarget1 = obj.simData.corRows(:,1);
+		  corRowsTarget2 = obj.simData.corRows(:,2);
+          corRowsSource1 = find(~cellfun(@isempty,corRowsTarget1));
+          corRowsSource2 = find(~cellfun(@isempty,corRowsTarget2));		  
+          
+          simInterventionIDCol = find(ismember(mySimColNames, 'interventionID'));
+          simTimeCol = find(ismember(mySimColNames, 'time'));
+          simElementIDCol = find(ismember(mySimColNames, 'elementID'));
+          simElementTypeCol = find(ismember(mySimColNames, 'elementType'));                        
+		  
+          if ~isempty(corRowsSource1)
+              corRowsTarget1 = corRowsTarget1(corRowsSource1);
+			  corRowsTarget2 = corRowsTarget2(corRowsSource2);
+              % 2 step assignment to speed execution
+              % first to matrix, then convert back to table.
+              [nCorRows, nCorCols] = size(myCorTable);
+              curSimValues1 = nan(nCorRows,  size(mySimData,2));
+              curSimValues2 = nan(nCorRows,  size(mySimData,2));
+              % We need a loop for the assignment
+              for target1counter = 1 :length(corRowsTarget1)
+                  targetRows = corRowsTarget1{target1counter};
+                  for target1repCounter = 1 :length(targetRows)
+                    curSimValues1(targetRows(target1repCounter),:) = (mySimData(corRowsSource1(target1counter), :));
+                  end
+              end
+              for target2counter = 1 :length(corRowsTarget2)
+                  targetRows = corRowsTarget2{target2counter};
+                  for target2repCounter = 1 :length(targetRows)
+                    curSimValues2(targetRows(target2repCounter),:) = (mySimData(corRowsSource2(target2counter), :));
+                  end                  
+              end              		  
+			  % Unlike the 1D case we won't pre-sort
+              %[curSimValues1, I] = sort(curSimValues1, 2, 'ascend');
+			  %curSimValues2 = curSimValues2(:,I);
+              for rowCounter = 1 : nCorRows
+                  keepIndices = find(~isnan(curSimValues1(rowCounter,:)) & ~isnan(curSimValues2(rowCounter,:)));
+                  curVals = [curSimValues1(rowCounter,keepIndices); curSimValues2(rowCounter,keepIndices)];          
+                  myCorTable.('predSample'){rowCounter} = curVals;
+				  myCorTable.('predIndices'){rowCounter} = keepIndices;
+              end
+              obj.corTable = myCorTable;												
+          end   
+
+      end	        
       function obj = addPredTableVals(obj)
           % Once we have read the simData and generated a pw vector,
           % We need to add the predicted equivalents to the 
@@ -774,6 +1035,8 @@ methods
           %                mnSDTable
           %                binTable
           %                distTable
+          %                distTable2D
+          %                corTable	   
           %                simData
           %
           % RETURNS
@@ -782,10 +1045,14 @@ methods
           %                mnSDTable
           %                binTable
           %                distTable
+          %                distTable2D
+          %                corTable								 
           
           myMnSdData = obj.mnSDTable;
           myBinTable = obj.binTable;
           myDistTable = obj.distTable;          
+          myDistTable2D = obj.distTable2D;
+		  myCorTable = obj.corTable;
           mySimData = obj.simData.Data;
           mySimRowInfo = obj.simData.rowInfo;
           myPWs = obj.pws;
@@ -878,16 +1145,59 @@ methods
           if ~isempty(distRowsSource)
               [nDistRows, nDistCols] = size(myDistTable); 
 			  assignPWs = cell(nDistRows,1);			  
+			  keepIndices = myDistTable.('predIndices');						 
               for rowCounter = 1 : nDistRows
-                  % We have already found these
-                  keepIndices = myDistTable.('predIndices'){rowCounter};     
-				  curPWs = myPWs(keepIndices); 														  
+                  % We have already found these     
+				  curPWs = myPWs(keepIndices{rowCounter}); 														  
 				  assignPWs{rowCounter} = curPWs;
               end
 			  myDistTable.('predN') = (curN * ones(nDistRows,1));
 			  myDistTable.('predProbs') = (assignPWs);
               obj.distTable = myDistTable;
-          end      
+         end 		  
+         if ~isempty(myDistTable2D)
+			  distRowsTarget1 = obj.simData.distRows2D(:,1);
+			  distRowsTarget2 = obj.simData.distRows2D(:,2);
+			  distRowsSource1 = find(~cellfun(@isempty,distRowsTarget1));
+			  distRowsSource2 = find(~cellfun(@isempty,distRowsTarget2));		 
+          
+			  [nDistRows, nDistCols] = size(myDistTable2D); 
+			  assignPWs = cell(nDistRows,1);
+			  keepIndices = myDistTable2D.('predIndices');						 
+              for rowCounter = 1 : nDistRows
+                   % We have already found these
+                   {rowCounter};     
+				   curPWs = myPWs(keepIndices{rowCounter}); 				   
+				   assignPWs{rowCounter} = curPWs;				   
+              end
+              myDistTable2D.('predN') = (curN * ones(nDistRows,1));
+			  myDistTable2D.('predProbs') = (assignPWs);
+              obj.distTable2D = myDistTable2D;					
+         end      
+         if ~isempty(myCorTable)
+			  corRowsTarget1 = obj.simData.corRows(:,1);
+			  corRowsTarget2 = obj.simData.corRows(:,2);
+			  corRowsSource1 = find(~cellfun(@isempty,corRowsTarget1));
+			  corRowsSource2 = find(~cellfun(@isempty,corRowsTarget2));	
+			  
+			  [nCorRows, nCorCols] = size(myCorTable); 
+			  assignPWs = cell(nCorRows,1);
+			  curCor = nan(nCorRows,1);
+			  assignN = (curN * ones(nDistRows,1));
+			  keepIndices = myCorTable.('predIndices');
+              for rowCounter = 1 : nCorRows
+                   % We have already found these    
+				   curPWs = myPWs(keepIndices{rowCounter}); 				   
+				   assignPWs{rowCounter} = curPWs;
+				   curwtdcorr = weightedcorrs(myCorTable.('predSample'){rowCounter}', curPWs');
+				   curCor(rowCounter) = curwtdcorr(1,2);
+			  end   
+              myCorTable.('predN') = assignN;
+			  myCorTable.('predProbs') = (assignPWs);
+			  myCorTable.('predCor') = (curCor);
+              obj.corTable = myCorTable;								
+			  
+          end 									
       end
 
       function obj = VPop()
@@ -903,12 +1213,16 @@ methods
           obj.mnSDTable = '';
           obj.binTable = '';
           obj.distTable = '';          
+          obj.distTable2D = '';	
+		  obj.corTable = '';
           obj.expData = '';          
           obj.simData = '';
           obj.gofMn = '';
           obj.gofSD = '';
           obj.gofBin = '';
           obj.gofDist = '';          
+		  obj.gofDist2D = '';  
+		  obj.gofCor = '';
           obj.gof = '';          
           obj.spreadOut = 0;
           obj.minIndPVal = 0;			  

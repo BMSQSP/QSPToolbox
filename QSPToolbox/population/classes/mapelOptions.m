@@ -9,8 +9,14 @@ classdef mapelOptions
 %                    match.  Must be populated with 
 %                    experimental data before calling MAPEL.
 % distTable:         (Required) containing data on a cdf function to
-%                    match.  Must be populated with 
-%                    experimental data before calling MAPEL.
+%                    match.  Must be
+%                    populated with experimental data before calling MAPEL,
+%                    or leave unassigned if no distribution targets.
+% distTable2D:       (Required) containing data on a 2D pdf function to
+%                    match.  Must be
+%                    populated with experimental data before calling MAPEL,
+%                    or leave unassigned if no 2D distribution targets.
+% corTable:															   
 % nBins:             (Optional) Number of bins per continuous axis.  The
 %                    default is 2, which may be too constrictive in many
 %                    situations.
@@ -73,6 +79,8 @@ classdef mapelOptions
       mnSDTable
       binTable
       distTable      
+	  distTable2D		
+	  corTable
       nBins
       initialProbs
       randomStart
@@ -108,7 +116,14 @@ classdef mapelOptions
       function obj = set.distTable(obj,myExpDistData)
           obj.distTable = myExpDistData;
       end      
-      
+
+      function obj = set.distTable2D(obj,myExpDistData2D)
+          obj.distTable2D = myExpDistData2D;
+      end 
+	  
+      function obj = set.corTable(obj,myCorTable)
+          obj.corTable = myCorTable;
+      end 	  
       function obj = set.nBins(obj,myNBins)
           if mod(myNBins,1) == 0
               obj.nBins = myNBins;
@@ -165,7 +180,7 @@ classdef mapelOptions
           if (myMinIndPVal >= 0) & (myMinIndPVal <= 1)
                obj.minIndPVal = myMinIndPVal;
           else
-               error(['Property minIndPVal in ',milename,' must be between 0 and 1.'])
+               error(['Property minIndPVal in ',mfilename,' must be between 0 and 1.'])
           end
       end 			  
 
@@ -173,7 +188,7 @@ classdef mapelOptions
           if islogical(myUseEffN)
                obj.useEffN = myUseEffN;
           else
-               error(['Property useEffN in ',milename,' must be logical.'])
+               error(['Property useEffN in ',mfilename,' must be logical.'])
           end
       end  
 
@@ -181,7 +196,7 @@ classdef mapelOptions
           if islogical(myFlag)
                obj.exactFlag = myFlag;
           else
-               error(['Property exactFlag in ',milename,' must be logical.'])
+               error(['Property exactFlag in ',mfilename,' must be logical.'])
           end
       end     
       
@@ -193,7 +208,7 @@ classdef mapelOptions
           if sum(ismember({'pso','ga','simplex'},lower(myOptimizeType))) == 1
               obj.optimizeType = lower(myOptimizeType);
           else
-              error(['Property optimizeType in ',milename,' must be "ga," "pso," or "simplex."'])
+              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," or "simplex."'])
           end
       end        
       
@@ -239,6 +254,10 @@ classdef mapelOptions
                   value = obj.binTable;  
               case 'distTable'
                   value = obj.distTable;                   
+              case 'distTable2D'
+                  value = obj.distTable2D;
+              case 'corTable'
+                  value = obj.corTable;	
               case 'nBins'
                   value = obj.nBins;
               case 'initialProbs'
@@ -286,6 +305,8 @@ classdef mapelOptions
           obj.mnSDTable = '';
           obj.binTable = '';
           obj.distTable = '';          
+		  obj.distTable2D = ''; 
+		  obj.corTable = ''; 
           obj.nBins = 2;
           obj.initialProbs = []; %=NULL
           obj.randomStart = 0;

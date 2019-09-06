@@ -1,4 +1,4 @@
-SUBJID	LESIONID	time_day	time_10delayed_day	mouse_weight_kg	N87_xenograft_volume_L	N87_xenograft_weight_g	dose_nmole	accumulation_N87_nmole_per_gram_tumor	accumulation_N87_nM
+USUBJID	LESIONID	time_day	time_10delayed_day	mouse_weight_kg	N87_xenograft_volume_L	N87_xenograft_weight_g	dose_nmole	accumulation_N87_nmole_per_gram_tumor	accumulation_N87_nM
 95305073_01	95305073_01_N87	0	10	0.0234	0.000275	0.28875	0.398222222	.	.
 95305073_01	95305073_01_N87	0.904861111	10.90486111	.	.	.	.	0.043004686	45.15492015
 95305073_01	95305073_01_N87	3.946527778	13.94652778	.	.	.	.	0.036532076	38.35867968

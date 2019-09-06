@@ -1,4 +1,4 @@
-SUBJID	LESIONID	time_day	time_10delayed_day	mouse_weight_kg	HEP3B_xenograft_volume_L	HEP3B_xenograft_weight_g	dose_nmole	accumulation_HEP3B_nmole_per_gram_tumor	accumulation_HEP3B_nM
+USUBJID	LESIONID	time_day	time_10delayed_day	mouse_weight_kg	HEP3B_xenograft_volume_L	HEP3B_xenograft_weight_g	dose_nmole	accumulation_HEP3B_nmole_per_gram_tumor	accumulation_HEP3B_nM
 95305073_01	95305073_01_HEP3B	0	10	0.0234	7.20E-05	0.0756	0.398222222	.	.
 95305073_01	95305073_01_HEP3B	0.904861111	10.90486111	.	.	.	.	0.028533658	29.96034139
 95305073_01	95305073_01_HEP3B	3.946527778	13.94652778	.	.	.	.	0.019360283	20.32829666
