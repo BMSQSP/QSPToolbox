@@ -621,13 +621,13 @@ methods
 			   obj.corTable = myTable; 
            end
            
-           obj.gofMn = '';
-           obj.gofSD = '';
-           obj.gofBin = '';
-           obj.gofDist = '';
-		   obj.gofDist2D = '';		   
-		   obj.gofCor = '';		   						
-           obj.gof = '';
+           obj.gofMn = [];
+           obj.gofSD = [];
+           obj.gofBin = [];
+           obj.gofDist = [];
+		   obj.gofDist2D = [];		   
+		   obj.gofCor = [];		   						
+           obj.gof = [];
       end
 
       function obj = getSimData(obj, myWorksheet)
@@ -1203,27 +1203,27 @@ methods
       function obj = VPop()
           % This is the constructor method for an instance of a VPop
           % (virtual population) object.
-          obj.coeffsTable='';	
-		  obj.coeffsDist='';
-          obj.indexTable = '';
-          obj.binEdges = '';
-          obj.binMidPoints = '';
+          obj.coeffsTable=[];	
+		  obj.coeffsDist=[];
+          obj.indexTable = [];
+          obj.binEdges = [];
+          obj.binMidPoints = [];
           obj.binProbs = [];
           obj.pws = [];
-          obj.mnSDTable = '';
-          obj.binTable = '';
-          obj.distTable = '';          
-          obj.distTable2D = '';	
-		  obj.corTable = '';
-          obj.expData = '';          
-          obj.simData = '';
-          obj.gofMn = '';
-          obj.gofSD = '';
-          obj.gofBin = '';
-          obj.gofDist = '';          
-		  obj.gofDist2D = '';  
-		  obj.gofCor = '';
-          obj.gof = '';          
+          obj.mnSDTable = [];
+          obj.binTable = [];
+          obj.distTable = [];          
+          obj.distTable2D = [];	
+		  obj.corTable = [];
+          obj.expData = [];          
+          obj.simData = [];
+          obj.gofMn = [];
+          obj.gofSD = [];
+          obj.gofBin = [];
+          obj.gofDist = [];          
+		  obj.gofDist2D = [];  
+		  obj.gofCor = [];
+          obj.gof = [];          
           obj.spreadOut = 0;
           obj.minIndPVal = 0;			  
           obj.useEffN = false;

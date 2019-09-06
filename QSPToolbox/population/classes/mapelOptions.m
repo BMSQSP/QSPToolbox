@@ -301,14 +301,14 @@ classdef mapelOptions
           % This is the constructor method for instances of mapelOptions
           % objects.
           %
-          obj.expData = '';
-          obj.mnSDTable = '';
-          obj.binTable = '';
-          obj.distTable = '';          
-		  obj.distTable2D = ''; 
-		  obj.corTable = ''; 
+          obj.expData = [];
+          obj.mnSDTable = [];
+          obj.binTable = [];
+          obj.distTable = [];          
+		  obj.distTable2D = []; 
+		  obj.corTable = []; 
           obj.nBins = 2;
-          obj.initialProbs = []; %=NULL
+          obj.initialProbs = [];
           obj.randomStart = 0;
           obj.nIters = 10000;
           obj.equalBinBreaks = false;

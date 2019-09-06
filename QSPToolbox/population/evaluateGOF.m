@@ -48,19 +48,12 @@ if continueFlag
     myMnSDTable = myVPop.mnSDTable;
     myBinTable = myVPop.binTable;
     myDistTable = myVPop.distTable;
+	myDistTable2D = myVPop.distTable2D;
+	myCorTable = myVPop.corTable;	
 	if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPopRECISTnoBin')
 		myBRTableRECIST = myVPop.brTableRECIST;
 		myRTableRECIST = myVPop.rTableRECIST;        
 	end
-	if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPopRECISTnoBin')
-		myDistTable2D = myVPop.distTable2D;
-		myCorTable = myVPop.corTable;
-	else
-		% Not implemented yet
-		myDistTable2D = '';
-		myCorTable = '';
-	end
-    
 
     if ~isempty(myMnSDTable)
         % Evaluate mn sd first
@@ -96,9 +89,6 @@ if continueFlag
 		
         myVPop.gofMn = meanPvals;
         myVPop.gofSD = sdPvals;
-		
-
-		
     else
         myVPop.gofMn = [];
         myVPop.gofSD = [];
@@ -106,20 +96,26 @@ if continueFlag
     if ~isempty(myBinTable)
         expN = myBinTable{:,'expN'};
         predN = myBinTable{:,'predN'};
-        expBinCounts = round(repmat(expN,1,4) .* [myBinTable{:, 'expBin1'}, myBinTable{:, 'expBin2'}, myBinTable{:, 'expBin3'}, myBinTable{:, 'expBin4'}]);
-        predBinCounts = round(repmat(predN,1,4) .* [myBinTable{:, 'predBin1'}, myBinTable{:, 'predBin2'}, myBinTable{:, 'predBin3'}, myBinTable{:, 'predBin4'}]);
-        [nStatRows, nBins] = size(expBinCounts);
-        chiPvals = nan(nStatRows,1);
+        expBins = [myBinTable{:, 'expBin1'}, myBinTable{:, 'expBin2'}, myBinTable{:, 'expBin3'}, myBinTable{:, 'expBin4'}];
+        predBins = [myBinTable{:, 'predBin1'}, myBinTable{:, 'predBin2'}, myBinTable{:, 'predBin3'}, myBinTable{:, 'predBin4'}];		
+        %expBinCounts = round(repmat(expN,1,4) .* [myBinTable{:, 'expBin1'}, myBinTable{:, 'expBin2'}, myBinTable{:, 'expBin3'}, myBinTable{:, 'expBin4'}]);
+        %predBinCounts = round(repmat(predN,1,4) .* [myBinTable{:, 'predBin1'}, myBinTable{:, 'predBin2'}, myBinTable{:, 'predBin3'}, myBinTable{:, 'predBin4'}]);
+        [nStatRows, ~] = size(expBins);
+        binPvals = nan(nStatRows,1);
         for rowCounter = 1 : nStatRows 
-            % The desired test is a 2x4 contigency table.  For sufficient smaple
-            % sizes, chi^2 approximation is used.  For smaller sizes, an alternate
-            % approximation to the exact test is employed.
-            chiPval = contingency24(expBinCounts(rowCounter,:), predBinCounts(rowCounter,:),myVPop.exactFlag);
-            % A 3rd party myfisher24() is used for the small sample size table.
-            chiPvals(rowCounter) = chiPval;
+			curExpBins = expBins(rowCounter,:);
+			curPredBins = predBins(rowCounter,:);
+			[~, nCurExpBins] = size(curExpBins);
+			[~, nCurPredBins] = size(curPredBins);
+			expBinCounts = round(repmat(expN(rowCounter),1,nCurExpBins) .* curExpBins);
+			predBinCounts = round(repmat(predN(rowCounter),1,nCurPredBins) .* curPredBins);
+            % The desired test is related to a 2xN contigency table.  
+            binPval = contingency2N(expBinCounts, predBinCounts,myVPop.exactFlag);
+            % 3rd party "myfisher" series of tests are used if the sample size is small.
+            binPvals(rowCounter) = binPval;
         end
         % Write these pvals to the VPop before returning it.
-        myVPop.gofBin = chiPvals;
+        myVPop.gofBin = binPvals;
     else
         myVPop.gofBin = [];
     end
@@ -200,17 +196,15 @@ if continueFlag
 			expBinCounts = round(repmat(expN,1,4) .* [myBRTableRECIST{:, 'expCR'}, myBRTableRECIST{:, 'expPR'}, myBRTableRECIST{:, 'expSD'}, myBRTableRECIST{:, 'expPD'}]);
 			predBinCounts = round(repmat(predN,1,4) .* [myBRTableRECIST{:, 'predCR'}, myBRTableRECIST{:, 'predPR'}, myBRTableRECIST{:, 'predSD'}, myBRTableRECIST{:, 'predPD'}]);
 			[nStatRows, nBins] = size(expBinCounts);
-			chiPvals = nan(nStatRows,1);
+			binPvals = nan(nStatRows,1);
 			for rowCounter = 1 : nStatRows 
-				% The desired test is a 2x4 contigency table.  For sufficient smaple
-				% sizes, chi^2 approximation is used.  For smaller sizes, an alternate
-				% approximation to the exact test is employed.
-				chiPval = contingency24(expBinCounts(rowCounter,:), predBinCounts(rowCounter,:),myVPop.exactFlag);
+				% The desired test is a 2x4 contigency table.  
+				chiPval = contingency2N(expBinCounts(rowCounter,:), predBinCounts(rowCounter,:),myVPop.exactFlag);
 				% A 3rd party myfisher24() is used for the small sample size table.
-				chiPvals(rowCounter) = chiPval;
+				binPvals(rowCounter) = chiPval;
 			end
 			% Write these pvals to the VPop before returning it.
-			myVPop.gofBR = chiPvals;
+			myVPop.gofBR = binPvals;
 		else
 			myVPop.gofBR = [];
         end
@@ -220,17 +214,15 @@ if continueFlag
 			expBinCounts = round(repmat(expN,1,4) .* [myRTableRECIST{:, 'expCR'}, myRTableRECIST{:, 'expPR'}, myRTableRECIST{:, 'expSD'}, myRTableRECIST{:, 'expPD'}]);
 			predBinCounts = round(repmat(predN,1,4) .* [myRTableRECIST{:, 'predCR'}, myRTableRECIST{:, 'predPR'}, myRTableRECIST{:, 'predSD'}, myRTableRECIST{:, 'predPD'}]);
 			[nStatRows, nBins] = size(expBinCounts);
-			chiPvals = nan(nStatRows,1);
+			binPvals = nan(nStatRows,1);
 			for rowCounter = 1 : nStatRows 
-				% The desired test is a 2x4 contigency table.  For sufficient smaple
-				% sizes, chi^2 approximation is used.  For smaller sizes, an alternate
-				% approximation to the exact test is employed.
-				chiPval = contingency24(expBinCounts(rowCounter,:), predBinCounts(rowCounter,:),myVPop.exactFlag);
+				% The desired test is a 2x4 contigency table.  
+				chiPval = contingency2N(expBinCounts(rowCounter,:), predBinCounts(rowCounter,:),myVPop.exactFlag);
 				% A 3rd party myfisher24() is used for the small sample size table.
-				chiPvals(rowCounter) = chiPval;
+				binPvals(rowCounter) = chiPval;
 			end
 			% Write these pvals to the VPop before returning it.
-			myVPop.gofR = chiPvals;
+			myVPop.gofR = binPvals;
 		else
 			myVPop.gofR = [];
 		end         

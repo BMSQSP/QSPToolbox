@@ -321,15 +321,15 @@ classdef mapelOptionsRECISTnoBin
           % This is the constructor method for instances of mapelOptions
           % objects.
           %
-          obj.expData = '';
-          obj.mnSDTable = '';
-          obj.binTable = '';
-          obj.distTable = '';   
-		  obj.distTable2D = ''; 
-		  obj.corTable = ''; 					   
-          obj.brTableRECIST = '';
-          obj.rTableRECIST = '';          
-          obj.initialPWs = []; %=NULL
+          obj.expData = [];
+          obj.mnSDTable = [];
+          obj.binTable = [];
+          obj.distTable = [];   
+		  obj.distTable2D = []; 
+		  obj.corTable = []; 					   
+          obj.brTableRECIST = [];
+          obj.rTableRECIST = [];          
+          obj.initialPWs = [];
           obj.randomStart = 0;
           obj.nIters = 10000;
           obj.tol = 1E-3;
@@ -343,8 +343,8 @@ classdef mapelOptionsRECISTnoBin
 		  obj.objectiveLimit = -Inf;		  
           obj.intSeed = -1;   
           obj.minEffN = 0;     
-          obj.relSLDvar = '';
-          obj.absALDVar = '';
+          obj.relSLDvar = [];
+          obj.absALDVar = [];
           obj.crCutoff = nan;          
       end
    end
