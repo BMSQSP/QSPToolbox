@@ -109,7 +109,7 @@ if continueFlag
         testBounds{responseTypeCounter} = max(myResponseSummaryTables{responseTypeCounter}.values((nAxis+1):end,:),[],2);
     end
 
-    if (~ismember(class(hotStartVPop),{'VPop','VPopRECIST','VPopRECISTnoBin'}))
+    if (~ismember(class(hotStartVPop),{'VPop','VPopRECIST'}))
         nVPopsFound = 0;
     else
         nVPopsFound = 1;
@@ -126,7 +126,7 @@ if continueFlag
 		myMapelOptions.intSeed=-1;
 	end	
 
-    while curEffN <= targetEffN
+    while curEffN < (targetEffN + effNDelta)
 		% Set the initial best p value to a negative
 		% number to force the algorithm to record
 		% and write out the first VPop calibration
@@ -149,11 +149,11 @@ if continueFlag
             if (myTestCounter == 1) && (nVPopsFound > 0)
                 newVPop = initializeOptionPropertiesToVPop(myMapelOptions);
                 
-                if isa(myMapelOptions,'mapelOptionsRECIST') || isa(myMapelOptions,'mapelOptionsRECISTnoBin')                   
+                if isa(myMapelOptions,'mapelOptionsRECIST')                   
                     newVPop.recistSimFilter = createRECISTSimFilter(myWorksheet, newVPop);                    
                 end		
 				newVPop = newVPop.getSimData(myWorksheet);
-				if ~isa(newVPop,'VPopRECISTnoBin')
+				if ismember(newVPop.pwStrategy,'bin')
 					newVPop = newVPop.assignIndices(myWorksheet, myMapelOptions);
 					% We assume the old bin probs are compatible
 					% with the new indices assignments.  That is,
@@ -212,7 +212,7 @@ if continueFlag
                 % We randomize here with magnitude myExpandVPopEffNOptions.expandRandomStart
 				% If the magnitude is set to infinity, we just fully randomize before "restarting"
 				if isinf(myExpandVPopEffNOptions.expandRandomStart)
-					if isa(newVPop, 'VPopRECISTnoBin')
+					if ismember(newVPop.pwStrategy,'direct')
 						newVPop = newVPop.startPWs(myWorksheet,true);
 					else
 						newVPop = newVPop.startProbs(true);

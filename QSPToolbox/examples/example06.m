@@ -23,17 +23,20 @@ myMapelOptions.mnSDTable = convertExpDataToMnSDTable(myMapelOptions);
 % Note that this will automatically generate the bin table for now.
 % Sometimes, we may want to create our own bin tables rather than using the
 % default bin edges.
+% Note the bin functions have changes since Cheng et al. AAPS J 2017,
+% so bin edges may vary slightly from the available historical
+% VPOP used later in this example.
+myMapelOptions.pwStrategy = 'bin';
 myMapelOptions.binTable = convertExpDataToBinTable(myMapelOptions);
-
 [nAxis,nVP] = size(myWorksheet.axisProps.axisVP);
-% We set additional parameters for the optimization
-myMapelOptions.optimizeType = 'pso';
 % nVPs is the largest total number of bins we should create.
 % We need at least 1 VP per bin
 % or we risk assigning weight to areas
 % not represented by VPs.  This sets the number of bins on a
 % per-axis basis, so there are a total 4 * 13 total population bins
 myMapelOptions.nBins = 4;
+% We set additional parameters for the optimization
+myMapelOptions.optimizeType = 'pso';
 % We usually don't need very small tolerances to find good solutions, which
 % we can assess by the GOF statistic and effN.  The objective is on a
 % logarithmic scale.  The optimization may time out before convergence,

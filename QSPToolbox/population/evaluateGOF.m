@@ -4,14 +4,15 @@ function myVPop = evaluateGOF(myVPop)
 % as a stand-alone function rather than a method.
 %
 % ARGUMENTS
-% myVPop:         An instance of a VPop, VPopRECIST, or VPopRECISTnoBin object.  Populating the tables
+% myVPop:         An instance of a VPop, VPopRECIST object.  Populating the tables
 %                 with experiment and simulated data should be performed
 %                 prior to calling this function:
 %                  mnSDTable
 %                  binTable
 %                  distTable
 %                  distTable2D
-%                  brTableRECIST (only if a VPopRECIST or VPopRECISTnoBin object)									   
+%                  corTable
+%                  brTableRECIST (only if a VPopRECIST object)									   
 %
 % RETURNS
 % myVpop:         A VPop is returned, with the fields populated:
@@ -20,6 +21,7 @@ function myVPop = evaluateGOF(myVPop)
 %                  gofBin
 %                  gofDist
 %                  gofDist2D
+%                  gofCor
 %                  gof
 %
 
@@ -96,15 +98,15 @@ if continueFlag
     if ~isempty(myBinTable)
         expN = myBinTable{:,'expN'};
         predN = myBinTable{:,'predN'};
-        expBins = [myBinTable{:, 'expBin1'}, myBinTable{:, 'expBin2'}, myBinTable{:, 'expBin3'}, myBinTable{:, 'expBin4'}];
-        predBins = [myBinTable{:, 'predBin1'}, myBinTable{:, 'predBin2'}, myBinTable{:, 'predBin3'}, myBinTable{:, 'predBin4'}];		
+        expBins = myBinTable{:, 'expBins'};
+        predBins = myBinTable{:, 'predBins'};		
         %expBinCounts = round(repmat(expN,1,4) .* [myBinTable{:, 'expBin1'}, myBinTable{:, 'expBin2'}, myBinTable{:, 'expBin3'}, myBinTable{:, 'expBin4'}]);
         %predBinCounts = round(repmat(predN,1,4) .* [myBinTable{:, 'predBin1'}, myBinTable{:, 'predBin2'}, myBinTable{:, 'predBin3'}, myBinTable{:, 'predBin4'}]);
         [nStatRows, ~] = size(expBins);
         binPvals = nan(nStatRows,1);
         for rowCounter = 1 : nStatRows 
-			curExpBins = expBins(rowCounter,:);
-			curPredBins = predBins(rowCounter,:);
+			curExpBins = expBins{rowCounter};
+			curPredBins = predBins{rowCounter};
 			[~, nCurExpBins] = size(curExpBins);
 			[~, nCurPredBins] = size(curPredBins);
 			expBinCounts = round(repmat(expN(rowCounter),1,nCurExpBins) .* curExpBins);
@@ -148,14 +150,14 @@ if continueFlag
         predN = myDistTable2D.('predN');
 		expSample = myDistTable2D.('expSample');
 		predSample = myDistTable2D.('predSample');
-		combineQuadrants = myDistTable2D.('combinedQuadrants');
         for rowCounter = 1 : nStatRows 
 			expW = 1./(expN(rowCounter)*ones(1,expN(rowCounter)));
-            % Custom KS test for weighted samples
-			quadrantCounts1c = combineQuadrants{rowCounter,1};
-			quadrantCounts1s = combineQuadrants{rowCounter,2};
-			quadrantCounts2c = combineQuadrants{rowCounter,3};
-			quadrantCounts2s = combineQuadrants{rowCounter,4};	
+            curPredW = predW{rowCounter};
+            % Custom 2DKS test for weighted samples
+
+            sample1 = expSample{rowCounter};
+            curVals = predSample{rowCounter};
+
             sample1KeepN = expN(rowCounter);
             [~,sample2KeepN] = size(predSample{rowCounter});            
             if ~myVPop.exactFlag
@@ -164,14 +166,31 @@ if continueFlag
                 % gave very good estimates of P (within 10%) of the full matrix
                 % value.  But 2 x was substantially faster if a 50% error in the 
                 % returned p value is acceptable.
+
                 sample2KeepN = min(max(min(sample2KeepN,2*ceil(predN(rowCounter))),3),sample2KeepN);
+
+                [~, indices2] = sort(curPredW, 'descend');
+                indices2 = indices2(1:sample2KeepN);
+                curVals = curVals(:,indices2);
+                curPredW = curPredW(indices2);
+                curPredW = curPredW/sum(curPredW);
             end
-			ksPval = weightedKS2D(expSample{rowCounter}, predSample{rowCounter}, quadrantCounts1c, quadrantCounts1s, quadrantCounts2c, quadrantCounts2s, expW, predW{rowCounter}, sample1KeepN, sample2KeepN);
+
+            % These can take a while to generate but are also large
+            % to store on file.  So they are generated as needed.
+            % Fortunately, if most of the calculations are done
+            % without the exactFlag, the comparison grid can
+            % be kept smaller and these run faster.
+            quadrantCounts1c = quadrantCount(sample1, curVals);
+            quadrantCounts1s = quadrantCount(sample1, sample1);
+            quadrantCounts2c = quadrantCount(curVals, sample1);
+            quadrantCounts2s = quadrantCount(curVals, curVals); 
+			ksPval = weightedKS2D(sample1, curVals, quadrantCounts1c, quadrantCounts1s, quadrantCounts2c, quadrantCounts2s, expW, curPredW, sample1KeepN, sample2KeepN);
             ksPvals2D(rowCounter) = ksPval;
         end		
         % Write these pvals to the VPop before returning it.
         myVPop.gofDist2D = ksPvals2D;
-    elseif isa(myVPop,'VPopRECIST') || isa(myVPop,'VPopRECISTnoBin')
+    else
         myVPop.gofDist2D = [];
 	end	
     if ~isempty(myCorTable)
@@ -186,10 +205,10 @@ if continueFlag
         end		
         % Write these pvals to the VPop before returning it.
         myVPop.gofCor = corPvals2D;
-    elseif isa(myVPop,'VPopRECIST') || isa(myVPop,'VPopRECISTnoBin')
+    else
         myVPop.gofCor = [];
 	end	
-	if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPopRECISTnoBin')
+	if isa(myVPop,'VPopRECIST')
 		if ~isempty(myBRTableRECIST)
 			expN = myBRTableRECIST{:,'expN'};
 			predN = myBRTableRECIST{:,'predN'};
@@ -227,7 +246,7 @@ if continueFlag
 			myVPop.gofR = [];
 		end         
 	end			   
-    if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPopRECISTnoBin')
+    if isa(myVPop,'VPopRECIST')
 		myVPop = compositeGOFRECIST(myVPop);
 	else
 		myVPop = compositeGOF(myVPop);

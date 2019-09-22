@@ -36,7 +36,11 @@ warning('off','MATLAB:integral2:maxFunEvalsPass');
 % We may want to turn this back on with improved performance of
 % the 2D integration
 warning('off','MATLAB:integral2:maxFunEvalsFail');
-int = integral2(@(x,y) f(x,y), min(combinedPoints(1,:)), max(combinedPoints(1,:)), min(combinedPoints(2,:)), max(combinedPoints(2,:)),'method','auto','AbsTol',1e-6,'RelTol',1e-3);
+% We use large tolerances.  int does not have to be very precise,
+% and MATLAB's integral2 function can use much overhead if
+% we require a small tolerance.
+int = integral2(@(x,y) f(x,y), min(combinedPoints(1,:)), max(combinedPoints(1,:)), min(combinedPoints(2,:)), max(combinedPoints(2,:)),'method','tiled','AbsTol',1e-2,'RelTol',1e-1);
+
 % Normalize the 2D PDF
 data1pdf = data1pdf/int;
 
@@ -50,7 +54,7 @@ data2pdf = ksdensity(data2pdf,combinedPoints','Bandwidth',[bw1;bw2]);
 % negative interpolant with the available options, which does not 
 % make sense for a pdf surface
 f = scatteredInterpolant(combinedPoints(1,:)', combinedPoints(2,:)', data2pdf, 'nearest');
-int = integral2(@(x,y) f(x,y), min(combinedPoints(1,:)), max(combinedPoints(1,:)), min(combinedPoints(2,:)), max(combinedPoints(2,:)),'method','auto','AbsTol',1e-6,'RelTol',1e-3);
+int = integral2(@(x,y) f(x,y), min(combinedPoints(1,:)), max(combinedPoints(1,:)), min(combinedPoints(2,:)), max(combinedPoints(2,:)),'method','tiled','AbsTol',1e-2,'RelTol',1e-1);
 data2pdf = data2pdf/int;
 warning('on','MATLAB:integral2:maxFunEvalsPass');
 warning('on','MATLAB:integral2:maxFunEvalsFail');

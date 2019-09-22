@@ -1,21 +1,26 @@
-function myBinTable = convertExpDataToMnSDTable(myVPop)
+function myBinTable = convertExpDataToBinTable(myVPop, nBins)
 % This function takes experimental data and
 % converts it to a bin table format for use in MAPEL
 %
 % ARGUMENTS:
 % myVPop:           A VPop object with a populated expData field.  A
-%                   mapelOptions structure is also OK.
+%                    mapelOptions structure is also OK.
+% nBins:            Number of bins.  If not given, 4 are assumed.
+%                    The same number of bins are used for all datasets.
 %
 % RETURNS
 % myBinTable
 %
 
 continueFlag = true;
-if nargin > 1
+if nargin > 2
     continueFlag = false;
-    warning(['Too many input arguments for ',mfilename,'. Should provide: myVPop.'])
+    warning(['Too many input arguments for ',mfilename,'. Should provide: myVPop and optionally nBins.'])
     continueFlag = false;
+elseif nargin > 1
+    continueFlag = true;	
 elseif nargin > 0
+	nBins = 4;
     continueFlag = true;
 else
     warning(['Insufficient input arguments for ',mfilename,'. Should provide: myVPop.'])
@@ -44,10 +49,16 @@ if continueFlag
         nDataHeaderCols = 11;
     end
     uniqueExpDataTime = unique(myVPop.expData{:,'time'});
+	% Bins will be set to capture
+	% a similar number of experimental datapoints
+	% in each bin by default		
+	binPercentiles = 100/nBins;
+	binPercentiles = (1 : 1: (nBins-1))*binPercentiles;	
     for rowCounter = 1 : nRows
         if rowCounter == 1
             tableVariableNames = myVPop.expData.Properties.VariableNames(1:nDataHeaderCols);
-            tableVariableNames = [tableVariableNames,{'weight','binEdge1','binEdge2','binEdge3','expN','expBin1','expBin2','expBin3','expBin4','predN','predBin1','predBin2','predBin3','predBin4'}];
+            %tableVariableNames = [tableVariableNames,{'weight','binEdge1','binEdge2','binEdge3','expN','expBin1','expBin2','expBin3','expBin4','predN','predBin1','predBin2','predBin3','predBin4'}];
+			tableVariableNames = [tableVariableNames,{'weight','binEdges','expN','expBins','predN','predBins'}];
             myBinTable = cell2table(cell(0,length(tableVariableNames)));
             myBinTable.Properties.VariableNames = tableVariableNames;
         end
@@ -58,10 +69,10 @@ if continueFlag
         allCurVarRows = find(ismember(table2cell(myVPop.expData(:, 'elementID')),myElementID));
         allCurVarValues = myVPop.expData{allCurVarRows, nDataHeaderCols+1:end};
         allCurVarValues = allCurVarValues(~isnan(allCurVarValues));
-        myBinEdgeValues = [(median(allCurVarValues) - min(allCurVarValues))/2+min(allCurVarValues),median(allCurVarValues),(max(allCurVarValues) - median(allCurVarValues))/2+median(allCurVarValues)];
+		myBinEdgeValues = prctile(allCurVarValues, binPercentiles);
         curProbs = wtdBinProb(curData, ones(1, length(curData))/length(curData), myBinEdgeValues);
         expN = length(curData);
-        curRow = [curRow,{1,myBinEdgeValues(1), myBinEdgeValues(2), myBinEdgeValues(3), expN, curProbs(1), curProbs(2), curProbs(3), curProbs(4), nan, nan, nan, nan, nan}];        
+        curRow = [curRow,{1,{myBinEdgeValues}, expN, {curProbs}, nan, {nan(1,nBins)}}];        
         curRow = cell2table(curRow);
         curRow.Properties.VariableNames = myBinTable.Properties.VariableNames; 
         myBinTable = [myBinTable; curRow];   

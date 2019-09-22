@@ -2,6 +2,7 @@ function myObjective = evaluateObjective(myVPop, myProbVectTrans)
 % This function evaluates an objective function, which is similar to
 % the composite goodness-of-fit but with a few critical differences, and is
 % generally called only during the optimization / VPop fit to data.
+% This function should be called just for VPops with 'bin' pwStrategy
 %
 % ARGUMENTS
 %  myVPop:              a VPop object instance, with properties already
@@ -12,7 +13,10 @@ function myObjective = evaluateObjective(myVPop, myProbVectTrans)
 %                        mnSDTable: should at least be populated with
 %                                   experiment data
 %                        binTable:  Also need experiment data
-%                        distTable:  Also need experiment data
+%                        distTable2D
+%                        corTable
+%                        brTableRECIST (if applicable)
+%                        rTableRECIST (if applicable)
 %  myProbVectTrans:     a 1 x (nBins-1 * nAxis) vector of transformed 
 %                       probabilities
 %
@@ -76,6 +80,16 @@ end
 myMnSDTable = myVPop.mnSDTable;
 myBinTable = myVPop.binTable;
 myDistTable = myVPop.distTable;
+myDistTable2D = myVPop.distTable2D;
+myCorTable = myVPop.corTable;
+if isa(myVPop, 'VPopRECIST')
+	myBRTable = myVPop.brTableRECIST;
+	myRTable = myVPop.rTableRECIST;
+else
+	myBRTable = [];
+	myRTable = [];
+end	
+
 % We use the same epsilon from the MAPEL paper
 %epsilon = myVPop.epsilon;
 epsilon = 1E-16;
@@ -83,6 +97,12 @@ gofMean = myVPop.gofMn;
 gofSD = myVPop.gofSD;
 gofBin = myVPop.gofBin;
 gofDist = myVPop.gofDist;
+gofDist2D = myVPop.gofDist2D;
+gofCor = myVPop.gofCor;
+if isa(myVPop, 'VPopRECIST')
+	gofBR = myVPop.gofBR;
+	gofR = myVPop.gofR;
+end	
 minIndPVal = myVPop.minIndPVal;
 
 % May want to add checks here for the Mean/SD/Bin evaluations and whether
@@ -91,19 +111,42 @@ if ~isempty(myMnSDTable)
     myObjective = myObjective - 2*(sum(myMnSDTable{:,'weightMean'} .* log10(gofMean+epsilon)) + sum(myMnSDTable{:,'weightSD'} .* log10(gofSD+epsilon)));
 	if minIndPVal > 0
 		myObjective = myObjective + (sum((myMnSDTable{:,'weightMean'} > 0) .* (gofMean < minIndPVal) .* 1E6 .* (minIndPVal - gofMean)) + sum((myMnSDTable{:,'weightSD'} > 0) .* (gofSD < minIndPVal) .* 1E6 .* (minIndPVal - gofSD)));
-	end
+	end	
 end
 if ~isempty(myBinTable)
     myObjective = myObjective - 2*(sum(myBinTable{:,'weight'} .* log10(gofBin+epsilon)));
 	if minIndPVal > 0
-		myObjective = myObjective + sum((myBinTable{:,'weight'} > 0) .* (gofBin < minIndPVal) .* 1E6 .* (gofBin - minIndPVal));
-	end	
+		myObjective = myObjective + sum((myBinTable{:,'weight'} > 0) .* (gofBin < minIndPVal) .* 1E6 .* (minIndPVal - gofBin));
+	end		
 end
 if ~isempty(myDistTable)
     myObjective = myObjective - 2*(sum(myDistTable{:,'weight'} .* log10(gofDist+epsilon)));
 	if minIndPVal > 0
 		myObjective = myObjective + sum((myDistTable{:,'weight'} > 0) .* (gofDist < minIndPVal) .* 1E6 .* (minIndPVal - gofDist));
+	end			
+end
+if ~isempty(myDistTable2D)
+    myObjective = myObjective - 2*(sum(myDistTable2D{:,'weight'} .* log10(gofDist2D+epsilon)));
+	if minIndPVal > 0
+		myObjective = myObjective + sum((myDistTable2D{:,'weight'} > 0) .* (gofDist2D < minIndPVal) .* 1E6 .* (minIndPVal - gofDist2D));
+	end			
+end
+if ~isempty(myCorTable)
+    myObjective = myObjective - 2*(sum(myCorTable{:,'weight'} .* log10(gofCor+epsilon)));
+	if minIndPVal > 0
+		myObjective = myObjective + sum((myCorTable{:,'weight'} > 0) .* (gofCor < minIndPVal) .* 1E6 .* (minIndPVal - gofCor));
+	end			
+end
+if ~isempty(myBRTable)
+    myObjective = myObjective - 2*(sum(myBRTable{:,'weight'} .* log10(gofBR+epsilon)));
+	if minIndPVal > 0
+		myObjective = myObjective + sum((myBRTable{:,'weight'} > 0) .* (gofBR < minIndPVal) .* 1E6 .* (minIndPVal - gofBR));
 	end		
 end
-
+if ~isempty(myRTable)
+    myObjective = myObjective - 2*(sum(myRTable{:,'weight'} .* log10(gofR+epsilon)));
+	if minIndPVal > 0
+		myObjective = myObjective + sum((myRTable{:,'weight'} > 0) .* (gofR < minIndPVal) .* 1E6 .* (minIndPVal - gofR));
+	end		
+end
 end

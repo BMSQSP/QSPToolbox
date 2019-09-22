@@ -22,6 +22,12 @@ function myRecistSimFilter = createRECISTSimFilter(myWorksheet, myVPopRECIST)
 %                                               2 = "SD", 3 = "SD"
 %                                               nan = VP is off study
 %                    'bestResp':    best response
+%                    'curRespNotCorrected':   RECIST classifications except without correction
+%                                             (relative to baseline and
+%                                             ignoring the clinical observation times.
+%                                             This is in contrast to ‘curResp’ and ‘bestResp’, which
+%                                             are only updated at the clinical observation times, and
+%                                             which are relative to the previous ‘bestResp’). 
 %                    'curWeight:    whether simulated patient stays in
 %                                   population for calibration at current time
 %                                   point.  Achieving 0
@@ -69,6 +75,8 @@ for interventionCounter = 1 :length(myInterventionIDs);
 end
 
 if flagContinue  
+    % Check the interventions that already have RECIST classification times
+    % in the data
     interventionsRECISTClass = unique(myBRTableRECIST{:,'interventionID'});
     if sum(~ismember(myInterventionIDs, interventionsRECISTClass)) > 0
         warning([mfilename,' found not all interventions to have RECIST classification times in myVPopRECIST.brTableRECIST for scoring.  Creating a simFilter for mechanistic dropouts using classification times for interventions where available, and pooling all observation times from other interventions where not.']) 
@@ -96,12 +104,16 @@ if flagContinue
         curSize(:,1) = timeVector;
         for vpCounter = 1 : length(myVPIDs)
             sampleData = myWorksheet.results{interventionCounter,vpCounter}.Data;
+            % Get all of the relative SLD data for the VP
             curData(:,vpCounter + 1) = sampleData(:,varIndices);
+            % Get all of the absolute lesion size data for the VP
+            % (used for CR classification)
             curSize(:,vpCounter + 1) = sampleData(:,varSizeIndices);
         end
         curDataRecalc = curData;
         curSizeRecalc = curSize;
 
+        % Get the observation times for the current intervention
         obsTimes = find(ismember(myBRTableRECIST{:,'interventionID'},myInterventionID));
         if length(obsTimes) > 0
             obsTimes = myBRTableRECIST{obsTimes,'time'};
@@ -115,10 +127,14 @@ if flagContinue
         end
 
         % Recalculate values only at the observed times
+        % Discretized observations so they are only updated at clinical
+        % lesion scan times.
         obsTimes = [obsTimes;nan];
         for vpCounter = 1 : length(myVPIDs)
+            % How many observation time points have passed
             pointsFound = 0;
             for timeCounter = 1 : nTimePoints
+                % Prior to first observation, assign nan
                 if timeVector(timeCounter) < obsTimes(1)
                     curDataRecalc(timeCounter,vpCounter + 1) = nan;
                     curSizeRecalc(timeCounter,vpCounter + 1) = nan;
@@ -140,6 +156,16 @@ if flagContinue
         % Nominal PR VPs
         bin1 = (curDataRecalc(:,2:end)<=binEdge(1)) & (curSizeRecalc(:,2:end)>=crCutoff);
         curResp =  3 * (bin3 > 0) + 2 * (bin2 > 0) .* (bin3 < 1) + 1 * (bin1 > 0) .* (bin3 < 1) .* (bin2 < 1);
+        
+        % Also calculate the current response from baseline, ignoring
+        % observation times:
+        % Nominal PD VPs
+        bin3Continuous = (binEdge(2)<curData(:,2:end)) & (curSize(:,2:end)>=crCutoff);
+        % Nominal SD VPs
+        bin2Continuous = (binEdge(1)<curData(:,2:end)) & (curSize(:,2:end)>=crCutoff);
+        % Nominal PR VPs
+        bin1Continuous = (curData(:,2:end)<=binEdge(1)) & (curData(:,2:end)>=crCutoff);
+        curRespNotCorrected =  3 * (bin3Continuous > 0) + 2 * (bin2Continuous > 0) .* (bin3Continuous < 1) + 1 * (bin1Continuous > 0) .* (bin3Continuous < 1) .* (bin2Continuous < 1);
         
         % Need to add cumulative change from min, too
         % increase of 20%, binEdge(2), relative to nadir
@@ -169,6 +195,7 @@ if flagContinue
             curBestResp(:,vpCounter) = cummin(curResp(:,vpCounter));
 		end
         myRecistSimFilter{interventionCounter}.curResp = curResp;
+        myRecistSimFilter{interventionCounter}.curRespNotCorrected = curRespNotCorrected;
         myRecistSimFilter{interventionCounter}.bestResp = curBestResp;
         myRecistSimFilter{interventionCounter}.filterMatrix = curWeight;
         myRecistSimFilter{interventionCounter}.time = curData(:,1);

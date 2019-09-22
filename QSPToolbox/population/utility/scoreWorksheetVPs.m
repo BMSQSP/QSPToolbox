@@ -38,15 +38,15 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
     % We will also score the VPs to add based on the data
     vpScores = zeros(1,length(newIndices));
 
-    %vpopDataCol1Index = find(ismember(testVPop.expData.Properties.VariableNames,'expVal1'));
     % First column where there is data
-    if isa(testVPop,'VPop')
-        vpopDataCol1Index = 8;
+    % data columns with DataIDs should follow
+    % PatientIDVar or RSCOREVar, depending on RECIST status
+    if sum(ismember(testVPop.expData.Properties.VariableNames,{'RSCOREVar'})) >= 1
+        vpopDataCol1Index = find(ismember(testVPop.expData.Properties.VariableNames,{'RSCOREVar'}))+1;
     else
-        vpopDataCol1Index = 12;
-    end    
-    
-    
+        vpopDataCol1Index = find(ismember(testVPop.expData.Properties.VariableNames,{'PatientIDVar'}))+1;
+    end
+
     addScore = zeros(nTestOutcomes,length(newIndices));
     % We'll also calculate a score weighted by biomarker and intervention
     % to avoid biasing towards biomarkers with too many time points
@@ -283,18 +283,13 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
 				
 				pdfDiff = (PDFexp-PDFsim).*(PDFexp>PDFsim);
 				% We want the indices 
-				newValInd =nan(1,0);
-				scInd =nan(1,0);
                 if nTestValues > 0
-                    for testCounter = 1 : nTestValues
-                        curInd = find(ismember(combinedPoints',(testValues(:,testCounter))','rows'));
-                        if length(curInd) > 0
-                            % This is the position in combined points
-                            scInd = [scInd, curInd(1)];
-                            % This is the original index in the new VPs that have not dropped out
-                            newValInd = [newValInd, testCounter];
-                        end
-                    end
+                    % We want the first index for each member of combinedPoints
+                    % that is also in testValues that is also in combinedPoints
+                    [~, scInd] = ismember(testValues', combinedPoints', 'rows');
+                    scInd = scInd';
+                    % all members of testValues should be in combinedPoints
+                    newValInd = (1:1:nTestValues);
                     % Need a map from new VPs that have not dropped out back into new VP position
                     newIndicesNotDropout = find(ismember(newIndices,newPredIndices));
 

@@ -1,4 +1,4 @@
-function myBinTableRECIST = createBinTableRECIST(myWorksheet,myExpDataIDs,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar,myVars,myBinEdges,mySimVars,mySimVarTypes,timeVar,startTime,myInterventionIDs)
+function myBinTableRECIST = createBinTableRECIST(myWorksheet,myExpDataIDs,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar,myVars,myBinEdges,mySimVars,mySimVarTypes,timeVar,startTime,myInterventionIDs, nBins)
 % This function takes experimental data embedded in a worksheet and
 % converts it to a bin table, bypassing reading from a mapelOptions
 % "experimental data table" and directly taking data from the worksheet,
@@ -41,7 +41,7 @@ function myBinTableRECIST = createBinTableRECIST(myWorksheet,myExpDataIDs,Patien
 continueFlag = true;
 
 tableVariableNamesFixed = {'time', 'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID','PatientIDVar','TRTVar','BRSCOREVar','RSCOREVar'};
-tableVariableNames = [tableVariableNamesFixed,{'weight','binEdge1','binEdge2','binEdge3','expN','expBin1','expBin2','expBin3','expBin4','predN','predBin1','predBin2','predBin3','predBin4'}];
+tableVariableNames = [tableVariableNamesFixed,{'weight','binEdges','expN','expBins','predN','predBins'}];
 myBinTableRECIST = cell2table(cell(0,length(tableVariableNames)));
 myBinTableRECIST.Properties.VariableNames = tableVariableNames;
 
@@ -177,9 +177,7 @@ if continueFlag
             % First get the bin edges from all variable data points
             allCurVarValues = selectData{curRows, curVar};
             myBinEdgeValues = myBinEdges{varCounter};
-            if length(myBinEdgeValues) ~= 3
-                myBinEdgeValues = [(median(allCurVarValues) - min(allCurVarValues))/2+min(allCurVarValues),median(allCurVarValues),(max(allCurVarValues) - median(allCurVarValues))/2+median(allCurVarValues)];
-            end
+			nBins = length(myBinEdgeValues)+1;
             % Now we need to step through and evaluate for the times
             curTimes = unique(selectData{curRows,timeVar});
             for curTimeCounter = 1: length(curTimes)
@@ -194,7 +192,7 @@ if continueFlag
                         curProbs = wtdBinProb(curData', ones(1, length(curData))/length(curData), myBinEdgeValues);
                         expN = length(curData);
                         curRow = {curTimes(curTimeCounter), interventionID, mySimVars{varCounter}, mySimVarTypes{varCounter}, myExpDataID, timeVar, curVar, PatientIDVar, TRTVar, BRSCOREVar, RSCOREVar};
-                        curRow = [curRow,{1,myBinEdgeValues(1), myBinEdgeValues(2), myBinEdgeValues(3), expN, curProbs(1), curProbs(2), curProbs(3), curProbs(4), nan, nan, nan, nan, nan}];
+						curRow = [curRow,{1,{myBinEdgeValues}, expN, {curProbs}, nan, {nan(1,nBins)}}];
                         curRow = cell2table(curRow);
                         curRow.Properties.VariableNames = myBinTableRECIST.Properties.VariableNames; 
                         myBinTableRECIST = [myBinTableRECIST; curRow];

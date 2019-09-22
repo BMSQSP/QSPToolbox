@@ -73,10 +73,18 @@ if (flagContinue)
     plotHandle = figure;
     for plotCounter = 1 : myNPlots
         subplot(nPlotsVer, nPlotsHor, plotCounter);
-        expBins = [myTable{plotCounter,'expBin1'},myTable{plotCounter,'expBin2'},myTable{plotCounter,'expBin3'},myTable{plotCounter,'expBin4'}];
-        predBins = [myTable{plotCounter,'predBin1'},myTable{plotCounter,'predBin2'},myTable{plotCounter,'predBin3'},myTable{plotCounter,'predBin4'}];
-        binEdges = [myTable{plotCounter,'binEdge1'},myTable{plotCounter,'binEdge2'},myTable{plotCounter,'binEdge3'}];
-        binLabels = {['< ',num2str(binEdges(1))],[num2str(binEdges(1)),' - ',num2str(binEdges(2))],[num2str(binEdges(2)),' - ',num2str(binEdges(3))],['>= ',num2str(binEdges(3))]};
+        expBins = myTable{plotCounter,'expBins'};
+        predBins = myTable{plotCounter,'predBins'};
+        binEdges = myTable{plotCounter,'binEdges'};
+        binEdges = binEdges{1};
+        expBins = expBins{1};
+        predBins = predBins{1};
+        binLabels = cell(1, length(binEdges)+1);
+        binLabels{1} = ['< ',num2str(binEdges(1))];
+        binLabels{length(binEdges)+1} = ['>= ',num2str(binEdges(length(binEdges)))];
+        for binCounter = 1 : (length(binEdges)-1)
+            binLabels{binCounter+1} = [num2str(binEdges(binCounter)),' - ',num2str(binEdges(binCounter+1))];
+        end
         barplot = bar([expBins;predBins]');
         set(gca,'XTickLabel',binLabels);
         xtickangle(45);

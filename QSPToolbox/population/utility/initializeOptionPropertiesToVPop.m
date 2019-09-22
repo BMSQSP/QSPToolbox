@@ -8,51 +8,51 @@ function myVPop = initializeOptionPropertiesToVPop(myMapelOptions)
 % RETURNS
 %  VPop:                    an instance of a VPop
 %
+
 if isa(myMapelOptions, 'mapelOptions')
     myVPop = VPop;
 elseif isa(myMapelOptions, 'mapelOptionsRECIST')
     myVPop = VPopRECIST;
-else
-    myVPop = VPopRECISTnoBin;
 end
 % First, get the properties from myMapelOptions
 % Copying over myMapelOptions.initialPWs is not done
 % here.  It is assumed appropriate treatment of these
 % is done in a calling script
-myVPop.spreadOut = myMapelOptions.spreadOut;
-myVPop.minIndPVal = myMapelOptions.minIndPVal;
-myVPop.exactFlag = myMapelOptions.exactFlag;        
-myVPop.useEffN = myMapelOptions.useEffN;    
-myVPop.optimizeTimeLimit = myMapelOptions.optimizeTimeLimit;
-myVPop.optimizeType = myMapelOptions.optimizeType;        
-myVPop.optimizePopSize = myMapelOptions.optimizePopSize;
-myVPop.objectiveLimit = myMapelOptions.objectiveLimit; 	
-myVPop.intSeed = myMapelOptions.intSeed;
-myVPop.nIters = myMapelOptions.nIters;
-myVPop.tol = myMapelOptions.tol;
-myVPop.expData = myMapelOptions.expData;
+%  pws
+% Also can't be done here:
+%  indexTable
+%  binEdges
+%  binMidPoints
+%  binProbs
+%  simData
+%  recistSimFilter
+
+myVPop.pwStrategy = myMapelOptions.pwStrategy;
 myVPop.mnSDTable = myMapelOptions.mnSDTable;
 myVPop.binTable = myMapelOptions.binTable;
 myVPop.distTable = myMapelOptions.distTable; 
 myVPop.distTable2D = myMapelOptions.distTable2D;
 myVPop.corTable = myMapelOptions.corTable;
+myVPop.expData = myMapelOptions.expData;
+myVPop.spreadOut = myMapelOptions.spreadOut;
+myVPop.minIndPVal = myMapelOptions.minIndPVal;
+myVPop.useEffN = myMapelOptions.useEffN;    
+myVPop.exactFlag = myMapelOptions.exactFlag;   
+myVPop.optimizeTimeLimit = myMapelOptions.optimizeTimeLimit;
+myVPop.optimizeType = myMapelOptions.optimizeType;        
+myVPop.optimizePopSize = myMapelOptions.optimizePopSize;
+myVPop.objectiveLimit = myMapelOptions.objectiveLimit; 	
+myVPop.intSeed = myMapelOptions.intSeed;
+myVPop.tol = myMapelOptions.tol;
+myVPop.nIters = myMapelOptions.nIters;
 myVPop.minEffN = myMapelOptions.minEffN;
 
 if isa(myVPop,'VPopRECIST')
-
 		myVPop.brTableRECIST = myMapelOptions.brTableRECIST;
 		myVPop.rTableRECIST = myMapelOptions.rTableRECIST;        
         myVPop.relSLDvar = myMapelOptions.relSLDvar;
         myVPop.absALDVar = myMapelOptions.absALDVar;
         myVPop.crCutoff = myMapelOptions.crCutoff;        
 end	    
-if isa(myVPop,'VPopRECISTnoBin')
-        myVPop.distTable2D = myMapelOptions.distTable2D;
-		myVPop.corTable = myMapelOptions.corTable;
-		myVPop.brTableRECIST = myMapelOptions.brTableRECIST;
-		myVPop.rTableRECIST = myMapelOptions.rTableRECIST;        
-        myVPop.relSLDvar = myMapelOptions.relSLDvar;
-        myVPop.absALDVar = myMapelOptions.absALDVar;
-        myVPop.crCutoff = myMapelOptions.crCutoff;        
-end
+
 end

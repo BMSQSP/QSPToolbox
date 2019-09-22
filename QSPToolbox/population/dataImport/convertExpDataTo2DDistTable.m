@@ -71,7 +71,7 @@ if continueFlag
                 tableVariableNames = {'time1','time2','interventionID1','interventionID2','elementID1','elementID2','elementType1','elementType2','expDataID1','expDataID2','expTimeVarID1','expTimeVarID2','expVarID1','expVarID2','PatientIDVar1','PatientIDVar2','TRTVar1','TRTVar2','BRSCOREVar1','BRSCOREVar2','RSCOREVar1','RSCOREVar2'};
             end
             oldTableVariableNames = myVPop.expData.Properties.VariableNames(1:nDataHeaderCols);
-            tableVariableNames = [tableVariableNames,{'weight','expN', 'expSample', 'predN', 'predIndices', 'predSample', 'predProbs','combinedQuadrants'}];
+            tableVariableNames = [tableVariableNames,{'weight','expN', 'expSample', 'predN', 'predIndices', 'predSample', 'predProbs'}];
             myDistTable = cell2table(cell(0,length(tableVariableNames)));
             myDistTable.Properties.VariableNames = tableVariableNames;
         end
@@ -87,7 +87,7 @@ if continueFlag
         else
             curRow = {myVPop.expData{sourceRow1,'time'},myVPop.expData{sourceRow2,'time'},myVPop.expData{sourceRow1,'interventionID'},myVPop.expData{sourceRow2,'interventionID'},myVPop.expData{sourceRow1,'elementID'},myVPop.expData{sourceRow2,'elementID'},myVPop.expData{sourceRow1,'elementType'},myVPop.expData{sourceRow2,'elementType'},myVPop.expData{sourceRow1,'expDataID'},myVPop.expData{sourceRow2,'expDataID'},myVPop.expData{sourceRow1,'expTimeVarID'},myVPop.expData{sourceRow2,'expTimeVarID'},myVPop.expData{sourceRow1,'expVarID'},myVPop.expData{sourceRow2,'expVarID'},myVPop.expData{sourceRow1,'PatientIDVar'},myVPop.expData{sourceRow2,'PatientIDVar'},myVPop.expData{sourceRow1,'TRTVar'},myVPop.expData{sourceRow2,'TRTVar'},myVPop.expData{sourceRow1,'BRSCOREVar'},myVPop.expData{sourceRow2,'BRSCOREVar'},myVPop.expData{sourceRow1,'RSCOREVar'},myVPop.expData{sourceRow2,'RSCOREVar'}};
         end 
-        curRow = [curRow,{1, nEntries, {curData}, nan, {nan}, {nan}, {nan}, {nan,nan,nan,nan}}];
+        curRow = [curRow,{1, nEntries, {curData}, nan, {nan}, {nan}, {nan}}];
         curRow = cell2table(curRow);
         curRow.Properties.VariableNames = myDistTable.Properties.VariableNames; 
         myDistTable = [myDistTable; curRow];   

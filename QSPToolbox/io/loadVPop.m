@@ -46,6 +46,7 @@ if flagContinue
         fullFileName = [myPath,myFileName,'.',myFormat];
         myVPop = load(fullFileName, '-mat');
         myVPop = myVPop.myVPop;
+		myVPop = checkUpdateObjectVersion(myVPop);
     end
 else
     warning('Unable to load in ',mfilename,'. Returning a blank VPop.')

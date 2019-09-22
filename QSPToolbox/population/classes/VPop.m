@@ -11,20 +11,23 @@ classdef VPop
 %                coefficients
 %  coeffsDist:   (Don't manipulate) A nVP X vVP matrix with VP the
 %                distance for the coefficients
+%  pwStrategy:	 Strategy for the optimization.  Allowed values:
+%                 'direct' (default value) If this is set then PWs are optimized directly
+%                 'bin'     specified in a strategy similar to teh original MAPEL algorithm 
 %  indexTable:   (Don't manipulate) A nAxis X nVP table that indicates in which 
 %                axis bin each VP falls into.  This is usually populated at 
 %                the beginning of the MAPEL algorithm by the assignIndices
-%                method.
+%                method.  ONLY NEEDED FOR BIN PWSTRATEGY
 %  binEdges:     (Don't manipulate) Edges for the axis bins. These are also
 %                populated by the assignIndices method.
 %  binMidPoints: (Don't manipulate) Mid points for the axis bins, populated
-%                by the assignIndices method.
+%                by the assignIndices method.  ONLY NEEDED FOR BIN PWSTRATEGY
 %  binProbs:     (Don't manipulate) Probabilities for each axis bin.  These are directly
 %                varied in the optimization, and the results are used
-%                to calculate the individual prevalence weights.
+%                to calculate the individual prevalence weights.  ONLY NEEDED FOR BIN PWSTRATEGY
 %  pws:          (Don't manipulate) A 1xnVP vector of prevalence weights,
 %                which are calculated based on the assignPWs.
-%  coefficients: a nAxisxnVP matrix of VP parameter coefficients.
+%  coefficients: a nAxisxnVP matrix of VP parameter coefficients.  ONLY NEEDED FOR BIN PWSTRATEGY
 %  expData:      (Don't manipulate) A table of experimental data used to
 %                guide optimization.  It is usually taken from the
 %                mapelOptions.
@@ -51,6 +54,9 @@ classdef VPop
 %                adjust some of the weights here. 
 %  distTable2D:	 (Don't manipulate) A table to enable calibrating 2D distributions
 %  corTable:	 (Don't manipulate) A table to enable calibrating pairwise correlations																				  
+%  brTableRECIST: (Don't manipulate) A table with best RECIST responses
+%  rTableRECIST: (Don't manipulate) A table with RECIST responses to better 
+%                calibrate the distributions at each time step							  
 %  gofMn:        (Don't manipulate) Goodness of fit statistics for 
 %                individual endpoint/time mean comparisons between data
 %                and virtual population.  Usually calcualated by the
@@ -67,6 +73,7 @@ classdef VPop
 %                empirical distribution comparisons 
 %                between data and virtual population.  Usually calculated 
 %                by the evaluateGOF function.
+%  gofCor:						 
 %  gof:          (Don't manipulate) Composite goodness-of-fit result.
 %                Usually updated by a call to the evaluateGOF.
 %  useEffN:      Whether or not to use the effN for optimization and
@@ -109,6 +116,7 @@ classdef VPop
 properties
 	coeffsTable
 	coeffsDist
+	pwStrategy
     indexTable
     binEdges
     binMidPoints
@@ -151,6 +159,13 @@ methods
       function obj = set.coeffsDist(obj,myCoeffsDist)
           obj.coeffsDist = myCoeffsDist;
       end	  	  
+      function obj = set.pwStrategy(obj,myPWStrategy)
+          if sum(ismember({'direct','bin'},lower(myPWStrategy))) == 1
+              obj.pwStrategy = lower(myPWStrategy);
+          else
+              error(['Property pwStrategy in ',mfilename,' must be "direct" or "bin"'])
+          end
+      end  
       function obj = set.indexTable(obj,myIndexTable)
           obj.indexTable = myIndexTable;
       end
@@ -331,7 +346,9 @@ methods
               case 'coeffsTable'
                   value = obj.coeffsTable;	
               case 'coeffsDist'
-                  value = obj.coeffsDist;					  
+                  value = obj.coeffsDist;	
+              case 'pwStrategy'
+                  value = obj.pwStrategy;				  
               case 'indexTable'
                   value = obj.indexTable;
               case 'binEdges'
@@ -464,6 +481,7 @@ methods
       function obj = startProbs(obj, myRandomStart)
           % This method initializes bin probabilities, and is used
           % prior to the optization.
+		  % Only relevant for obj.pwStrategy = 'bin'											  
           %
           % ARGUMENTS
           %  (self)
@@ -505,6 +523,7 @@ methods
 		  %  gofCor					   
           %  gof
           %
+		  % Only relevant for obj.pwStrategy = 'axis'											   
           % ARGUMENTS:
           %  (self): No additional arguments, but the VPop object must have
           %          previously assigned the following properties:
@@ -630,6 +649,32 @@ methods
            obj.gof = [];
       end
 
+      function obj = startPWs(obj, myWorksheet, myRandomStart)
+          % This method initializes pws, and is used
+          % prior to the optization.
+		  % Only relevant for obj.pwStrategy = 'direct'
+          %
+          % ARGUMENTS
+          %  (self)
+          %  myRandomStart:  A boolean variable (true/false), if true
+          %                  prevalence weights will be set
+          %                  randomly and if false they will be uniform
+           if nargin < 1
+                myRandomStart = false;
+           end
+          mycoeffsTable = getVPCoeffs(myWorksheet);
+          [nAxis, nVP] = size(mycoeffsTable);
+           if ~myRandomStart
+                myUniformStartProbs = ones(1,nVP) ./ nVP;
+           else
+                myUniformStartProbs = rand([1, nVP]);
+				myUniformStartProbsSum=sum(myUniformStartProbs);
+                for axisCounter = 1 : nVP
+                    myUniformStartProbs(1,axisCounter) = myUniformStartProbs(1,axisCounter)/myUniformStartProbsSum;
+                end
+           end
+           obj.pws = myUniformStartProbs;
+      end	  
       function obj = getSimData(obj, myWorksheet)
            % Get all of the simulation datapoints for the VPs that will
            % be needed for calculating population statistics
@@ -932,22 +977,11 @@ methods
                   end                  
               end              		  
 			  % Unlike the 1D case we won't pre-sort
-              %[curSimValues1, I] = sort(curSimValues1, 2, 'ascend');
-			  %curSimValues2 = curSimValues2(:,I);
               for rowCounter = 1 : nDistRows
                   keepIndices = find(~isnan(curSimValues1(rowCounter,:)) & ~isnan(curSimValues2(rowCounter,:)));
                   curVals = [curSimValues1(rowCounter,keepIndices); curSimValues2(rowCounter,keepIndices)];          
                   myDistTable.('predSample'){rowCounter} = curVals;
 				  myDistTable.('predIndices'){rowCounter} = keepIndices;
-                  % Also get the quadrant measures
-                  sample1 = myDistTable.('expSample'){rowCounter};
-				  quadrantCounts1c = quadrantCount(sample1, curVals);
-				  quadrantCounts1s = quadrantCount(sample1, sample1);
-				  quadrantCounts2c = quadrantCount(curVals, sample1);
-				  quadrantCounts2s = quadrantCount(curVals, curVals);
-                  %myDistTable.('expCombinedIndices'){rowCounter} = sample1Ind;
-                  %myDistTable.('simCombinedIndices'){rowCounter} = sample2Ind;
-                  myDistTable.('combinedQuadrants')(rowCounter,:) = {quadrantCounts1c,quadrantCounts1s,quadrantCounts2c,quadrantCounts2s};
               end
               obj.distTable2D = myDistTable;												
           end   
@@ -1125,21 +1159,18 @@ methods
               % 2 step assignment to speed execution
               % first to matrix, then convert back to table.
               [nBinRows, nBinCols] = size(myBinTable);          
-              curProbs = nan(nBinRows,4);     
+              curProbs = cell(nBinRows,1);     
 
               curSimValues = nan(nBinRows,length(myPWs));
               curSimValues(binRowsTarget,:) = (mySimData(binRowsSource, :));
-              binEdgeValues = [myBinTable{:,'binEdge1'},myBinTable{:,'binEdge2'},myBinTable{:,'binEdge3'}];          
+              binEdgeValues = myBinTable{:,'binEdges'};          
 
               for rowCounter = 1 : nBinRows
                    % 'binEdge1','binEdge2','binEdge3'
-                   curProbs(rowCounter,:) = wtdBinProb(curSimValues(rowCounter,:), myPWs, binEdgeValues(rowCounter,:));
+                   curProbs{rowCounter} = wtdBinProb(curSimValues(rowCounter,:), myPWs, binEdgeValues{rowCounter});
               end
               myBinTable.('predN') = (curN * ones(nBinRows,1));
-              myBinTable.('predBin1') = (curProbs(:,1));
-              myBinTable.('predBin2') = (curProbs(:,2));
-              myBinTable.('predBin3') = (curProbs(:,3));
-              myBinTable.('predBin4') = (curProbs(:,4));      
+              myBinTable.('predBins') = curProbs;  
               obj.binTable = myBinTable;
           end
           if ~isempty(distRowsSource)
@@ -1205,6 +1236,7 @@ methods
           % (virtual population) object.
           obj.coeffsTable=[];	
 		  obj.coeffsDist=[];
+		  obj.pwStrategy = 'direct';							  
           obj.indexTable = [];
           obj.binEdges = [];
           obj.binMidPoints = [];

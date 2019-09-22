@@ -21,12 +21,23 @@ classdef mapelOptionsRECIST
 % corTable:
 % brTableRECIST:     (Required) A table with best RECIST responses.
 % rTableRECIST:      (Required) A table with RECIST responses.
+% pwStrategy:	     Strategy for the optimization.  Allowed values:
+%                     'direct' (default value) If this is set then PWs are optimized directly
+%                     'bin'     specified in a strategy similar to teh original MAPEL algorithm 
 % nBins:             (Optional) Number of bins per continuous axis.  The
 %                    default is 2, which may be too constrictive in many
-%                    situations.
+%                    situations. ONLY USED IN BIN PWSTRATEGY
 % initialProbs:      (Optional) A NAxis X Nbins matrix of initial 
 %                    probabilities. If set to be [], probabilities are
 %                    initialized to be uniform.  The default is [].
+%                    ONLY USED IN BIN PWSTRATEGY
+% initialPWs:        (Optional) 
+%                     - A 1 nVP vector of initial pws. OR
+%                     - (default) If set to be [], probabilities are
+%                       initialized to be uniform.  The default is []. OR
+%                     - if set to -1, we will try to find a near optimum starting
+%                       point based on a linearized problem formulation.
+%                       ONLY USED IN DIRECT PWSTRATEGY
 % randomStart:       (Optional) If 0, the initial 
 %                    parameters are not perturbed in anyway.  Otherwise the 
 %                    transformed initial bin probabilities are perturbed  
@@ -43,6 +54,7 @@ classdef mapelOptionsRECIST
 %                    edges so they cover an equal numeric interval (true),
 %                    or a ~ equal number of VPs are
 %                    included in each bin (false).  Default is false.
+%                    ONLY USED IN BIN PWSTRATEGY
 % tol:               (Optional) Stopping tolerance for the solvers.
 %                    Default is 1E-3.
 % spreadOut:         (Optional) Extra argument for "findFit" function that 
@@ -57,7 +69,7 @@ classdef mapelOptionsRECIST
 %                    strongly recommended to set this to false during
 %                    optimization.  It is set to false by
 %                    default.
-%  exactFlag:        Whether to check to apply Fisher's exact test instead
+% exactFlag:         Whether to check to apply Fisher's exact test instead
 %                    of the chi-square approximation for binned distribution
 %                    test.  This may be strictly correct but can slow
 %                    calculations, often with small impacts on GOF
@@ -89,9 +101,11 @@ classdef mapelOptionsRECIST
 	  distTable2D		
 	  corTable
       brTableRECIST
-      rTableRECIST      
+      rTableRECIST  
+	  pwStrategy	  
       nBins
       initialProbs
+      initialPWs
       randomStart
       nIters
       equalBinBreaks
@@ -146,6 +160,14 @@ classdef mapelOptionsRECIST
           obj.corTable = myCorTable;
       end 	  
 	  
+      function obj = set.pwStrategy(obj,myPWStrategy)
+          if sum(ismember({'direct','bin'},lower(myPWStrategy))) == 1
+              obj.pwStrategy = lower(myPWStrategy);
+          else
+              error(['Property pwStrategy in ',mfilename,' must be "direct" or "bin"'])
+          end
+      end 	  
+	  
       function obj = set.nBins(obj,myNBins)
           if mod(myNBins,1) == 0
               obj.nBins = myNBins;
@@ -157,6 +179,10 @@ classdef mapelOptionsRECIST
       function obj = set.initialProbs(obj,myInitialProbs)
           obj.initialProbs = myInitialProbs;
       end      
+	  
+      function obj = set.initialPWs(obj,myInitialPWs)
+          obj.initialPWs = myInitialPWs;
+      end    	  
       
       function obj = set.randomStart(obj,myRandomStart)
           if (myRandomStart >= 0)
@@ -279,10 +305,8 @@ classdef mapelOptionsRECIST
       end           
       
       
-      function value = get(obj,propName)
+      function value = get(obj,propName)  
           switch propName
-              case 'brTableRECIST'
-                  value = obj.brTableRECIST;            
               case 'expData'
                   value = obj.expData;
               case 'mnSDTable'
@@ -298,7 +322,9 @@ classdef mapelOptionsRECIST
               case 'brTableRECIST'
                   value = obj.brTableRECIST; 
               case 'rTableRECIST'
-                  value = obj.rTableRECIST;                   
+                  value = obj.rTableRECIST;
+              case 'pwStrategy'
+                  value = obj.pwStrategy;
               case 'nBins'
                   value = obj.nBins;
               case 'initialProbs'
@@ -355,12 +381,14 @@ classdef mapelOptionsRECIST
 		  obj.distTable2D = []; 
 		  obj.corTable = []; 
           obj.brTableRECIST = [];
-          obj.rTableRECIST = [];          
+          obj.rTableRECIST = []; 
+		  obj.pwStrategy = 'direct';		  
           obj.nBins = 2;
           obj.initialProbs = [];
+          obj.equalBinBreaks = false;		  
+          obj.initialPWs = [];	
           obj.randomStart = 0;
           obj.nIters = 10000;
-          obj.equalBinBreaks = false;
           obj.tol = 1E-3;
           obj.spreadOut = 0;
           obj.minIndPVal = 0;			  		  

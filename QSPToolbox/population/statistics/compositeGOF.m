@@ -11,6 +11,8 @@ function myVPop = compositeGOF(myVPop)
 %               gofSD
 %               gofBin
 %               gofDist
+%               gofDist2D
+%               gofCor
 %
 % RETURNS
 %  myVpop:     A VPop object with the composite GOF updated.
@@ -28,7 +30,7 @@ else
 end
 
 if continueFlag
-    if ~ismember(class(myVPop),{'VPop','VPopRECIST'})
+    if sum(ismember(class(myVPop),{'VPop','VPopRECIST'}))<1
         continueFlag = false;
         warning(['Input VPop not recognized in call to ',mfilename,'.'])
     end       

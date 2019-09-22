@@ -3,7 +3,7 @@ function myVPop = compositeGOFRECIST(myVPop)
 % given axes weight solution
 %
 % ARGUMENTS
-%  myVPop:     An instance of a VPopRECIST or VPopRECISTnoBin object. The fields should be
+%  myVPop:     An instance of a VPopRECIST object. The fields should be
 %              populated and individual p-values calculated before calling:
 %               mnSDTable
 %               binTable
@@ -12,6 +12,7 @@ function myVPop = compositeGOFRECIST(myVPop)
 %               gofBin
 %               gofDist
 %               gofDist2D
+%               gofCor
 %               gofBR
 %               gofR
 %
@@ -31,7 +32,7 @@ else
 end
 
 if continueFlag
-    if ~strcmp(class(myVPop),'VPopRECIST') && ~strcmp(class(myVPop),'VPopRECISTnoBin')
+    if ~strcmp(class(myVPop),'VPopRECIST')
         continueFlag = false;
         warning(['Input VPop not recognized in call to ',mfilename,'.'])
     end       

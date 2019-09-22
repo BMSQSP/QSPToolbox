@@ -46,6 +46,7 @@ if flagContinue
         fullFileName = [myPath,myFileName,'.',myFormat];
         myMapelOptions = load(fullFileName, '-mat');
         myMapelOptions = myMapelOptions.myMapelOptions;
+		myMapelOptions = checkUpdateObjectVersion(myMapelOptions);
     end
 else
     warning('Unable to load in ',mfilename,'. Returning a blank mapelOptions.')

@@ -1,12 +1,12 @@
-function myObjective = evaluateObjectiveRECIST(myVPop, myProbVectTrans)
+function myObjective = evaluateObjectiveNoBin(myVPop, myPWVectTrans)
 % This function evaluates an objective function, which is similar to
 % the composite goodness-of-fit but with a few critical differences, and is
 % generally called only during the optimization / VPop fit to data.
+% This function should be called just for VPops with 'direct' pwStrategy
 %
 % ARGUMENTS
 %  myVPop:              a VPop object instance, with properties already
 %                       assigned:
-%                        binProbs:  Should at least be initialized
 %                        spreadOut
 %                        minEffN
 %                        mnSDTable: should at least be populated with
@@ -14,27 +14,17 @@ function myObjective = evaluateObjectiveRECIST(myVPop, myProbVectTrans)
 %                        binTable:  Also need experiment data
 %                        distTable2D
 %                        corTable
-%                        brTableRECIST
-%                        rTableRECIST
-%  myProbVectTrans:     a 1 x (nBins-1 * nAxis) vector of transformed 
+%                        brTableRECIST (if applicable)
+%                        rTableRECIST (if applicable)
+%  myPWVectTrans:     a 1 x (nVP-1) vector of transformed PW
 %                       probabilities
 %
 % RETURNS
 %  myObjective:         the objective function values
 %
 
-% First update pws with new probVect
-[nAxis, nBins] = size(myVPop.binProbs);
-myProbTrans = transpose(reshape(myProbVectTrans, nBins-1, nAxis));
-binProbs = nan(nAxis, nBins);
-for axisCounter = 1 : nAxis
-    binProbs(axisCounter,:) = invHyperTransform(myProbTrans(axisCounter,:));
-end
-
-myVPop.binProbs = binProbs;
-myVPop = myVPop.assignPWs();
-
 % Next update the individual GOF statistics
+myVPop.pws=invHyperTransform(myPWVectTrans);
 myVPop = evaluateGOF(myVPop);
 
 myObjective = 0;
@@ -67,7 +57,7 @@ if myVPop.spreadOut > 0
 	% by roughly what we would expect for nVP evenly spaced
 	% partices in
 	% a nAxis space
-	dIdeal = (1/nPWs)^(1/nAxis);
+        dIdeal = (1/nPWs)^(1/nAxis);
     notUnif = myVPop.spreadOut*dIdeal/myDAvg;
     myObjective = myObjective + notUnif;
 end
@@ -81,8 +71,13 @@ myBinTable = myVPop.binTable;
 myDistTable = myVPop.distTable;
 myDistTable2D = myVPop.distTable2D;
 myCorTable = myVPop.corTable;
-myBRTable = myVPop.brTableRECIST;
-myRTable = myVPop.rTableRECIST;
+if isa(myVPop, 'VPopRECIST')
+	myBRTable = myVPop.brTableRECIST;
+	myRTable = myVPop.rTableRECIST;
+else
+	myBRTable = [];
+	myRTable = [];
+end	
 
 % We use the same epsilon from the MAPEL paper
 %epsilon = myVPop.epsilon;
@@ -93,8 +88,10 @@ gofBin = myVPop.gofBin;
 gofDist = myVPop.gofDist;
 gofDist2D = myVPop.gofDist2D;
 gofCor = myVPop.gofCor;
-gofBR = myVPop.gofBR;
-gofR = myVPop.gofR;
+if isa(myVPop, 'VPopRECIST')
+	gofBR = myVPop.gofBR;
+	gofR = myVPop.gofR;
+end
 minIndPVal = myVPop.minIndPVal;
 
 % May want to add checks here for the Mean/SD/Bin evaluations and whether

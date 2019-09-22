@@ -63,9 +63,11 @@ if continueFlag
     
     myCoeffs = getVPCoeffs(myWorksheet);
     [nAxis, nOriginalVPs] = size(myCoeffs);	
+    
     % We will pre-rank parent VPs we might want to add
     % to resampling based on the observed data    
-    
+    % This step will only be impactful if
+    % nUnweightedParents > 0
     % We need to create an updated the VPop in case
     % new VPs were added to the worksheet
     if isa(newVPop,'VPop')
@@ -79,8 +81,9 @@ if continueFlag
     testVPop.mnSDTable = newVPop.mnSDTable;
     testVPop.binTable = newVPop.binTable;
     testVPop.distTable = newVPop.distTable;
+    testVPop.distTable2D = newVPop.distTable2D;   
+    testVPop.corTable = newVPop.corTable;
     if isa(newVPop,'VPopRECIST') || isa(newVPop,'VPopRECISTnoBin')
-        testVPop.distTable2D = newVPop.distTable2D;
         testVPop.brTableRECIST = newVPop.brTableRECIST;
         testVPop.rTableRECIST = newVPop.rTableRECIST;        
         testVPop.relSLDvar = newVPop.relSLDvar;
@@ -92,12 +95,13 @@ if continueFlag
 		testVPop = testVPop.assignIndices(myWorksheet, myMapelOptions);
     end
     testVPop = testVPop.getSimData(myWorksheet);
-    testVPop.pws = ones(1,nOriginalVPs)./nOriginalVPs;
     testVPop = testVPop.addDistTableSimVals();  
+    testVPop = testVPop.addDistTable2DSimVals();
+	testVPop = testVPop.addCorTableSimVals();
+    % For evaluation
+    % coerce pws to be the same.
+    testVPop.pws = ones(1,nOriginalVPs)./nOriginalVPs;
     testVPop = testVPop.addPredTableVals();    
-	if ~isa(testVPop,'VPop')
-        testVPop = testVPop.addDistTable2DSimVals();
-    end	    
     
     % Get the scores
     originalVPScores = scoreWorksheetVPs(testVPop,1:nOriginalVPs,1:nOriginalVPs);
@@ -221,6 +225,9 @@ if continueFlag
     newIndices = (find(~ismember(curVPIDs,originalVPIDs)));
     newVPIDs = curVPIDs(newIndices);
 
+    
+    
+    
     % We create a "dummy" vpop object to help identify
     % areas where we may need to expand the range in simulated
     % outcomes
@@ -235,8 +242,9 @@ if continueFlag
     testVPop.mnSDTable = newVPop.mnSDTable;
     testVPop.binTable = newVPop.binTable;
     testVPop.distTable = newVPop.distTable;
+    testVPop.distTable2D = newVPop.distTable2D;   
+    testVPop.corTable = newVPop.corTable;
     if isa(newVPop,'VPopRECIST') || isa(newVPop,'VPopRECISTnoBin')
-        testVPop.distTable2D = newVPop.distTable2D;
         testVPop.brTableRECIST = newVPop.brTableRECIST;
         testVPop.rTableRECIST = newVPop.rTableRECIST;        
         testVPop.relSLDvar = newVPop.relSLDvar;
@@ -248,15 +256,20 @@ if continueFlag
 		testVPop = testVPop.assignIndices(jitteredWorksheet, myMapelOptions);
     end
     testVPop = testVPop.getSimData(jitteredWorksheet);
-    testVPop.pws = ones(1,length(curVPIDs))./length(curVPIDs);
     testVPop = testVPop.addDistTableSimVals();  
+    testVPop = testVPop.addDistTable2DSimVals();
+	testVPop = testVPop.addCorTableSimVals();
+    % For evaluation
+    % coerce pws to be the same.
+    testVPop.pws = ones(1,length(curVPIDs))./length(curVPIDs);
     testVPop = testVPop.addPredTableVals();    
-	if ~isa(testVPop,'VPop')
-        testVPop = testVPop.addDistTable2DSimVals();
-    end	
-	
+    
 	% Now get the score matrix for the new VPs
-	newVPScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices);
+    if isa(newVPop,'VPopRECISTnoBin')
+        newVPScores = scoreWorksheetVPsLC(testVPop,originalIndices,newIndices);
+    else
+        newVPScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices);
+    end
 
 
     newPassNames = cell(1,0);

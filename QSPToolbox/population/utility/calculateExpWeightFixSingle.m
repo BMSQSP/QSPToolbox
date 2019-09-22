@@ -1,10 +1,10 @@
-function w = calculateExpWeight(expN, expSTD, dataGroupDescription, simN)
-% This is a utility function to find calculation of
-% different weights for the different data group types
+function w = calculateExpWeightFixSingle(expN, expSTD, dataGroupDescription, simN, keepType)
+% This is a utility function to fix the experimental
+% weight to 1 for a single data group type
 % in linear calibrate.
 %
 % ARGUMENTS
-%  expN:                  An experimental N
+%  expN:                  An experimental N, these are ignored here
 %  expSTD:                An experimental standard deviation  
 %  dataGroupDescription:  Data group description.  Should be one of:
 %							binTable
@@ -13,34 +13,62 @@ function w = calculateExpWeight(expN, expSTD, dataGroupDescription, simN)
 %                           rTableRECIST
 %                           mnSDTablemean
 %                           mnSDTablevariance      
+%                           corTable
 %  simN:                  Assumed N for weighting for the simulation results
+%                           keepType: data group description to keep
+%                           nonzero.  Note: use mnSDTable rather than 
+%                           mnSDTablemean, mnSDTablevariance
 % RETURNS
 %  w:                     A weighting factor.
 %
 
 if strcmp(dataGroupDescription(1:length('binTable')), 'binTable')
-                w = sqrt((expN*simN)/(expN+simN));
+    if strcmp(keepType,'binTable')
+        w = 1;
+    else
+        w = 0;
+    end
  
 elseif strcmp(dataGroupDescription(1:length('distTable')), 'distTable')
-                w = sqrt((expN*simN)/(expN+simN));
+    if strcmp(keepType,'distTable')
+        w = 1;
+    else
+        w = 0;
+    end
  
 elseif strcmp(dataGroupDescription(1:length('brTableRECIST')), 'brTableRECIST')
-                w = sqrt((expN*simN)/(expN+simN));
+    if strcmp(keepType,'distTable')
+        w = 1;
+    else
+        w = 0;
+    end
  
 elseif strcmp(dataGroupDescription(1:length('rTableRECIST')), 'rTableRECIST')
-                w = sqrt((expN*simN)/(expN+simN));
+    if strcmp(keepType,'rTableRECIST')
+        w = 1;
+    else
+        w = 0;
+    end
  
 elseif strcmp(dataGroupDescription(1:length('mnSDTable')), 'mnSDTable') && strcmp(dataGroupDescription(end-length('mean')+1:end), 'mean')
-                w = 1/(expSTD*sqrt(1/expN+1/simN));
+    if strcmp(keepType,'mnSDTable')
+        w = 1;
+    else
+        w = 0;
+    end
+
  
 elseif strcmp(dataGroupDescription(1:length('mnSDTable')), 'mnSDTable') && strcmp(dataGroupDescription(end-length('variance')+1:end), 'variance')
-                w = 1/(expSTD*sqrt(1/expN+1/simN));
-elseif strcmp(dataGroupDescription(1:length('corTable')), 'corTable')
-    if expN>3 && simN>3
-        w = 1/sqrt(1/(expN-3)+1/(simN-3));
+    if strcmp(keepType,'mnSDTable')
+        w = 1;
     else
-        warning(['Either expN or simN is less than or equal to 3, modify weight calculation in ' mfilename ' to avoid NaN'])
-        w = 1/sqrt(1/(expN)+1/(simN));
+        w = 0;
+    end
+elseif strcmp(dataGroupDescription(1:length('corTable')), 'corTable')
+    if strcmp(keepType,'corTable')
+        w = 1;
+    else
+        w = 0;
     end
 else
                 error('data group not supported');

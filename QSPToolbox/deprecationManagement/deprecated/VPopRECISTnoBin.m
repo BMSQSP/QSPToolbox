@@ -1095,14 +1095,14 @@ methods
               % 2 step assignment to speed execution
               % first to matrix, then convert back to table.
               [nBinRows, nBinCols] = size(myBinTable);          
-              curProbs = nan(nBinRows,4);     
+              curProbs = cell(nBinRows,1);     
               curPredN = nan(nBinRows,1);
               curSimValues = nan(nBinRows,length(myPWs));
               curSimValues(binRowsTarget,:) = (mySimData(binRowsSource, :));
-              binEdgeValues = [myBinTable{:,'binEdge1'},myBinTable{:,'binEdge2'},myBinTable{:,'binEdge3'}];          
+              binEdgeValues = myBinTable{:,'binEdges'};          
 
               for rowCounter = 1 : nBinRows
-                   % 'binEdge1','binEdge2','binEdge3'
+
                    
                    keepIndices = find(~isnan(curSimValues(rowCounter,:)));
                    curPWs = myPWs(keepIndices) / sum(myPWs(keepIndices)); 
@@ -1119,13 +1119,10 @@ methods
                    end
                    
                    curPredN(rowCounter) = curN;
-                   curProbs(rowCounter,:) = wtdBinProb(curSimValues(rowCounter,keepIndices), curPWs, binEdgeValues(rowCounter,:));
+                   curProbs{rowCounter} = wtdBinProb(curSimValues(rowCounter,keepIndices), curPWs, binEdgeValues{rowCounter});
               end
               myBinTable.('predN') = (curPredN);
-              myBinTable.('predBin1') = (curProbs(:,1));
-              myBinTable.('predBin2') = (curProbs(:,2));
-              myBinTable.('predBin3') = (curProbs(:,3));
-              myBinTable.('predBin4') = (curProbs(:,4));     
+              myBinTable.('predBins') = curProbs;    
               obj.binTable = myBinTable;
           end
 		  

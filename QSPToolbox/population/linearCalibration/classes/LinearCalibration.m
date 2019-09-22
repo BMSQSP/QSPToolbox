@@ -879,18 +879,7 @@ methods (Hidden = true)
 
                 % extract bin edges
                 binTableVariableNames = Obj.InputVPop.binTable.Properties.VariableNames;
-                binEdges = -Inf;
-                iBinEdge = 1;
-                while true
-                    variableNameParticular = ['binEdge' num2str(iBinEdge)];
-                    variableIndex = strcmp(binTableVariableNames,variableNameParticular);
-                    if ~any(variableIndex)
-                        break;
-                    end
-                    binEdges = [binEdges Obj.InputVPop.binTable.(variableNameParticular)(iBinTableRow)];
-                    iBinEdge = iBinEdge + 1;
-                end
-                binEdges = [binEdges Inf];
+				binEdges = [-Inf, Obj.InputVPop.binTable{iBinTableRow,'binEdges'}{1}, Inf];
 
                 % Extract the simulation values, and bin them according to the binEdges
                 % determined above
@@ -903,7 +892,8 @@ methods (Hidden = true)
                 for iBin = 1:nObservations
                     % The observed response is taken to be the experimentally observed
                     % probability of this bin
-                    observationValParticularBin = Obj.InputVPop.binTable.(['expBin' num2str(iBin)])(iBinTableRow);
+					observationValParticularBin = Obj.InputVPop.binTable{iBinTableRow,'expBins'}{1};
+					observationValParticularBin = observationValParticularBin(iBin);
                     % Description of this observation:
                     descriptionParticular = ['binTable; Row ' num2str(iBinTableRow) '; Bin ' num2str(iBin)];
                     % The values for the independent variables will be set to 1 for
@@ -978,7 +968,7 @@ methods (Hidden = true)
                     dataParticular.observationVals(iIncludedProbs) = observationValParticular;
                     dataParticular.observationWeights(iIncludedProbs) = Obj.InputVPop.distTable.weight(iDistTableRow);
                     dataParticular.observationDescriptions{iIncludedProbs} = descriptionParticular;
-                    dataParticular.expWeight(iIncludedProbs) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.distTable.expN(iIncludedProbs),nan,descriptionParticular);
+                    dataParticular.expWeight(iIncludedProbs) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.distTable.expN(iDistTableRow),nan,descriptionParticular);
                 end
                 dataConsolidated = [dataConsolidated dataParticular];
             end

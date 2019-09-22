@@ -8,7 +8,7 @@ function myVPop = mapel(myWorksheet, myMapelOptions)
 %                          special pass-through where a VPop object can also
 %                          be given here to get a couple critical
 %                          properties (simData, indexTable, binEdges
-%                          binMidPoints) mapel to be called from
+%                          binMidPoints) for mapel to be called from
 %                          a restart, but in this case all other
 %                          properties are taken from the options.
 %  myMapelOptions:         (Required) an instance of a mapelOptions object.
@@ -19,19 +19,19 @@ function myVPop = mapel(myWorksheet, myMapelOptions)
 
 continueFlag = false;
 if nargin > 2
-    warning(['Too many input arguments provided to ',mfilename,'.  Requires: myWorksheet and a mapelOptions (or mapelOptionsRECIST or mapelOptionsRECISTnoBin) object'])
+    warning(['Too many input arguments provided to ',mfilename,'.  Requires: myWorksheet and a mapelOptions (or mapelOptionsRECIST) object'])
     continueFlag = false;
 elseif nargin > 1
     continueFlag = true;
 else
     continueFlag = false;
-    warning(['Insufficient input arguments provided to ',mfilename,'.  Requires: myWorksheet and a mapelOptions (or mapelOptionsRECIST or mapelOptionsRECISTnoBin) object.'])
+    warning(['Insufficient input arguments provided to ',mfilename,'.  Requires: myWorksheet and a mapelOptions (or mapelOptionsRECIST) object.'])
 end
 
 if continueFlag
-    if ~ismember(class(myMapelOptions),{'mapelOptions','mapelOptionsRECIST','mapelOptionsRECISTnoBin'})
+    if ~ismember(class(myMapelOptions),{'mapelOptions','mapelOptionsRECIST'})
         continueFlag = false;
-        warning(['Input mapelOptions not recognized in call to ',mfilename,'.  Requires: myWorksheet and a mapelOptions or mapelOptionsRECIST or mapelOptionsRECISTnoBin object.'])
+        warning(['Input mapelOptions not recognized in call to ',mfilename,'.  Requires: myWorksheet and a mapelOptions or mapelOptionsRECIST object.'])
     end       
 end
 
@@ -46,20 +46,13 @@ if continueFlag
         else   
             myVPop.recistSimFilter = myWorksheet.recistSimFilter;
         end
-    end	    
-	if isa(myVPop,'VPopRECISTnoBin')      
-        if ~isa(myWorksheet,'VPopRECISTnoBin')
-            myVPop.recistSimFilter = createRECISTSimFilter(myWorksheet, myVPop);
-        else   
-            myVPop.recistSimFilter = myWorksheet.recistSimFilter;
-        end
-    end		 
+    end	    	 
 
     % Next, we create a table of nVPs x nBins to index each VP axis into a
     % bin for subsequent calculations.
     % We go to the simulation results in the worksheet and create
     % a table of the needed results to compare to the experimental data
-    if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPop')
+    if strcmp(myVPop.pwStrategy, 'bin')
         if ~isa(myWorksheet,'VPop') && ~isa(myWorksheet,'VPopRECIST')
             myVPop = myVPop.assignIndices(myWorksheet, myMapelOptions);
             myVPop = myVPop.getSimData(myWorksheet);
@@ -77,8 +70,8 @@ if continueFlag
                 myVPop.coeffsDist = single(pdist2(myVPop.coeffsTable',myVPop.coeffsTable'));
             end
         end
-    else %'VPopRECISTnoBin'
-        if ~isa(myWorksheet,'VPopRECISTnoBin')
+    else %noBin
+        if ~isa(myWorksheet,'VPop') && ~isa(myWorksheet,'VPopRECIST')
             myVPop = myVPop.getSimData(myWorksheet);
             myVPop = myVPop.assignCoeffs(myWorksheet);
             if myVPop.spreadOut > 0
@@ -86,7 +79,7 @@ if continueFlag
             end
         else
             myVPop.simData = myWorksheet.simData;
-            % PWs will still be taken from the mapelOptionsNoBins
+            % PWs will still be taken from the mapelOptions (later)
             myVPop.coeffsTable = myWorksheet.coeffsTable;
             if myVPop.spreadOut > 0
                 myVPop.coeffsDist = single(pdist2(myVPop.coeffsTable',myVPop.coeffsTable'));
@@ -98,16 +91,15 @@ if continueFlag
         rng(myVPop.intSeed, 'twister');
     end        
 	
-    % Also assign the now fixed sim data into the bin tables initially
+    % Also assign the now static sim data into the bin tables initially
     % rather than during execution to reduce table assignments and
     % recalculating the 1D mesh.
     myVPop = myVPop.addDistTableSimVals();
-    
     myVPop = myVPop.addDistTable2DSimVals();
 	myVPop = myVPop.addCorTableSimVals();
     	
     
-    if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPop')
+    if strcmp(myVPop.pwStrategy, 'bin')
         % We adopt the index table convention from the original MAPEL paper
         myIndexTable = myVPop.indexTable;
         [myNAxis, nVP] = size(myIndexTable);
@@ -115,7 +107,7 @@ if continueFlag
         myBinMidPoints = myVPop.binMidPoints;
         myNBins = myMapelOptions.nBins;
 
-        % We can continue a run from a previous run if we have a valid
+        % We can continue from a previous run if we have a valid
         % initial probability table.
         myInitialProbs = myMapelOptions.initialProbs;
         myRandomStart = myMapelOptions.randomStart;

@@ -8,6 +8,7 @@ classdef mapelOptions
 % binTable:          (Required) containing data on a binned pdf function to
 %                    match.  Must be populated with 
 %                    experimental data before calling MAPEL.
+%                    or leave unassigned if no bin targets.		   
 % distTable:         (Required) containing data on a cdf function to
 %                    match.  Must be
 %                    populated with experimental data before calling MAPEL,
@@ -17,12 +18,23 @@ classdef mapelOptions
 %                    populated with experimental data before calling MAPEL,
 %                    or leave unassigned if no 2D distribution targets.
 % corTable:															   
+% pwStrategy:	     Strategy for the optimization.  Allowed values:
+%                     'direct' (default value) If this is set then PWs are optimized directly
+%                     'bin'     specified in a strategy similar to teh original MAPEL algorithm 
 % nBins:             (Optional) Number of bins per continuous axis.  The
 %                    default is 2, which may be too constrictive in many
 %                    situations.
 % initialProbs:      (Optional) A NAxis X Nbins matrix of initial 
 %                    probabilities. If set to be [], probabilities are
 %                    initialized to be uniform.  The default is [].
+%                    ONLY USED IN BIN PWSTRATEGY
+% initialPWs:        (Optional) 
+%                     - A 1 nVP vector of initial pws. OR
+%                     - (default) If set to be [], probabilities are
+%                       initialized to be uniform.  The default is []. OR
+%                     - if set to -1, we will try to find a near optimum starting
+%                       point based on a linearized problem formulation.
+%                       ONLY USED IN DIRECT PWSTRATEGY		  
 % randomStart:       (Optional) If 0, the initial 
 %                    parameters are not perturbed in anyway.  Otherwise the 
 %                    transformed initial bin probabilities are perturbed  
@@ -39,6 +51,7 @@ classdef mapelOptions
 %                    edges so they cover an equal numeric interval (true),
 %                    or a ~ equal number of VPs are
 %                    included in each bin (false).  Default is false.
+%                    ONLY USED IN BIN PWSTRATEGY												
 % tol:               (Optional) Stopping tolerance for the solvers.
 %                    Default is 1E-3.
 % spreadOut:         (Optional) Extra argument for "findFit" function that 
@@ -81,8 +94,10 @@ classdef mapelOptions
       distTable      
 	  distTable2D		
 	  corTable
+      pwStrategy
       nBins
       initialProbs
+      initialPWs
       randomStart
       nIters
       equalBinBreaks
@@ -124,23 +139,36 @@ classdef mapelOptions
       function obj = set.corTable(obj,myCorTable)
           obj.corTable = myCorTable;
       end 	  
+
+      function obj = set.pwStrategy(obj,myPWStrategy)
+          if sum(ismember({'direct','bin'},lower(myPWStrategy))) == 1
+              obj.pwStrategy = lower(myPWStrategy);
+          else
+              error(['Property pwStrategy in ',mfilename,' must be "direct" or "bin"'])
+          end
+      end 
+	  
       function obj = set.nBins(obj,myNBins)
           if mod(myNBins,1) == 0
               obj.nBins = myNBins;
           else
-              error(['Invalid nBins in ',milename,'.'])
+              error(['Invalid nBins in ',mfilename,'.'])
           end
       end      
 
       function obj = set.initialProbs(obj,myInitialProbs)
           obj.initialProbs = myInitialProbs;
       end      
+	  
+      function obj = set.initialPWs(obj,myInitialPWs)
+          obj.initialPWs = myInitialPWs;
+      end    	
       
       function obj = set.randomStart(obj,myRandomStart)
           if (myRandomStart >= 0)
                obj.randomStart = myRandomStart;
           else
-               error(['Property randomStart in ',milename,' must be > 0.'])
+               error(['Property randomStart in ',mfilename,' must be > 0.'])
           end
       end  
       
@@ -148,7 +176,7 @@ classdef mapelOptions
           if (myNIters > 0) && (mod(myNIters,1) == 0)
                obj.nIters = myNIters;
           else
-               error(['Property nIters in ',milename,' must be a positive integer.'])
+               error(['Property nIters in ',mfilename,' must be a positive integer.'])
           end
       end            
 
@@ -156,7 +184,7 @@ classdef mapelOptions
           if islogical(myEqualBinBreaks)
                obj.equalBinBreaks = myEqualBinBreaks;
           else
-               error(['Property equalBinBreaks in ',milename,' must be true or false.'])
+               error(['Property equalBinBreaks in ',mfilename,' must be true or false.'])
           end
       end  
       
@@ -164,7 +192,7 @@ classdef mapelOptions
           if (myTol > 0)
                obj.tol = myTol;
           else
-               error(['Property tol in ',milename,' must be > 0.'])
+               error(['Property tol in ',mfilename,' must be > 0.'])
           end
       end      
        
@@ -172,7 +200,7 @@ classdef mapelOptions
           if (mySpreadOut >= 0)
                obj.spreadOut = mySpreadOut;
           else
-               error(['Property spreadOut in ',milename,' must be >= 0.'])
+               error(['Property spreadOut in ',mfilename,' must be >= 0.'])
           end
       end  
 	  
@@ -258,6 +286,8 @@ classdef mapelOptions
                   value = obj.distTable2D;
               case 'corTable'
                   value = obj.corTable;	
+              case 'pwStrategy'
+                  value = obj.pwStrategy;
               case 'nBins'
                   value = obj.nBins;
               case 'initialProbs'
@@ -307,8 +337,10 @@ classdef mapelOptions
           obj.distTable = [];          
 		  obj.distTable2D = []; 
 		  obj.corTable = []; 
+		  obj.pwStrategy = 'direct';								  
           obj.nBins = 2;
           obj.initialProbs = [];
+          obj.initialPWs = [];	
           obj.randomStart = 0;
           obj.nIters = 10000;
           obj.equalBinBreaks = false;
