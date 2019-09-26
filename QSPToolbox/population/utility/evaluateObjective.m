@@ -13,6 +13,7 @@ function myObjective = evaluateObjective(myVPop, myProbVectTrans)
 %                        mnSDTable: should at least be populated with
 %                                   experiment data
 %                        binTable:  Also need experiment data
+%                        distTable
 %                        distTable2D
 %                        corTable
 %                        brTableRECIST (if applicable)

@@ -29,6 +29,9 @@ if strcmp(dataGroupDescription(1:length('binTable')), 'binTable')
  
 elseif strcmp(dataGroupDescription(1:length('distTable')), 'distTable')
                 w = 1;
+                
+elseif strcmp(dataGroupDescription(1:length('distTable2D')), 'distTable2D')
+                w = 1;
  
 elseif strcmp(dataGroupDescription(1:length('brTableRECIST')), 'brTableRECIST')
                 w = 1;

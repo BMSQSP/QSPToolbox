@@ -139,6 +139,7 @@ if continueFlag
 				% optimal solution to the linearized problem
 				myOptimOptions = LinearCalibrationOptions();
 				myOptimOptions.cdfProbsToFit = 0.05:0.05:0.95;
+                myOptimOptions.pdf2DProbsToFitN =5;
 				myOptimOptions.optimizationAlgorithm = "nnls";
 				myOptimOptions.optimizationAlgorithmOptions.Accy = 0;
 				myOptimOptions.priorPrevalenceWeightAssumption = 'specified';

@@ -34,13 +34,14 @@ testVPop=myVPop;
 if nAdd >= 1
    myOptimOptions = LinearCalibrationOptions();
    myOptimOptions.cdfProbsToFit = 0.05:0.05:0.95;
+   myOptimOptions.pdf2DProbsToFitN = 5;
    myOptimOptions.optimizationAlgorithm = "nnls";
    myOptimOptions.optimizationAlgorithmOptions.Accy = 0;
    myOptimOptions.priorPrevalenceWeightAssumption = "uniform";
    myOptimOptions.nBootstrapIterations = nBootstrapIterations;
    myOptimOptions.fractionVPsPerBaggingIteration=.5;
    myOptimOptions.method = "bagging";
-   simN = 1;
+   simN = 3;
    myOptimOptions.expWeightFuncHandle = @(expN, expSTD, dataGroupDescription) calculateExpWeight(expN, expSTD, dataGroupDescription, simN);
    linearCalibrationObject = LinearCalibration(testVPop,'optimOptions',myOptimOptions);
    try

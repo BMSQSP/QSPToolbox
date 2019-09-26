@@ -12,7 +12,8 @@ function myVPop = evaluateGOF(myVPop)
 %                  distTable
 %                  distTable2D
 %                  corTable
-%                  brTableRECIST (only if a VPopRECIST object)									   
+%                  brTableRECIST (only if a VPopRECIST object)	
+%                  rTableRECIST (only if a VPopRECIST object)									   
 %
 % RETURNS
 % myVpop:         A VPop is returned, with the fields populated:
@@ -22,6 +23,8 @@ function myVPop = evaluateGOF(myVPop)
 %                  gofDist
 %                  gofDist2D
 %                  gofCor
+%                  gofBR (only if a VPopRECIST object)
+%                  gofR (only if a VPopRECIST object)
 %                  gof
 %
 

@@ -23,6 +23,9 @@ if strcmp(dataGroupDescription(1:length('binTable')), 'binTable')
  
 elseif strcmp(dataGroupDescription(1:length('distTable')), 'distTable')
                 w = sqrt((expN*simN)/(expN+simN));
+                
+elseif strcmp(dataGroupDescription(1:length('distTable2D')), 'distTable2D')
+                w = sqrt((expN*simN)/(expN+simN));
  
 elseif strcmp(dataGroupDescription(1:length('brTableRECIST')), 'brTableRECIST')
                 w = sqrt((expN*simN)/(expN+simN));

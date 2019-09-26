@@ -1005,22 +1005,24 @@ methods
                    brRows(rowCounter) = temp;
                    % To avoid re-searching for the right rows on every
                    % iteration mapel, we provide the indices here
-                   
-                   % I don't see how to avoid looping this, given the way
-                   % the data is structured.  Luckily we just get the data
-                   % once
-                   for vpCounter = 1 : nVPs
-                       % We need to verify the desired result for the VP is
-                       % present, otherwise we report the simData result as
-                       % nan
-                       if length(myWorksheet.results) > 0
-                           curResult = myRECISTFilter{wshInterventionIndex}.bestResp(:,vpCounter);
-                           curTime = myRECISTFilter{wshInterventionIndex}.time;
+                   if length(myWorksheet.results) > 0
+                       curStruct = myRECISTFilter{wshInterventionIndex};
+                       curTime = curStruct.time;                   
+                       % I don't see how to avoid looping this, given the way
+                       % the data is structured.  Luckily we just get the data
+                       % once
+                       for vpCounter = 1 : nVPs
+                           % We need to verify the desired result for the VP is
+                           % present, otherwise we report the simData result as
+                           % nan
+                           curResult = curStruct.bestResp(:,vpCounter);
                            
                            % Interpolate to get the time exactly right
                            % Might want to make this "last"
-                           interpolateValue = interp1(curTime,curResult,expTime,'previous');
-                           brData.Data(rowCounter, vpCounter) = interpolateValue;
+                           % Interp1 demands double or dingle for input
+                           interpolateValue = interp1(curTime,single(curResult),expTime,'previous');
+                           % Convert back
+                           brData.Data(rowCounter, vpCounter) = int8(interpolateValue);
                        end
                    end
                end
@@ -1049,21 +1051,22 @@ methods
                    % To avoid re-searching for the right rows on every
                    % iteration mapel, we provide the indices here
                    
-                   % I don't see how to avoid looping this, given the way
-                   % the data is structured.  Luckily we just get the data
-                   % once
-                   for vpCounter = 1 : nVPs
-                       % We need to verify the desired result for the VP is
-                       % present, otherwise we report the simData result as
-                       % nan
-                       if length(myWorksheet.results) > 0
-                           curResult = myRECISTFilter{wshInterventionIndex}.curResp(:,vpCounter);
-                           curTime = myRECISTFilter{wshInterventionIndex}.time;
+                   if length(myWorksheet.results) > 0
+                       curStruct = myRECISTFilter{wshInterventionIndex};
+                       curTime = curStruct.time;   
+                       % I don't see how to avoid looping this, given the way
+                       % the data is structured.  Luckily we just get the data
+                       % once
+                       for vpCounter = 1 : nVPs
+                           % We need to verify the desired result for the VP is
+                           % present, otherwise we report the simData result as
+                           % nan
+                           curResult = curStruct.curResp(:,vpCounter);
                            
                            % Interpolate to get the time exactly right
                            % Might want to make this "last"
-                           interpolateValue = interp1(curTime,curResult,expTime,'previous');
-                           rData.Data(rowCounter, vpCounter) = interpolateValue;
+                           interpolateValue = interp1(curTime,single(curResult),expTime,'previous');
+                           rData.Data(rowCounter, vpCounter) = int8(interpolateValue);
                        end
                    end
                end               

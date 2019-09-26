@@ -25,9 +25,9 @@ function myRecistSimFilter = createRECISTSimFilter(myWorksheet, myVPopRECIST)
 %                    'curRespNotCorrected':   RECIST classifications except without correction
 %                                             (relative to baseline and
 %                                             ignoring the clinical observation times.
-%                                             This is in contrast to ‘curResp’ and ‘bestResp’, which
+%                                             This is in contrast to ï¿½curRespï¿½ and ï¿½bestRespï¿½, which
 %                                             are only updated at the clinical observation times, and
-%                                             which are relative to the previous ‘bestResp’). 
+%                                             which are relative to the previous ï¿½bestRespï¿½). 
 %                    'curWeight:    whether simulated patient stays in
 %                                   population for calibration at current time
 %                                   point.  Achieving 0
@@ -194,10 +194,16 @@ if flagContinue
             end
             curBestResp(:,vpCounter) = cummin(curResp(:,vpCounter));
 		end
-        myRecistSimFilter{interventionCounter}.curResp = curResp;
-        myRecistSimFilter{interventionCounter}.curRespNotCorrected = curRespNotCorrected;
-        myRecistSimFilter{interventionCounter}.bestResp = curBestResp;
+
         myRecistSimFilter{interventionCounter}.filterMatrix = curWeight;
+        % To save memory, we will convert to int8.  First, any nans should 
+        % be set to -1.
+        curResp(isnan(curResp)) = -1;
+        curRespNotCorrected(isnan(curRespNotCorrected)) = -1;
+        curBestResp(isnan(curBestResp))= -1;
+        myRecistSimFilter{interventionCounter}.curResp = int8(curResp);
+        myRecistSimFilter{interventionCounter}.curRespNotCorrected = int8(curRespNotCorrected);
+        myRecistSimFilter{interventionCounter}.bestResp = int8(curBestResp);
         myRecistSimFilter{interventionCounter}.time = curData(:,1);
     
 	end

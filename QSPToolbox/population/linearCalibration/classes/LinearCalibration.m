@@ -1193,6 +1193,152 @@ methods (Hidden = true)
         
         
         
+		 % Now let's try to formulate the linear problem for 2D PDF
+        % ***************************************************************************************************
+        % Extract data from distTable
+        if istable(Obj.InputVPop.distTable2D)
+            nRows = height(Obj.InputVPop.distTable2D);
+            warning('off','MATLAB:integral2:maxFunEvalsPass');
+            % We may want to turn this back on with improved performance of
+            % the 2D integration
+            warning('off','MATLAB:integral2:maxFunEvalsFail');
+            % calculate x, y range and total scaling factor for PDFs
+            for iDistTableRow = 1:nRows
+            % loop through table rows
+                myTable = Obj.InputVPop.distTable2D;
+                % lets first build the experiemtal pdf scaled to be
+                % integrate to 1
+                expSample = myTable{iDistTableRow,'expSample'}{1};
+                simSample = myTable{iDistTableRow,'predSample'}{1};
+				%simPWs = myTable{iDistTableRow,'predProbs'}{1};
+                combinedPoints = [(unique(expSample','rows'))',(unique(simSample','rows'))'];
+                
+                %combinedPoints = [(unique(expSample','rows'))'];
+                
+                bw1 = (max(combinedPoints(1,:),[],2)-min(combinedPoints(1,:),[],2))/10;
+                bw2 = (max(combinedPoints(2,:),[],2)-min(combinedPoints(2,:),[],2))/10;
+                expSamplePDF = ksdensity(expSample',combinedPoints','Bandwidth',[bw1;bw2]);
+                expSamplePDFf = scatteredInterpolant(combinedPoints(1,:)', combinedPoints(2,:)', expSamplePDF, 'nearest');
+                % Unfortunately, we have to integrate over discontinuous surfaces (see
+                % below)
+                % and it's very likely there will be some residual error.  We may want
+                % to revisit this in future MATLAB releases.
+                xlb = min(combinedPoints(1,:));
+                xub = max(combinedPoints(1,:));
+                ylb = min(combinedPoints(2,:));
+                yub = max(combinedPoints(2,:));
+                expSamplePDFfint = integral2(@(x,y) expSamplePDFf(x,y), xlb, xub, ylb, yub,'method','tiled','AbsTol',1e-2,'RelTol',1e-1);
+                
+                % let's add a warning if expSamplePDFfint is too small
+                if expSamplePDFfint<1e-16
+                    warning(['expSamplePDFfint is less than 1e-16 in' mfilename '. Might wanted to check the calculation.'])
+                end
+                    
+                % read the mesh information
+                if isnumeric(Obj.OptimOptions.pdf2DProbsToFitN)
+                    pdf2DProbsToFitN = Obj.OptimOptions.pdf2DProbsToFitN;
+                else
+                    error('Unsupported specification for Obj.OptimOptions.pdf2DProbsToFitN. Must be a integer.');
+                end
+                xmesh = xlb:(xub-xlb)/pdf2DProbsToFitN:xub;
+                ymesh = ylb:(yub-ylb)/pdf2DProbsToFitN:yub;
+                % create the mesh coordinates
+                [Xmesh,Ymesh] = meshgrid(xmesh,ymesh);
+                % build the bin edges
+                %[nnodey,nnodex]=size(Xmesh);
+                Xbinloweredges = Xmesh(1:(end-1),1:(end-1));
+                Xbinupperedges = Xmesh(2:end,2:end);
+                Ybinloweredges = Ymesh(1:(end-1),1:(end-1));
+                Ybinupperedges = Ymesh(2:end,2:end);
+                
+                % vectorize bin edges
+                Xbinloweredgesv = Xbinloweredges(:);
+                Xbinupperedgesv = Xbinupperedges(:);
+                Ybinloweredgesv = Ybinloweredges(:);
+                Ybinupperedgesv = Ybinupperedges(:);
+                
+                % now read the simulation data
+
+                    jMaskSimData1Row = ...
+                    simDataRowInfoTbl.time == Obj.InputVPop.distTable2D.time1(iDistTableRow) & ...
+                    strcmp(simDataRowInfoTbl.interventionID,Obj.InputVPop.distTable2D.interventionID1{iDistTableRow}) & ...
+                    strcmp(simDataRowInfoTbl.elementID,Obj.InputVPop.distTable2D.elementID1{iDistTableRow}) & ...
+                    strcmp(simDataRowInfoTbl.elementType,Obj.InputVPop.distTable2D.elementType1{iDistTableRow}) & ...
+                    strcmp(simDataRowInfoTbl.expVarID,Obj.InputVPop.distTable2D.expVarID1{iDistTableRow});
+                    simVals1 = Obj.InputVPop.simData.Data(jMaskSimData1Row,:);
+
+                    jMaskSimData2Row = ...
+                    simDataRowInfoTbl.time == Obj.InputVPop.distTable2D.time2(iDistTableRow) & ...
+                    strcmp(simDataRowInfoTbl.interventionID,Obj.InputVPop.distTable2D.interventionID2{iDistTableRow}) & ...
+                    strcmp(simDataRowInfoTbl.elementID,Obj.InputVPop.distTable2D.elementID2{iDistTableRow}) & ...
+                    strcmp(simDataRowInfoTbl.elementType,Obj.InputVPop.distTable2D.elementType2{iDistTableRow}) & ...
+                    strcmp(simDataRowInfoTbl.expVarID,Obj.InputVPop.distTable2D.expVarID2{iDistTableRow});
+                    simVals2 = Obj.InputVPop.simData.Data(jMaskSimData2Row,:);
+                    
+                    % Some simVals will be NaN for VPs that dropped off of therapy. Thus,
+                    % we need to scale the prevalence weights so that the sum of the
+                    % weights for the VPs still on therapy adds to 1.
+                    nanValsIndexMask = isnan(simVals1) | isnan(simVals2);
+                    if ignoreNaN
+                        if any(nanValsIndexMask)
+                            continue;
+                        end
+                        % If we reached here, there are no NaN VPs and thus sumPWsForNonNanVPs = 1
+                        sumPWsForNonNanVPs = 1;
+                    else
+                        sumPWsForNonNanVPs = sum(pws(~nanValsIndexMask));
+                    end
+                
+                
+                
+                
+                
+                % the length of vectors should be the same so we can choose
+                % any to get number of Observations
+                nObservations = length(Ybinupperedgesv);
+                dataParticular = initDataParticular(Obj.NumVPs,nObservations,Obj.OptimOptions.distTable2DGroupWeight);
+                for iIncludedProbs = 1:nObservations
+                % loop through the probabilities to fit
+                    % first calculate the target bin integration
+                    targetProb = integral2(@(x,y) expSamplePDFf(x,y), Xbinloweredgesv(iIncludedProbs), Xbinupperedgesv(iIncludedProbs), Ybinloweredgesv(iIncludedProbs), Ybinupperedgesv(iIncludedProbs),'method','tiled','AbsTol',1e-2,'RelTol',1e-1);
+                    % scale targetProb by total integration
+                    targetProb = targetProb/expSamplePDFfint;
+                    observationValParticular = targetProb;
+                    descriptionParticular = ['distTable2D; Row ' num2str(iDistTableRow) '; Included 2D bin ' num2str(iIncludedProbs)];
+                    % The values of the independent variables will be set to 1 for
+                    % VPs that contribute to the particular point on the 2D PDF (within the bin), and
+                    % to 0 for VPs that don't contribute to that point:
+                    
+                    
+                    independentVarValParticular = zeros(1,Obj.NumVPs);
+                    
+                    independentVarValParticular((simVals1 >= Xbinloweredgesv(iIncludedProbs)) & ...
+                        (simVals1 <= Xbinupperedgesv(iIncludedProbs)) ...
+                        & (simVals2 >= Ybinloweredgesv(iIncludedProbs)) ...
+                        & (simVals2 <= Ybinupperedgesv(iIncludedProbs)))=1;
+                    
+                    dataParticular.independentVarVals(iIncludedProbs,:) = independentVarValParticular;
+                    dataParticular.independentVarVals(iIncludedProbs,:) = (1/sumPWsForNonNanVPs)*dataParticular.independentVarVals(iIncludedProbs,:);
+                    dataParticular.observationVals(iIncludedProbs) = observationValParticular;
+                    dataParticular.observationWeights(iIncludedProbs) = Obj.InputVPop.distTable2D.weight(iDistTableRow);
+                    dataParticular.observationDescriptions{iIncludedProbs} = descriptionParticular;
+                    dataParticular.expWeight(iIncludedProbs) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.distTable2D.expN(iDistTableRow),nan,descriptionParticular);
+                end
+                dataConsolidated = [dataConsolidated dataParticular];
+
+            end
+            warning('on','MATLAB:integral2:maxFunEvalsPass');
+            warning('on','MATLAB:integral2:maxFunEvalsFail');
+        end
+        
+        
+        
+        
+        % ***************************************************************************************************
+        
+        
+		
+		
         
         
         

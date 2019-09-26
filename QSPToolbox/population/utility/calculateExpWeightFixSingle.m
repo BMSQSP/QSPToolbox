@@ -35,6 +35,13 @@ elseif strcmp(dataGroupDescription(1:length('distTable')), 'distTable')
     else
         w = 0;
     end
+    
+elseif strcmp(dataGroupDescription(1:length('distTable2D')), 'distTable2D')
+    if strcmp(keepType,'distTable')
+        w = 1;
+    else
+        w = 0;
+    end
  
 elseif strcmp(dataGroupDescription(1:length('brTableRECIST')), 'brTableRECIST')
     if strcmp(keepType,'distTable')

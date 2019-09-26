@@ -60,7 +60,8 @@ else
 		[nTest, ~] = size(initialPWs);
 		nAdd = floor(myVPop.optimizePopSize/2-nTest);
 		if nAdd > 0
-			initialPWs = getInitialPWs(myVPop, initialPWs, nAdd, mySimulateOptions.nWorkers*20);
+            nBoostrapIterations = max(100,mySimulateOptions.nWorkers*5);
+			initialPWs = getInitialPWs(myVPop, initialPWs, nAdd, nBoostrapIterations);
 		end
 	end	
     
@@ -71,10 +72,28 @@ else
 	end
 end
 
+% We'll strip away unnecessary data for the workers
+% before running the swarm optimization.
+% They don't need:
+% expData
+% RECISTSimFilters
+% since the tables already have extracted the needed exp data
+% The tables are updated with simData during the iterations
+% but the sim filters can at least be dropped at this point
+% if present.
+% Stripping these fields were not not noted
+% to make much of a difference in performance,
+% but this is done as a precautionary measure.
+computeVPop=myVPop;
+computeVPop.expData=[];
+if isa(myVPop,'VPopRECIST')
+    computeVPop.recistSimFilter=[];
+end
+
 if strcmp(myVPop.pwStrategy, 'bin')
-    anonymousFunction = @(x)evaluateObjective(myVPop, x);
+    anonymousFunction = @(x)evaluateObjective(computeVPop, x);
 else
-	anonymousFunction = @(x)evaluateObjectiveNoBin(myVPop, x);
+	anonymousFunction = @(x)evaluateObjectiveNoBin(computeVPop, x);
 end
 
 if sum(ismember({'simplex'},optimizeType)) > 0

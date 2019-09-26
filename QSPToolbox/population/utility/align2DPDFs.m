@@ -46,8 +46,10 @@ data1pdf = data1pdf/int;
 
 % We will resample from data2 before smoothing.  We can't apply
 % PWs in the smoothing function directly
-rng(0);
-data2pdf = datasample(data2', 1E4, 'Weights',data2PWs');
+% Note: we may want to adjust the rng seed as an additional
+% input to make this reproducible
+% rng(0);
+data2pdf = datasample(data2', 1E3, 'Weights',data2PWs');
 data2pdf = ksdensity(data2pdf,combinedPoints','Bandwidth',[bw1;bw2]);
 % We have to use 'nearest', which is discontinuous but
 % the only practical option.  Otherwise, MATLAB may calculate a

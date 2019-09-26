@@ -26,12 +26,20 @@ classdef LinearCalibrationOptions
 % 							sparsely; e.g., 'cdfProbsToFit =
 % 							0.05:0.05:0.95'. Default is "all", which will
 % 							fit all points in the CDF.
+
+%  pdf2DProbsToFitN: 	    (scalar) an integer to specify 2D meshgrid
+%                            density. It would generate a
+%                            pdf2DProbsToFitN*pdf2DProbsToFitN 2D mesh to
+%                            generate a linear problem. Default is set to 2
+
 %  binTableGroupWeight: 				(scalar) Weight for data in myVPop.binTable
 %  distTableGroupWeight: 				(scalar) Weight for data in myVPop.distTable
 %  brTableRECISTGroupWeight:			(scalar) Weight for data in myVPop.brTableRECIST
 %  rTableRECISTGroupWeight: 			(scalar) Weight for data in myVPop.rTableRECIST
 %  mnSDTableGroupWeight:				(scalar) Weight for data in myVPop.mnSDTable
 %  corTableGroupWeight:                 (scalar) Weight for data in myVPop.corTable
+%  distTable2DGroupWeight:              (scalar) Weight for data in
+%                                        myVPop.distTable2D
 %										GroupWeights Specify fitting weights for each of the
 % 										different types of data. Default is to set all of the weights equal to 1,
 % 										so that all of the different data groups are weighed equally.
@@ -90,12 +98,14 @@ classdef LinearCalibrationOptions
       optimizationAlgorithm = "nnls"
       method = "bestFit"
       cdfProbsToFit = "all"
+      pdf2DProbsToFitN = 2
 	  binTableGroupWeight = 1
 	  distTableGroupWeight = 1
 	  brTableRECISTGroupWeight = 1
 	  rTableRECISTGroupWeight = 1
       mnSDTableGroupWeight = 1
       corTableGroupWeight = 1
+      distTable2DGroupWeight = 1
 	  priorPrevalenceWeightAssumption = "uniform"
 	  responseValTransformation = "relative";
       maxPrevalenceWeight = Inf
@@ -129,7 +139,14 @@ classdef LinearCalibrationOptions
           else
             error(['Invalid cdfProbsToFit value in ',mfilename,', expecting a numeric vector or the string "all"'])
           end
-      end 	    	  
+      end 	 
+      function obj = set.pdf2DProbsToFitN(obj,myValue)
+          if isnumeric(myValue)
+              obj.pdf2DProbsToFitN = myValue;
+          else
+            error(['Invalid pdf2DProbsToFitN value in ',mfilename,', expecting a numeric vector (integer)'])
+          end
+      end 
       function obj = set.binTableGroupWeight(obj,myValue)
           if isnumeric(myValue) 
               obj.binTableGroupWeight = myValue;
@@ -170,6 +187,13 @@ classdef LinearCalibrationOptions
               obj.corTableGroupWeight = myValue;
           else
             error(['Invalid corTableGroupWeight value in ',mfilename,', expecting a numeric value'])
+          end
+      end
+      function obj = set.distTable2DGroupWeight(obj,myValue)
+          if isnumeric(myValue) 
+              obj.distTable2DGroupWeight = myValue;
+          else
+            error(['Invalid distTable2DGroupWeight value in ',mfilename,', expecting a numeric value'])
           end
       end
       function obj = set.priorPrevalenceWeightAssumption(obj,myValue)
@@ -223,7 +247,9 @@ classdef LinearCalibrationOptions
               case 'verbose'
                   value = obj.verbose;
               case 'cdfProbsToFit'
-                  value = obj.cdfProbsToFit;				  
+                  value = obj.cdfProbsToFit;
+              case 'pdf2DProbsToFitN'
+                  value = obj.pdf2DProbsToFitN;
               case 'toleranceScalingFactor'
                   value = obj.toleranceScalingFactor;                  
               case 'binTableGroupWeight'
@@ -238,6 +264,8 @@ classdef LinearCalibrationOptions
                   value = obj.mnSDTableGroupWeight;
               case 'corTableGroupWeight'
                   value = obj.corTableGroupWeight;
+              case 'distTable2DGroupWeight'
+                  value = obj.distTable2DGroupWeight;
               case 'priorPrevalenceWeightAssumption'
                   value = obj.priorPrevalenceWeightAssumption;
               case 'responseValTransformation'

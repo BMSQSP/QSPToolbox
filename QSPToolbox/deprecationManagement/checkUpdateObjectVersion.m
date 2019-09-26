@@ -147,8 +147,8 @@ if continueFlag
         if nRows > 0
             if sum(ismember(myUpdatedObject.distTable2D.Properties.VariableNames,{'combinedQuadrants'})) > 0
                 myUpdatedObject.distTable2D.('combinedQuadrants') = [];
+                warning(['VPop/VPopRECIST distTable2D automatically updated to remove combinedQuadrants.  You may want to manually verify it looks OK.'])
             end
-            warning(['VPop/VPopRECIST distTable2D automatically updated to remove combinedQuadrants.  You may want to manually verify it looks OK.'])
         end
     end
 	
