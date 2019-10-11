@@ -3,7 +3,7 @@ classdef simulateOptions
 %
 % PROPERTIES:
 % responseTypeID:       a responseTypeID from the worksheet. This is needed 
-%                       of optimizeType is not set to 'none'.
+%                       if optimizeType is not set to 'none'.
 % rerunExisting:        boolean (true/false).  Whether to re-run  
 %                       simulations for VPs with full existing results 
 %                       stored.

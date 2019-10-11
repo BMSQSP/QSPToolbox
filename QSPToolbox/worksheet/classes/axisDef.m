@@ -182,7 +182,7 @@ classdef axisDef
                 curType = lower(elementTypeCellArray{cellIndex});
                 if strcmp(curType, 'parameter')
                     if sum(ismember(modelParameterNames, curName)) < 1
-                        warning('Warning: ',curName,' specified as a parameter, but not found in model parameters.');
+                        warning(['Warning: ',curName,' specified as a parameter, but not found in model parameters.'])
                         passCheck = false;
                         % We don't check for degeneracy, that should not be
                         % the case as SimBiology should check
@@ -190,12 +190,12 @@ classdef axisDef
                     end
                 elseif strcmp(curType, 'species')
                     if sum(ismember(modelSpeciesNames, curName)) < 1
-                        warning('Warning: ',curName,' specified as a species, but not found in model species.');
+                        warning(['Warning: ',curName,' specified as a species, but not found in model species.'])
                         passCheck = false;
                     end
                 elseif strcmp(curType, 'compartment')
                     if sum(ismember(modelSpeciesNames, curName)) < 1
-                        warning('Warning: ',curName,' specified as a compartment, but not found in model compartments.');
+                        warning(['Warning: ',curName,' specified as a compartment, but not found in model compartments.'])
                         passCheck = false;
                     end
                 else
@@ -208,10 +208,10 @@ classdef axisDef
             end
             wshAxisDefIDs = getAxisDefIDs(myWorksheet);
             if sum(ismember(wshAxisDefIDs,obj.id)) < 1
-                warning(['Warning: class instance with identity ',obj.id,' not found in the axis ids added to myWorksheet.']);
+                warning(['Warning: class instance with identity ',obj.id,' not found in the axis ids added to myWorksheet.'])
                 passCheck = false;
             elseif sum(ismember(wshAxisDefIDs,obj.id)) > 1
-                warning('Warning: class instance with identity ',obj.id,' degenerate in the axis ids added to myWorksheet.');
+                warning(['Warning: class instance with identity ',obj.id,' degenerate in the axis ids added to myWorksheet.'])
                 passCheck = false;
             end
             % wshAxisDefs = myWorksheet.axisProps.axisDef;

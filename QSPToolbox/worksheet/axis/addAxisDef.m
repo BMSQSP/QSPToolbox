@@ -12,7 +12,7 @@ function myUpdatedWorksheet = addAxisDef(myWorksheet, axisName, axisElementArray
 %                     'species', ... and the third contains
 %                     a 1X2 numeric matrix of [lowerLimit upperLimit]
 % axisScale:          (optional) 'linear' (default) or log (base 10
-%                     assumed)
+%                     assumed, i.e. use log10(value) to specify value)
 %
 % RETURNS
 % myUpdatedWorksheet: An updated worksheet with the axis added.

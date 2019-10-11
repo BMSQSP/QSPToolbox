@@ -8,7 +8,7 @@ function myWorksheet = createWorksheet()
 % myWorksheet
 
 % Worksheets are structures. At some point in the future, we may want to
-% re-code thse as objects.
+% re-code them as objects.
 myWorksheet = struct();
 
 % No null value in MATLAB, just use an empty string

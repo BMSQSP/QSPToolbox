@@ -1,4 +1,4 @@
-function objectiveValue = evaluatePointObjective(uniqueSimTime, simY, expTime, expY)
+function objectiveValue = evaluatePointObjectiveCV(uniqueSimTime, simY, expTime, expY)
 % Objective function for point response type elements
 % CV - A "coefficeint of variation" type of objective is implemented.
 %      We evaluate the variation in the data about the simulation at each

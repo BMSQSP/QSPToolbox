@@ -1,5 +1,5 @@
 function myVPCoeffs = getVPCoeffs(myWorksheet)
-% Get vp axes coefficient values from a worksheet
+% Get VP axes coefficient values from a worksheet
 % ARGUMENTS
 % myWorksheet: a worksheet, required
 %

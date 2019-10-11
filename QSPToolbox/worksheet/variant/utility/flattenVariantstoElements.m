@@ -1,5 +1,5 @@
 function elementValues = flattenVariantstoElements(myWorksheet, variants, flagReturnFull, vpAxesIndex)
-% Take a set of of M variants and return a cell of size N X 3
+% Take a set of M variants and return a cell of size N X 3
 % with N elements, column 1 is element name, 
 %                  column 2 is element type,
 %                  column 3 is value
@@ -9,7 +9,7 @@ function elementValues = flattenVariantstoElements(myWorksheet, variants, flagRe
 % variants:       simBiology variants
 % flagReturnFull: optional, whether to return a full set of model
 %                 parameters from myWorksheet.compiled.elements
-% vpAxesIndex:    optional, an index of the vp for which to apply axes
+% vpAxesIndex:    optional, an index of the VP for which to apply axes
 %                 values, applied after the variants
 %
 % RETURNS

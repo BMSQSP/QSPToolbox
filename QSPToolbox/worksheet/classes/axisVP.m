@@ -5,7 +5,7 @@ classdef axisVP
 % and the bounds, whereas axisVP contains the coefficients
 %
 % PROPERTIES:
-%  coefficients: an axis coefficient matrix if size nAxis x nVP, each value
+%  coefficients: an axis coefficient matrix of size nAxis x nVP, each value
 %                on the interval [0, 1].  The
 %                coefficients account for mechanistic variability between
 %                VPs in a worksheet, especially when the variants in

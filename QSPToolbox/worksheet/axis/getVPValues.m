@@ -1,10 +1,10 @@
 function myVPValues = getVPValues(myWorksheet)
-% Get vp element values that are defined by axes in a worksheet
+% Get VP element values that are defined by axes in a worksheet
 % ARGUMENTS
 % myWorksheet: a worksheet, required
 %
 % RETURNS
-% myVPValues: a cell array, each lement is a matrix of element (parameter) values
+% myVPValues: a cell array, each element is a matrix of element (parameter) values
 %
 myCoeffs = getVPCoeffs(myWorksheet);
 [nAxes, nVPs] = size(myCoeffs);

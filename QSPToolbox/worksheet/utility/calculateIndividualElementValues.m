@@ -3,12 +3,12 @@ function elementValues = calculateIndividualElementValues(axisVPCoeffs,curBounds
 % (parameter/initial species/compartment) values within an axis.
 % It is vectorized to work across all VPs in a worksheet to run
 % large worksheets more quickly.
-% Note these is no input argument proofing, this is essentially a
+% Note there is no input argument proofing, this is essentially a
 % utility function we anticipate will be called often.
 %
 % ARGUMENTS
 % axisVPCoeffs:      a 1xnVP vector of axis coefficients
-% curBounds:         a 1x2 vector of lower, upper bound for the current 
+% curBounds:         a 1x2 vector of lower, upper bound for the current axis 
 % scale:             axis string to indicate type of scale.  Currently
 %                    anticipated are 'linear' and 'log'.  Will default to
 %                    log calculation if specification is not recognized.

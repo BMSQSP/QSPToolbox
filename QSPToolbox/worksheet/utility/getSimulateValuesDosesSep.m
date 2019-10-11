@@ -1,6 +1,6 @@
 function [updateValues, updateIndices, updateDoses, baseValues, updateNames, baseNames] = getSimulateValuesDosesSep(myWorksheet, flagRunVP, flagRunSim)
 % Note this is a utility function and we generally wouldn't expect the
-% user to call this directly during the simulation.  Here, create outputs
+% user to call this directly during the simulation.  Here, we create outputs
 % that can be more readily fed into MATLAB's model simulate function.
 % We can't use getvariant and many other SimBiology functions that operate
 % on models in a parfor. So this is done in serial here.
@@ -24,7 +24,7 @@ function [updateValues, updateIndices, updateDoses, baseValues, updateNames, bas
 %                 parameters that need to be updated from the base model
 %  baseNames:     a nVP x 1 cell array of names for the parameters in the
 %                 base model (alternatively, they are attached to the 
-%                 worksheet anyway but ar eprovided here also)
+%                 worksheet anyway but are provided here also)
 
 flagContinue=true;
 if nargin > 3

@@ -18,16 +18,16 @@ function diffWorksheet = diffWorksheets(myWorksheet1, myWorksheet2, diffType, ep
 %                                       computed on a per-variable basis
 %                                       across all time points
 %                  'sumabsdiffavg':     The sumabsdiff is normalized by
-%                                       the number of time points
-%                  'reldiff' (default):  for each simulated result v    ariable, 
+%                                       the number of time points.
+%                                       For each simulated result variable, 
 %                                       a time vector of absolute 
 %                                       differences is returned and
 %                                       normalized by the average magnitude
-%                                       refdif is set at the default since
+%                  'reldiff' (default): refdif is set at the default since
 %                                       there may be some drift between ODE
-%                                       solvers and diffWorksheets isn't
+%                                       solvers and diffWorksheets, isn't
 %                                       exactly suited for comparing
-%                                       numerical toelrances between time
+%                                       numerical tolerances between time
 %                                       steps.
 %                  'relsumabsdiff':     The sumabsdiff is normalized by
 %                                       average absolute sum of the

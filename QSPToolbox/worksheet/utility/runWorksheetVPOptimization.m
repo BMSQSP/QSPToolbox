@@ -1,7 +1,7 @@
 function optAxesCoefs = runWorksheetVPOptimization(exportedModel, updateValues, updateIndices, baseValues, updateDoses, myWorksheet, mySimulateOptions, flagRunVP,indicesForVaried, boundsForVaried, axisScale)
 % This is a "utility function" that should be called directly.
 % This function is called following preprocessing to enable
-% multimple optimizations, one optimization where each VP in the worksheet
+% multiple optimizations, one optimization for each VP in the worksheet
 % included in the starting points.
 %
 % ARGUMENTS

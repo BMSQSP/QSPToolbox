@@ -88,16 +88,23 @@ if continueFlag
     switch fileType
         case 'SB'
              temp = sbioloadproject([filePath,filesep,noPathName,'.',fileTypeExt]);
-             modelNames = fields(temp);
+             nModels = length(fields(temp));
+             modelNames = cell(1,nModels);
+             dummyNames = fields(temp);
+             for modelCounter = 1 : nModels
+                 modelNames{modelCounter} = temp.(dummyNames{modelCounter}).Name;
+             end
              modelPos = find(ismember(modelNames,modelname));
              if length(modelPos) < 1
                  % By default we take the first model
-                 worksheet.model = temp.(modelNames{1});
+                 worksheet.model = temp.(dummyNames{1});
                  if length(modelname) > 0
-                     warning('Cannot find model with specified name, using the first.')
+                     warning(['Cannot find model with specified name, using the first: ',modelNames{1},'.'])
+                 else
+                     disp(['Model to use not specified, using the first: ',modelNames{1},'.'])
                  end
              else
-                 worksheet.model = temp.(modelNames(modelPos(1)));
+                 worksheet.model = temp.(dummyNames{modelPos(1)});
              end
     end
 

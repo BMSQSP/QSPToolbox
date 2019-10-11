@@ -18,18 +18,17 @@ function myObjective = runModelforOptimization(myModel, myWorksheet, currentElem
 % theDoses: 1XM cells, each cell containing a cell of the doses to apply for each intervention
 % coeffsToVary: current value guess, as a matrix of N X 1 or 1 X N axis
 %               coefficients
-%               Note ome MATLAB search algorithms
-%               require a row vector, but we often list the coefficients
-%               as columns, so this is intentiontally left to be compatible
-%               with either.
+%               Note some MATLAB search algorithms require a row vector,
+%               but we often list the coefficients as columns, so this is
+%               intentiontally left to be compatible with either.
 % indicesForVaried: N X M cell array to the map the
-%             N axes values to vary
-%             from the coefficients for 
-%             M interventions
-%             each cell contains a 1XnAxisParam matrix of indices
+%               N axes values to vary
+%               from the coefficients for 
+%               M interventions
+%               each cell contains a 1XnAxisParam matrix of indices
 % boundsForVaried: N X M cell array; each cell contains
-%             a 1XnAxisParam cell of {[low1, high1],[low2, high2],...}
-%             bounds for parameters along each of the axes
+%               a 1XnAxisParam cell of {[low1, high1],[low2, high2],...}
+%               bounds for parameters along each of the axes
 % responseTypeID: ID for the response type to use in the evaluation
 %                 of the objective                        
 % 

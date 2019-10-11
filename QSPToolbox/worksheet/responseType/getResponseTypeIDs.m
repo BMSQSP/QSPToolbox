@@ -1,4 +1,4 @@
-function responseTypeIDs = getresponseTypeIDs(myWorksheet)
+function responseTypeIDs = getResponseTypeIDs(myWorksheet)
 % Get response type IDs from a model
 % ARGUMENTS
 % worksheet: a worksheet object, required

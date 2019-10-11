@@ -1,17 +1,17 @@
 function myWorksheet = filterResults(myWorksheet,myElementIDs)
 % Check the simulation results stored in a worksheet and filter for
-% selected varaibles.  This is offered mainly to reduce the size
+% selected variables.  This is offered mainly to reduce the size
 % of worksheets from large sampling runs.
 %
 % ARGUMENTS
 % myWorksheet:  An instance of a worksheet
-% myElementIDs: A 1XN cell array of string of variable IDs to keep
+% myElementIDs: A 1XN cell array of strings of variable IDs to keep
 % 
 %
 % RETURNS
 % myWorksheet
 %
-% NOTE: we may want to do "double duty" and add add an interpolation option
+% NOTE: we may want to do "double duty" and add an interpolation option
 % to change the vector of results for certain times to facilitate
 % downstream analysis and plotting
 %

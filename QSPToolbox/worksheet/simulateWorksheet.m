@@ -1,7 +1,7 @@
 function myWorksheet = simulateWorksheet(myWorksheet, mySimulateOptions)
 % This function "crosses" the VPs in a worksheet plus alterations from 
-% applied axes with the interventions
-% defined int the worksheet and the runs each simulation
+% applied axes with the interventions defined in the worksheet and 
+% then runs each simulation
 % Simulations are run in parallel, if PCT is available.
 %
 % ARGUMENTS

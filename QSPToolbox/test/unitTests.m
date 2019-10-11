@@ -43,7 +43,7 @@ passCheck.failInitTests = failTests;
 nFailCur = 0;
 failTests = {};
 try
-    myWorksheet = readQSPModel(testModelFile);
+    myWorksheet = readQSPModel(testModelFile,'m1');
 catch
     failTests = [failTests,'readQSPModel'];
     nFailCur = nFailCur + 1;

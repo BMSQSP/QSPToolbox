@@ -3,7 +3,7 @@ function objectiveValue = evaluatePointObjectiveWtRange(uniqueSimTime, simY, exp
 % WtRange - values being included in the objective are weighted by how far 
 %           they fall outside the observed range in the data
 %           Note "CE" is not specified.  Objective values are also  
-%           normalized by an error term that is varies across time  
+%           normalized by an error term that is varied across time  
 %           points, the current standard deviation in the data
 %
 % ARGUMENTS

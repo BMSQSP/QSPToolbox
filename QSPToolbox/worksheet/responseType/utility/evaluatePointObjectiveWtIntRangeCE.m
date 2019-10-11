@@ -5,10 +5,10 @@ function objectiveValue = evaluatePointObjectiveWtIntRangeCE(uniqueSimTime, simY
 %              also take into consideration the interval between the
 %              data time points.  So data from periods of time
 %              that are more sparsely sampled can receive more weight
-% CE - The penalty for Simulated values falling outside the observed range 
-%      is normalized by an error term that is 
-%      constant across time points, the average standard deviation in the 
-%      data
+% CE - The penalty for simulated values falling outside the observed range 
+%      is normalized by an error term that is constant across time points, 
+%      the average standard deviation in the data
+%      
 %
 % ARGUMENTS
 %  uniqueSimTime: filtered to match unique values in expTime

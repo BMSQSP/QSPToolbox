@@ -10,7 +10,7 @@ function myWorksheet = resetAxisBounds(myWorksheet, myAxisCellArray)
 %                to use max/min values in the worksheet, otherwise
 %                set to [lowval highval]
 %
-% TODO: may want to add this in the future:
+% TODO: we may want to add this in the future:
 % myFactorList:  a relative amount to adjust the bounds of each axis by,
 %                widening them slightly relative to the VPs in the
 %                worksheet

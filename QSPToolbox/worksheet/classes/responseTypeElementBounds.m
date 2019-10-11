@@ -4,7 +4,7 @@ classdef responseTypeElementBounds
 % a mapping between simulation variables and upper/lower bounds
 %
 % Note the constructor method accepts a cell array of property values as
-% and input argument, or an empty cell array just to instantiate an
+% an input argument, or an empty cell array just to instantiate an object
 % with default values that may not really be valid.
 %
 % Note that when constructing via addResponseTypeElement, the

@@ -4,9 +4,9 @@ function variantNames = getVariantNames(worksheet, variantType)
 % ARGUMENTS
 % worksheet: a worksheet object, required
 % variantType: optional string.  If provided, variants with that prefix
-%         will be returned.  Otherwise, if the prefix does not
-%         match available prefixes or if prefix is not provided
-%         all model variants will be matched
+%              will be returned.  Otherwise, if the prefix does not
+%              match available prefixes or if prefix is not provided
+%              all model variants will be matched
 %
 % RETURNS
 % variantNames: an array of cells with the variant names; aka typeValueSets

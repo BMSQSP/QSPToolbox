@@ -1,13 +1,13 @@
 classdef resultTable
     % Here we define the resultTable class,
-    % which is intended to serve as a way store and
+    % which is intended to serve as a way to store and
     % check both axes inputs and response type
     % results
     %
     % PROPERTIES:
     %  id:       a string identifier for the resultTable
     %  values:   axis, responseTypeElement, and response type values
-    %  rowNames: name for rows in the the values matrix, i.e. axisID,
+    %  rowNames: name for rows in the values matrix, i.e. axisID,
     %            rteID, ...
     %  colNames: names for the columns, for example patient IDs
     %

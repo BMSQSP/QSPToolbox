@@ -1,8 +1,8 @@
 function objectiveValue = evaluatePointObjectiveRange(uniqueSimTime, simY, expTime, expY)
 % Objective function for point response type elements
 % Range - Whether the simulation falls within the experimental data range
-%         at each data point is simply evaluated.  The objective value is
-%         also normalized by the number of time points for which we have
+%         at each data point is evaluated.  The objective value is also
+%         normalized by the number of time points for which we have data
 %         
 %
 % ARGUMENTS

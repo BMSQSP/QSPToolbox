@@ -10,7 +10,7 @@ function myRTEresult = evaluateResponseTypeElement(myWorksheet, myRTE, mySimFilt
 %  myRTEresult:  a response type element result, a 1 x nVP numeric vector
 %
 % TODO: May want to add more checks to make sure myWorksheet has the right
-% elements, take a response type element ID as inpute, etc...
+% elements, take a response type element ID as input, etc ...
 %
 
 flagContinue = true;

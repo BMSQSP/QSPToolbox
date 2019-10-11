@@ -2,7 +2,7 @@ function myWorksheet = simulateWorksheetIterateTolerance(myWorksheet, mySimulate
 % This function will iterate with decreased tolerance or max step and try to
 % force all of the VPs in a worksheet to complete.  This function
 % will iteratively call simulate worksheet.  
-% NOTE 1: This function is provided for convenience to to 
+% NOTE 1: This function is provided for convenience to 
 %         try to force simulation of all of
 %         the provided VPs/parameter vectors to complete, but they 
 %         will not necessarily all be completed with the

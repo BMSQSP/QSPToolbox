@@ -1,5 +1,5 @@
 function myWorksheet = createIntervention(myWorksheet, interventionID, arrangedIntervention)
-% Create an intervention add it to the worksheet
+% Create an intervention and add it to the worksheet
 % ARGUMENTS
 % myWorksheet: a worksheet structure, required
 % interventionID: a simple text identifier for the intervention

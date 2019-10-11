@@ -10,8 +10,8 @@ function myWorksheet = compileModel(myWorksheet, accelerateFlag)
 % accelerateFlag:  Boolean (true/false), provided to allow for model
 %                  acceleration.  If this is false, we will just 
 %                  get "elements" from the model to help with other 
-%                  functions like the axis definititions, and export.  Of 
-%                  Export/Acceleration, Acceleration can be
+%                  functions like the axis definitions, and export. 
+%                  If Export/Acceleration is true, Acceleration can be
 %                  a lengthy step so we just want to trigger it when
 %                  first needed and avoid retriggering if necessary.
 %                  Default is true.

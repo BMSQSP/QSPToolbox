@@ -5,7 +5,7 @@ function myVariants = convertVPCoefficientsToVariants(myWorksheet, myVPIDs)
 % ARGUMENTS:
 %  myWorksheet   A worksheet data structure with VPs and coefficients
 %  myVPIDs       An optional 1xnVP cell array of virtual patient IDs to gather.
-%                 If none are given, all worksheet VP IDs will be used.
+%                If none are given, all worksheet VP IDs will be used.
 %
 % RETURNS:
 %  myVariants    A 1xnVP cell array of variants

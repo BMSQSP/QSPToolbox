@@ -2,7 +2,7 @@ function myWorksheet = removeVPs(myWorksheet, vpIDs)
 % Remove VPs from a worksheet based on ID
 % ARGUMENTS
 % myWorksheet: a worksheet
-% vpIDs: ids of VPs to remove from worksheet
+% vpIDs: IDs of VPs to remove from worksheet
 %
 % RETURNS
 % myWorksheet: an updated worksheet without the VPs

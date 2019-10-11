@@ -18,7 +18,7 @@ function [newVPCoeffs, newVPIDs, newVPVariants] = runWorksheetCohortOptimization
 %  boundsForVaried:        a nVariedAxis x 2 vector of upper and
 %                           lower bounds for the optimization
 %  axisScale:              a vector of length nVariedAxis indicating which axis
-%                           to set as linear or log scale for the optimization.
+%                           to set as linear or log scale (log10) for the optimization.
 %
 % RETURNS
 %  newVPCoeffs:           an nAxis x nVP matrix of coefficients from an
