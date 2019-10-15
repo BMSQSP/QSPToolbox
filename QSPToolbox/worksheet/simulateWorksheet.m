@@ -69,18 +69,28 @@ if flagContinue
         flagContinue = false;
     end
     % At least we can check the specified variables are
-    % recongized as elements.  We won't make 'time' requires as specified 
-    % but we will add this at the end in regardless.
-    if(sum(ismember(myWorksheet.simProps.saveElementResultIDs,myWorksheet.compiled.elements(:,1))) < length(myWorksheet.simProps.saveElementResultIDs))
-        warning(['Unable to identify all indicated saveElementResultIDs as elements in myWorksheet in call to ',mfilename,'.'])
-        flagContinue = false;
+    % recognized as elements from the exported model.  
+	% We won't make 'time' required as specified 
+    % variable or exclude it, but we will keep this at the end in regardless.
+	% 'time' is a special case and gets added in the simulation results
+	% later regardless.
+	missingIndices = find(~ismember(myWorksheet.simProps.saveElementResultIDs,['time',myWorksheet.compiled.elements(:,1)']));
+    if(length(missingIndices) > 0)
+		if length(missingIndices) >= length(myWorksheet.simProps.saveElementResultIDs)
+			warning(['Unable to identify any specified myWorksheet.simProps.saveElementResultIDs as elements in myWorksheet in call to ',mfilename,'.'])
+			flagContinue = false;
+		else
+			disp(['Unable to identify some indicated saveElementResultIDs as elements in myWorksheet in call to ', mfilename,'.  Proceeding with available model variables.'])
+			myStr = sprintf('%s, ', myWorksheet.simProps.saveElementResultIDs{missingIndices});
+			myStr(end-1:end) = [];
+			disp(['Note some variables will be dropped from myWorksheet.simProps.saveElementResultIDs: ',myStr,'.'])
+			myWorksheet.simProps.saveElementResultIDs(missingIndices) = [];
+		end
     end    
-    
 end
     
     
 if flagContinue
-    
     % We reset the random number generator if specified
     % this will be relevant if we are generating initial guesses
     % for optimization
