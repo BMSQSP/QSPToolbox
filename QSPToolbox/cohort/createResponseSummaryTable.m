@@ -39,6 +39,19 @@ if flagContinue
 end
 
 if flagContinue
+    [nInterventionResult, nVPResult] = size(myWorksheet.results);
+    nInterventions = length(getInterventionIDs(myWorksheet));
+    nVPs = length(getVPIDs(myWorksheet));
+    if (nInterventionResult == 0) || (nVPResult == 0)
+        warning(['Results not provided in worksheet provided to ',mfilename,'.'])
+        flagContinue = false;
+    elseif (nInterventionResult < nInterventions) || (nVPResult < nVPs)
+        warning(['Result dimensions (nInterventions x nVPs) not consistent with worksheet size in call to ',mfilename,'.'])
+        flagContinue = false;        
+    end
+end
+
+if flagContinue
     myResponseType = getResponseType(myWorksheet, myResponseTypeID);
     [nResponseTypeElements, dummyVar] = size(myResponseType.elements);
     myAxisDefIDs = getAxisDefIDs(myWorksheet);
@@ -60,5 +73,6 @@ if flagContinue
     else
         error([mfilename,' currently only supports flagParameters == false.'])
     end
-end
+else
+    warning(['Unable to generate a resultTable structure in call to ',mfilename,', returning an empty resultTable structure.'])
 end
