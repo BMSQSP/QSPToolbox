@@ -1,4 +1,4 @@
-function myRecistSimFilter = createRECISTSimFilter(myWorksheet, myVPopRECIST)
+function myRecistSimFilter = createRECISTSimFilter(myWorksheet, myVPopRECIST, poolObsTimes)
 % Scan the simulation results and create a weight
 % filter based on which VPs would still be on therapy
 % assuming we remove CR and PD patients from study
@@ -13,6 +13,9 @@ function myRecistSimFilter = createRECISTSimFilter(myWorksheet, myVPopRECIST)
 %                    relSLDvar          
 %                    absALDVar   
 %                    crCutoff  
+%  poolObsTimes:    Whether to pool observation times to create a
+%                    RECISTSimFilter for other interventions.
+%                    Default is true.
 %
 % RETURNS
 %  myRecistSimFilter: an nIntervention x 1 cell array of structures
@@ -39,12 +42,15 @@ function myRecistSimFilter = createRECISTSimFilter(myWorksheet, myVPopRECIST)
 flagContinue = true;
 myResponseSummaryTable = resultTable({});
 binEdge = [-0.3;0.2];
-if nargin > 2
-    warning([mfilename,' requires input arguments: myWorksheet, myVPopRECIST.  Too many arguments provided.'])
+if nargin > 3
+    warning([mfilename,' requires input arguments: myWorksheet, myVPopRECIST, optionally poolObsTimes.  Too many arguments provided.'])
     flagContinue = false;    
 elseif nargin < 2
-    warning([mfilename,' requires input arguments: myWorksheet, myVPopRECIST.  Too few arguments provided.'])
+    warning([mfilename,' requires input arguments: myWorksheet, myVPopRECIST, optionally poolObsTimes.  Too few arguments provided.'])
     flagContinue = false;
+elseif nargin < 3
+    flagContinue = true;
+    poolObsTimes = true;
 end
 
 if flagContinue
@@ -77,14 +83,23 @@ end
 if flagContinue  
     % Check the interventions that already have RECIST classification times
     % in the data
-    interventionsRECISTClass = unique(myBRTableRECIST{:,'interventionID'});
-    if sum(~ismember(myInterventionIDs, interventionsRECISTClass)) > 0
-        warning([mfilename,' found not all interventions to have RECIST classification times in myVPopRECIST.brTableRECIST for scoring.  Creating a simFilter for mechanistic dropouts using classification times for interventions where available, and pooling all observation times from other interventions where not.']) 
+    if ~isempty(myBRTableRECIST)
+        interventionsRECISTClass = unique(myBRTableRECIST{:,'interventionID'});
+        if sum(~ismember(myInterventionIDs, interventionsRECISTClass)) > 0
+            if poolObsTimes
+                warning([mfilename,' found not all interventions to have RECIST classification times in myVPopRECIST.brTableRECIST for scoring.  Creating a simFilter for mechanistic dropouts using classification times for interventions where available, and pooling all observation times from other interventions where not.'])
+            else
+                warning([mfilename,' found not all interventions to have RECIST classification times in myVPopRECIST.brTableRECIST for scoring.  Creating a simFilter for mechanistic dropouts using classification times for interventions where available, and assuming no dropouts from other interventions where not.'])
+            end
+        end
+        if sum(~ismember(interventionsRECISTClass,myInterventionIDs)) > 0
+            warning([mfilename,' found not all RECIST classification interventions are present.  Exiting...'])
+            flagContinue = false;
+        end    
+    else
+        warning([mfilename,' found no interventions to have RECIST classification times in myVPopRECIST.brTableRECIST for scoring.  Creating a simFilter for mechanistic dropouts assuming no dropouts from interventions.'])
+        poolObsTimes = false;
     end
-    if sum(~ismember(interventionsRECISTClass,myInterventionIDs)) > 0
-        warning([mfilename,' found not all RECIST classification interventions are present.  Exiting...'])
-        flagContinue = false;
-    end    
 end
 
 if flagContinue
@@ -114,16 +129,24 @@ if flagContinue
         curSizeRecalc = curSize;
 
         % Get the observation times for the current intervention
-        obsTimes = find(ismember(myBRTableRECIST{:,'interventionID'},myInterventionID));
-        if length(obsTimes) > 0
-            obsTimes = myBRTableRECIST{obsTimes,'time'};
-            obsTimes = sort(obsTimes,'ascend');
+        if ~isempty(myBRTableRECIST)
+            obsTimes = find(ismember(myBRTableRECIST{:,'interventionID'},myInterventionID));
+            if length(obsTimes) > 0
+                obsTimes = myBRTableRECIST{obsTimes,'time'};
+                obsTimes = sort(obsTimes,'ascend');
+            else
+                % If there are no observed times for the intervention in the
+                % data, for now we will simply take the pooled observation
+                % times across studies where we do have measures.
+                if poolObsTimes
+                    obsTimes = unique(myBRTableRECIST{:,'time'});
+                    obsTimes = sort(obsTimes,'ascend');
+                else
+                    obsTimes = max(timeVector);
+                end
+            end
         else
-            % If there are no observed times for the intervention in the
-            % data, for now we will simply take the pooled observation
-            % times across studies where we do have measures.
-            obsTimes = unique(myBRTableRECIST{:,'time'});
-            obsTimes = sort(obsTimes,'ascend');
+            obsTimes = max(timeVector);
         end
 
         % Recalculate values only at the observed times

@@ -9,9 +9,9 @@ function [myWorksheet, myVPop] = subsetWorksheetVPop(myWorksheet, myVPop, myVPID
 %  equalizePWflag: (optional, default FALSE) A boolean indicating
 %                  whether to reset all of the PWs to 1/N.
 %                  Default behavior is to re-normalize to 1
-%                  but not reset to be equal.  If pwStrategy is
-%                  'bin', the same bin porbabilities are kept
-%                  and equalize will set the bin bin probabilities
+%                  but not reset to be equal. If pwStrategy is
+%                  'bin', the same bin probabilities are kept
+%                  and equalize will set the bin probabilities
 %                  to be the same.
 % RETURNS
 %  myWorksheet
@@ -40,7 +40,7 @@ if flagContinue
 	iMaskVPIDsKeep = ismember(vpIDsAll,myVPIDs);
 	vpIDsKeep = vpIDsAll(iMaskVPIDsKeep);
 	myWorksheet = copyWorksheet(myWorksheet,vpIDsKeep);
-	if isa(myVPop,'vPopRECIST')
+	if isa(myVPop,'VPopRECIST')
 		myVPop.recistSimFilter = createRECISTSimFilter(myWorksheet, myVPop);  
 	end		
 	myVPop = myVPop.getSimData(myWorksheet);	

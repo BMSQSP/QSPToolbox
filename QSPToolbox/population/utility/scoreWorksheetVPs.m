@@ -188,15 +188,30 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
 						 
 						addScore(rowCounter,newNonNANIndices(newValInd)) = pdfDiff(scInd);
 					
-					else
-						setToZero = true;
+                    else
+                        % We are not weighting mean and SD.
+                        % So rather than assuming
+                        % a distribution, we set to 0
+                        setToZero = true;
+                        % We will do this for all "new" values.
+                        newValInd = 1:length(newNonNANIndices);
 					end
-				else
-					setToZero = true;
+                else
+                    % We did not find a mean or SD table match.
+                    % So rather than assuming
+                    % a distribution, we set to 0
+                    setToZero = true;
+                    % We will do this for all "new" values.
+                    newValInd = 1:length(newNonNANIndices);
 				end
 				
-			else
+            else
+                % We did not find a mean or SD table.
+                % So rather than assuming
+                % a distribution, we set to 0
 				setToZero = true;
+                % We will do this for all "new" values.
+                newValInd = 1:length(newNonNANIndices);
 			end
 			% Otherwise, we will simply implement
 			% as a zero.		

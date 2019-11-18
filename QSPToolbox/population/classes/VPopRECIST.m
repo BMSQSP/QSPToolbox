@@ -945,8 +945,9 @@ methods
                         end						
                     end 					
                     % I don't see how to avoid looping this, given the way
-                    % the data is structured.  Luckily we just get the data
-                    % once
+                    % the data are structured.  Luckily we just get the data
+                    % once 
+                    rowIndex = nan;
                     for vpCounter = 1 : nVPs
                         % We need to verify the desired result for the VP is
                         % present, otherwise we report the simData result as
@@ -962,8 +963,19 @@ methods
                                 curVarIndex = find(ismember(curResult.Names,elementID));
                                 curTime = curResult.Data(:,curTimeIndex);
                                 curVar = curResult.Data(:,curVarIndex);
-                                % Interpolate to get the time exactly right
-                                interpolateValue = interp1(curTime,curVar,expTime,'linear');
+                                % First check to see if the right row is
+                                % already known.  We assume the result
+                                % size is consistent across VPs.
+                                if isnan(rowIndex)
+                                    if sum(curTime == expTime) == 1
+                                        rowIndex = find(curTime == expTime);
+                                        interpolateValue = curVar(rowIndex);
+                                    else
+                                        interpolateValue = interp1(curTime,curVar,expTime,'linear');
+                                    end
+                                else
+                                    interpolateValue = curVar(rowIndex);
+                                end
                                 % Account for VPs dropping off of therapy
                                 filterIndex = find(expTime <= (simFilterTimes .* simFilterValuesInf(:,vpCounter)));
                                 
@@ -983,93 +995,133 @@ methods
                end
                
                % BR results for each VP for each row
-               myDataSource = myBRTableRECIST(:,rowInfoNames);
-               myDataSource = sortrows(myDataSource,{'interventionID','elementID','time','elementType'},{'ascend','ascend','ascend','ascend'});
+               if ~isempty(myBRTableRECIST)
+                   myDataSource = myBRTableRECIST(:,rowInfoNames);
+                   myDataSource = sortrows(myDataSource,{'interventionID','elementID','time','elementType'},{'ascend','ascend','ascend','ascend'});
                
-               brRowInfo = table2cell(myDataSource);
-               
-               [nEntries, ~] = size(myDataSource);
-               dataValues = nan(nEntries, length(vpIDs));
-               interventionIDIndex = find(ismember(rowInfoNames,'interventionID'));
-               expTimeIndex = find(ismember(rowInfoNames,'time'));
-               rData.Data = dataValues;
-               
-               interventionIDs = getInterventionIDs(myWorksheet);
-               brRows = nan(nEntries,1);
-               
-               for rowCounter = 1 : nEntries
-                   interventionID = brRowInfo{rowCounter,interventionIDIndex};
-                   wshInterventionIndex = find(ismember(interventionIDs,interventionID));
-                   expTime = brRowInfo{rowCounter,expTimeIndex};
-                   temp = find((ismember(myBRTableRECIST{:,'interventionID'},interventionID)) & ((myBRTableRECIST{:,'time'})==expTime) );
-                   brRows(rowCounter) = temp;
-                   % To avoid re-searching for the right rows on every
-                   % iteration mapel, we provide the indices here
-                   if length(myWorksheet.results) > 0
-                       curStruct = myRECISTFilter{wshInterventionIndex};
-                       curTime = curStruct.time;                   
-                       % I don't see how to avoid looping this, given the way
-                       % the data is structured.  Luckily we just get the data
-                       % once
-                       for vpCounter = 1 : nVPs
-                           % We need to verify the desired result for the VP is
-                           % present, otherwise we report the simData result as
-                           % nan
-                           curResult = curStruct.bestResp(:,vpCounter);
-                           
-                           % Interpolate to get the time exactly right
-                           % Might want to make this "last"
-                           % Interp1 demands double or dingle for input
-                           interpolateValue = interp1(curTime,single(curResult),expTime,'previous');
-                           % Convert back
-                           brData.Data(rowCounter, vpCounter) = int8(interpolateValue);
+                   brRowInfo = table2cell(myDataSource);
+
+                   [nEntries, ~] = size(myDataSource);
+                   dataValues = nan(nEntries, length(vpIDs));
+                   interventionIDIndex = find(ismember(rowInfoNames,'interventionID'));
+                   expTimeIndex = find(ismember(rowInfoNames,'time'));
+                   rData.Data = dataValues;
+
+                   interventionIDs = getInterventionIDs(myWorksheet);
+                   brRows = nan(nEntries,1);
+
+                   for rowCounter = 1 : nEntries
+                       interventionID = brRowInfo{rowCounter,interventionIDIndex};
+                       wshInterventionIndex = find(ismember(interventionIDs,interventionID));
+                       expTime = brRowInfo{rowCounter,expTimeIndex};
+                       temp = find((ismember(myBRTableRECIST{:,'interventionID'},interventionID)) & ((myBRTableRECIST{:,'time'})==expTime) );
+                       brRows(rowCounter) = temp;
+                       % To avoid re-searching for the right rows on every
+                       % iteration mapel, we provide the indices here
+                       if length(myWorksheet.results) > 0
+                           curStruct = myRECISTFilter{wshInterventionIndex};
+                           curTime = curStruct.time;                   
+                           % I don't see how to avoid looping this, given the way
+                           % the data are structured.  Luckily we just get the data
+                           % once
+                           rowIndex = nan;                       
+                           for vpCounter = 1 : nVPs
+                               % We need to verify the desired result for the VP is
+                               % present, otherwise we report the simData result as
+                               % nan
+                               curResult = curStruct.bestResp(:,vpCounter);
+
+                               % First check to see if the right row is
+                               % already known.  We assume the result
+                               % size is consistent across VPs.
+                               if isnan(rowIndex)
+                                   if sum(curTime == expTime) == 1
+                                       rowIndex = find(curTime == expTime);
+                                       interpolateValue = single(curResult(rowIndex));
+                                   else
+                                       % Interpolate to get the time exactly right
+                                       % Might want to make this "last"
+                                       % Interp1 demands double or single for input                                   
+                                       interpolateValue = interp1(curTime,single(curResult),expTime,'previous');
+                                   end
+                               else
+                                   interpolateValue = single(curResult(rowIndex));
+                               end
+                               % Convert back
+                               brData.Data(rowCounter, vpCounter) = int8(interpolateValue);
+                           end
                        end
                    end
+               else
+                   brRows = [];
+                   brData.Data = [];
+                   brRowInfo = []; 
                end
                
                % R results for each VP for each row
-               myDataSource = myRTableRECIST(:,rowInfoNames);
-               myDataSource = sortrows(myDataSource,{'interventionID','elementID','time','elementType'},{'ascend','ascend','ascend','ascend'});
-               
-               rRowInfo = table2cell(myDataSource);
-               
-               [nEntries, ~] = size(myDataSource);
-               dataValues = nan(nEntries, length(vpIDs));
-               interventionIDIndex = find(ismember(rowInfoNames,'interventionID'));
-               expTimeIndex = find(ismember(rowInfoNames,'time'));
-               rData.Data = dataValues;
-               
-               interventionIDs = getInterventionIDs(myWorksheet);
-               rRows = nan(nEntries,1);
-               
-               for rowCounter = 1 : nEntries
-                   interventionID = brRowInfo{rowCounter,interventionIDIndex};
-                   wshInterventionIndex = find(ismember(interventionIDs,interventionID));
-                   expTime = brRowInfo{rowCounter,expTimeIndex};
-                   temp = find((ismember(myRTableRECIST{:,'interventionID'},interventionID)) & ((myRTableRECIST{:,'time'})==expTime) );
-                   rRows(rowCounter) = temp;
-                   % To avoid re-searching for the right rows on every
-                   % iteration mapel, we provide the indices here
-                   
-                   if length(myWorksheet.results) > 0
-                       curStruct = myRECISTFilter{wshInterventionIndex};
-                       curTime = curStruct.time;   
-                       % I don't see how to avoid looping this, given the way
-                       % the data is structured.  Luckily we just get the data
-                       % once
-                       for vpCounter = 1 : nVPs
-                           % We need to verify the desired result for the VP is
-                           % present, otherwise we report the simData result as
-                           % nan
-                           curResult = curStruct.curResp(:,vpCounter);
-                           
-                           % Interpolate to get the time exactly right
-                           % Might want to make this "last"
-                           interpolateValue = interp1(curTime,single(curResult),expTime,'previous');
-                           rData.Data(rowCounter, vpCounter) = int8(interpolateValue);
+               if ~isempty(myRTableRECIST)
+                   myDataSource = myRTableRECIST(:,rowInfoNames);
+                   myDataSource = sortrows(myDataSource,{'interventionID','elementID','time','elementType'},{'ascend','ascend','ascend','ascend'});
+
+                   rRowInfo = table2cell(myDataSource);
+
+                   [nEntries, ~] = size(myDataSource);
+                   dataValues = nan(nEntries, length(vpIDs));
+                   interventionIDIndex = find(ismember(rowInfoNames,'interventionID'));
+                   expTimeIndex = find(ismember(rowInfoNames,'time'));
+                   rData.Data = dataValues;
+
+                   interventionIDs = getInterventionIDs(myWorksheet);
+                   rRows = nan(nEntries,1);
+
+                   for rowCounter = 1 : nEntries
+                       interventionID = brRowInfo{rowCounter,interventionIDIndex};
+                       wshInterventionIndex = find(ismember(interventionIDs,interventionID));
+                       expTime = brRowInfo{rowCounter,expTimeIndex};
+                       temp = find((ismember(myRTableRECIST{:,'interventionID'},interventionID)) & ((myRTableRECIST{:,'time'})==expTime) );
+                       rRows(rowCounter) = temp;
+                       % To avoid re-searching for the right rows on every
+                       % iteration mapel, we provide the indices here
+
+                       if length(myWorksheet.results) > 0
+                           curStruct = myRECISTFilter{wshInterventionIndex};
+                           curTime = curStruct.time;   
+                           % I don't see how to avoid looping this, given the way
+                           % the data are structured.  Luckily we just get the data
+                           % once
+                           rowIndex = nan;                       
+                           for vpCounter = 1 : nVPs
+                               % We need to verify the desired result for the VP is
+                               % present, otherwise we report the simData result as
+                               % nan
+                               curResult = curStruct.curResp(:,vpCounter);
+
+                               % First check to see if the right row is
+                               % already known.  We assume the result
+                               % size is consistent across VPs.
+                               if isnan(rowIndex)
+                                   if sum(curTime == expTime) == 1
+                                       rowIndex = find(curTime == expTime);
+                                       interpolateValue = single(curResult(rowIndex));
+                                   else
+                                       % Interpolate to get the time exactly right
+                                       % Might want to make this "last"
+                                       % Interp1 demands double or single for input                                   
+                                       interpolateValue = interp1(curTime,single(curResult),expTime,'previous');
+                                   end
+                               else
+                                   interpolateValue = single(curResult(rowIndex));
+                               end
+                               % Convert back
+                               rData.Data(rowCounter, vpCounter) = int8(interpolateValue);
+                           end
                        end
                    end
-               end               
+               else
+                   rRows = [];
+                   rData.Data = [];
+                   rRowInfo = [];     
+               end
                
                
                simData.binRows = binRows;

@@ -2,12 +2,16 @@
 #
 # Developed by Quantitative Systems Pharmacology group at Bristol-Myers Squibb
 # to piece together heterogenous oncology datasets and guide QSP modeling
-# Clearly this is an R script and not a MATLAB script!  It is anticipated
-# public examples/tutorials for the oncology trial integration will be forthcoming.
 #
 #
 # Version	Date		Author/Description
 # --------- ----------- --------------------------------------------------------------------
+# 0.29      09/30/2019    YC/ added codes between 1467-1483 to fix an issue where index lesion numbers at pretreatment are assigned NA
+# 0.28      09/27/2019    YC/ added new OS input when assigning tumor respones at line 2700 based ib ca 184022 off treatment reason
+# 0.27_yc   03/12/2019    YC/ added new OS input when assigning tumor responses at line 2699 based on ca184169 off treatment reason
+# 0.26_yc   xxxxxxxx    YC/ bug fix and added baseline volume and offtreatment time integration
+# 0.24   09/29/18    BJS/Update to get_patient_time_series_subdata to handle strings that
+#                        are entered.  Update calculate_demographic_time to handle missing entries.
 # 0.23	 08/16/18    BJS/Add PD2 classification for nontarget progression.
 # 0.22	 11/22/17    BJS/Add additional checks into get_patient_time_series_subdata for numeric data.
 # 0.21	 10/30/17    BJS/Minor update for adding index lesions indentified by numeric codes.
@@ -53,6 +57,9 @@
 #				  Added functions for calculating lesion summaries at the patient level
 #                         Added functions for updating variable names
 # 0.01	 12/5/14	BJS/initial trial release, probably still an alpha 
+#                       version
+# TODO: Calculation of TAPD - time after previous dose - for outputs
+#       Add function to calculate outputs relative to baseline (ratios)
 #
 #
 # *************** README ***************
@@ -879,7 +886,7 @@ get_patient_time_series_subdata = function(trial_list, filename, date_header="",
 							the_value = original_data_table[the_original_row_number,data_header]
 							the_value = check_and_convert_numeric(the_value)
 							
-							if (length(the_value) > 1)
+							if (length(the_value) >= 1)
 							{
 								if (is.numeric(the_value))
 								{
@@ -889,8 +896,10 @@ get_patient_time_series_subdata = function(trial_list, filename, date_header="",
 										the_value = the_value[keep_indices]
 									}
 									the_value = median(the_value)
-								} else {
-									the_value = names(which.max(table(mySet)))
+								} else if (is.character(the_value)) {
+									# If this is a character string we set
+									# the value to NA
+									the_value = NA#names(which.max(table(mySet)))
 								}
 							} 
 							one_patient_data_frame[the_one_patient_row,the_subclass_id] = the_value
@@ -1159,6 +1168,7 @@ calculate_lesion_summary = function(trial_list,lesion_measure_1,lesion_measure_2
 #  INDEX_LESION_SLD: sum of longest diameters at a time point
 #  INDEX_LESION_AVG_LD: sum of longest diameters at a time point / N
 #  INDEX_LESION_MED_LD: median of longest diameters at a time point
+#  INDEX_LESION_AVG_VOLUME: total volume of index lesion /N
 #  Conditional:
 #  INDEX_LESION_BSPD: sum of product of perpendicular diameters prior to the first dosing
 #  INDEX_LESION_SPD: sum of product of perpendicular diameters at a time point
@@ -1222,6 +1232,7 @@ calculate_lesion_summary = function(trial_list,lesion_measure_1,lesion_measure_2
 		trial_list[[the_patient_id]][["time_series"]][["INDEX_LESION_SLD"]]=list()
 		trial_list[[the_patient_id]][["time_series"]][["INDEX_LESION_AVG_LD"]]=list()
 		trial_list[[the_patient_id]][["time_series"]][["INDEX_LESION_MED_LD"]]=list()
+		trial_list[[the_patient_id]][["time_series"]][["INDEX_LESION_AVG_VOLUME"]]=list()
 		the_times = names(compiled_lesion_data)
 		if (!(is.null(the_times)))
 		{
@@ -1454,8 +1465,27 @@ calculate_lesion_summary = function(trial_list,lesion_measure_1,lesion_measure_2
 					trial_list[[the_patient_id]][["time_series"]][["INDEX_LESION_MED_PD"]][[the_time_string]] = median(dia_prod)
 				}		
 				
+				# Yougan: Note that if the pretreatment lesions are measured at seperate time points, this will result in NA assignment
+				# for l_dia, nlesions etc. This might be on purpuse, but I am changing it. For example if a patient got index lesion A B
+				# measured at day -20, and C, D measured at day -1, the algorithm still get the baseline measures fine. But, here it calculates
+				# the specific time point behavior, and at day -20 and -1 l_dia, nlesions will be assigned as NA
+				
+				if (as.numeric(the_time_string) <= 0)
+				{
+				  trial_list[[the_patient_id]][["time_series"]][["INDEX_LESION_N"]][[the_time_string]] = bnlesions
+				  nlesions = bnlesions
+				  l_dia = bl_dia
+				  if (length(l_dia) > 0)
+				  {
+				    max_node_l_dia = max(node_flags*l_dia)
+				    nonnode_l_dia = ((1-node_flags)*l_dia)
+				  }
+				}
+				
+				
 				trial_list[[the_patient_id]][["time_series"]][["INDEX_LESION_SLD"]][[the_time_string]] = sum(l_dia)
 				trial_list[[the_patient_id]][["time_series"]][["INDEX_LESION_AVG_LD"]][[the_time_string]] = sum(l_dia)/nlesions
+				trial_list[[the_patient_id]][["time_series"]][["INDEX_LESION_AVG_VOLUME"]][[the_time_string]] = (0.2291*sum((l_dia/2)^3))/nlesions
 				trial_list[[the_patient_id]][["time_series"]][["INDEX_LESION_MED_LD"]][[the_time_string]] = median(l_dia)
 				trial_list[[the_patient_id]][["time_series"]][["INDEX_LESION_MAXLN"]][[the_time_string]] = max_node_l_dia
 				trial_list[[the_patient_id]][["time_series"]][["INDEX_LESION_NLNSLD"]][[the_time_string]] = sum(nonnode_l_dia)
@@ -1752,13 +1782,19 @@ calculate_demographic_time = function(trial_list, newtime_name = "OFFTRTIME", da
 		}
 		if (date_name %in% names(trial_list[[the_patient_id]][["demographics"]]))
 		{
-			if (!(is.na(trial_list[[the_patient_id]][["demographics"]][[date_name]])))
+			if (length(trial_list[[the_patient_id]][["demographics"]][[date_name]]) > 0)
 			{
-				date2 = convert_to_date(trial_list[[the_patient_id]][["demographics"]][[date_name]])
-				if (class(date2) == "Date")
+				if (!(is.na(trial_list[[the_patient_id]][["demographics"]][[date_name]])))
 				{
-					pass2_flag = TRUE
+					date2 = convert_to_date(trial_list[[the_patient_id]][["demographics"]][[date_name]])
+					if (class(date2) == "Date")
+					{
+						pass2_flag = TRUE
+					}
 				}
+			} else {
+				pass2_flag = FALSE
+				trial_list[[the_patient_id]][["demographics"]][[date_name]] = NA
 			}
 		}
 		if (pass1_flag && pass2_flag)
@@ -2435,6 +2471,20 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 		output_matrix_score_1 = matrix(NA, n_time_points, n_patients)
 		output_matrix_bor_score_1 = matrix(NA, n_time_points, n_patients)
 		on_therapy_matrix_1 = matrix(NA, n_time_points, n_patients)
+		## Yougan addition starts: add the rscore, brscore, and ontherapy alternatives
+		## where we don't track off treatment
+		output_matrix_score_2 = matrix(NA, n_time_points, n_patients)
+		output_matrix_bor_score_2 = matrix(NA, n_time_points, n_patients)
+		on_therapy_matrix_2 = matrix(NA, n_time_points, n_patients)
+		colnames(output_matrix_score_2) = my_patient_ids
+		colnames(output_matrix_bor_score_2) = my_patient_ids
+		colnames(on_therapy_matrix_2) = my_patient_ids
+		rownames(output_matrix_score_2) = output_times
+		rownames(output_matrix_bor_score_2) = output_times
+		rownames(on_therapy_matrix_2) = output_times
+		## Yougan addition ends
+		
+		
 
 		colnames(output_matrix_1) = my_patient_ids
 		colnames(sld_matrix_1) = my_patient_ids
@@ -2450,6 +2500,7 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 
 		row_matrix = matrix(NA, n_time_points, n_patients)
 
+
 		
 		# Right now we just export the lesion data
 		for (time_point_counter in seq_along(output_times))
@@ -2458,6 +2509,7 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 			{
 				cur_rows = which(temp[,patient_id_varname]==my_patient_ids[patient_counter])
 				cur_row  = which(temp[cur_rows,time_varname]==output_times[time_point_counter])
+				
 				if (length(cur_row)>0)
 				{
 					output_matrix_1[time_point_counter,patient_counter] = temp[cur_rows[cur_row],response_varname]
@@ -2483,6 +2535,7 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 				}
 			}
 		}
+			
 		
 		# Now we want to step through each VP and create a matrix
 		# of PD, SD, PR, CR at each time point.  We also add "PD2" for
@@ -2490,7 +2543,6 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 		# lesions
 		# Also include off treatment for other reasons like death (DT) or toxicity (RX)
 		# get baseline value, get minimum
-		
 		remove_columns = c()
 		for (patient_counter in seq_along(my_patient_ids))
 		{
@@ -2503,6 +2555,7 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 				min_sld = sld_matrix_1[1,patient_counter]
 				cur_row = row_matrix[1,patient_counter]
 				# Replace off_treatment_time with inf if NA - assume stay on treatment
+				
 				off_treatment_time = temp[cur_row,offtrtime_varname]
 				if (is.na(off_treatment_time))
 				{
@@ -2564,20 +2617,25 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 							{
 								if ((((cur_pd_check_1 >= 0.2) & (cur_pd_check_2 >= 5)) | (cur_rel_sld >= 0.2)) ) {
 									output_matrix_score_1[time_point_counter,patient_counter] = "PD"
+
 								} else if (cur_nontarget_pd>0) {
 									# Nontarget PD will be flagged as different, decide how to best handle with PW algorithm
 									output_matrix_score_1[time_point_counter,patient_counter] = "PD2"
+
 								#} else if ((cur_pd_check_1 < 0.2) & ((cur_rel_sld <= -1) | ((cur_nonlnsld==0)&(cur_maxln<10))) & (cur_nontarget_pd<=0) & (cur_nontarget<=0))
 								} else if (((cur_rel_sld <= -1) | ((cur_nonlnsld==0)&(cur_maxln<10))) & (cur_nontarget_pd<=0) & (cur_nontarget<=0))
 								{
 									output_matrix_score_1[time_point_counter,patient_counter] = "CR"
+
 								#} else if ((cur_pd_check_1 < 0.2) & (cur_rel_sld <= -.3)) {
 								} else if (cur_rel_sld <= -.3) {
 									output_matrix_score_1[time_point_counter,patient_counter] = "PR"
 
+
 								#} else if ((cur_pd_check_1 < 0.2) & (cur_rel_sld < 0.2)) {
 								} else if (cur_rel_sld < 0.2) {
 									output_matrix_score_1[time_point_counter,patient_counter] = "SD"
+
 								#} else if (((cur_pd_check_1 >= 0.2) & (cur_pd_check_2 < 5))) {
 								#	# In this case the increase does not merit a classification
 								#	# as PD
@@ -2597,6 +2655,7 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 								} else {
 									print(paste("Warning: no valid measure for patient ",my_patient_ids[patient_counter]," at time ",toString(cur_time),".", sep = ""))
 									output_matrix_score_1[time_point_counter,patient_counter] = NA
+
 								}
 							} else if (!(is.na(cur_nontarget_pd))) {
 								if (cur_nontarget_pd > 0)
@@ -2604,14 +2663,18 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 									# We still need to check for other sources of PD even if index measures were not taken
 									# Nontarget PD will be flagged as different, decide how to best handle with PW algorithm
 									output_matrix_score_1[time_point_counter,patient_counter] = "PD2"
+
 								} else {
 									output_matrix_score_1[time_point_counter,patient_counter] = NA
+
 								}
 							} else {
 								output_matrix_score_1[time_point_counter,patient_counter] = NA
+
 							}
 
 							on_therapy_matrix_1[time_point_counter,patient_counter] = 1
+
 							# Only look at BOR after the baseline measure, the baseline is not a response
 							if (cur_time > 0)
 							{
@@ -2632,7 +2695,10 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 									output_matrix_bor_score_1[time_point_counter,patient_counter] = NA
 								}	
 							}
-						} else {
+							
+						
+							# this ends the before drop-off time point processing
+							} else {
 							# We may want to add a scenario for complete response here.... though there may be some issues 
 							# in using an investigator assessed CR.  
 							# Since we include more considerations in computing response, we will not use investigator assessment here.  Let's see how
@@ -2650,7 +2716,7 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 							{
 								output_matrix_score_1[time_point_counter,patient_counter] = "PD2"
 							# We will keep similar strict criteria for PD, this means the investigator may score some patients as PD that we do not
-							} else if (off_treatment_reason %in% c("MAXIMUM CLINICAL BENEFIT","STUDY DRUG TOXICITY","SUBJECT WITHDREW CONSENT","ADVERSE EVENT UNRELATED TO STUDY DRUG","SUBJECT REQUEST TO DISCONTINUE STUDY TREATMENT","NOT REPORTED","OTHER","DT","ADVERSE EVENT","DEATH","LOST TO FOLLOW-UP","NA","NA.","COMPLETION OF MAXIMUM CYCLES","DISEASE PROGRESSION","COMPLETE RESPONSE","MAXIMUM CLINICAL BENEFIT","POOR/NON-COMPLIANCE",NA)) {
+							} else if (off_treatment_reason %in% c("MAXIMUM CLINICAL BENEFIT","STUDY DRUG TOXICITY","SUBJECT WITHDREW CONSENT","ADVERSE EVENT UNRELATED TO STUDY DRUG","SUBJECT REQUEST TO DISCONTINUE STUDY TREATMENT","NOT REPORTED","OTHER","DT","ADVERSE EVENT","DEATH","LOST TO FOLLOW-UP","NA","NA.","COMPLETION OF MAXIMUM CYCLES","DISEASE PROGRESSION","COMPLETE RESPONSE","MAXIMUM CLINICAL BENEFIT","POOR/NON-COMPLIANCE","COMPLETED","PROGRESSIVE DISEASE","WITHDRAWAL BY SUBJECT","FAILURE TO MEET STUDY CRITERIA","DOCUMENTED DISEASE PROGRESSION","ADMINISTRATIVE REASON BY SPONSOR","DETERIORATION W/O DOCUMENTED PROGRESSION","NEVER TREATED WITH STUDY MEDICATION","PHYSICIAN DECISION","SUBJECT REQUEST",NA)) {
 								output_matrix_score_1[time_point_counter,patient_counter] = "OS"
 							} else {
 								print(paste("Warning: off treatment without recognized rationale for ",my_patient_ids[patient_counter],"!  It is: ",off_treatment_reason,".  Inputting PD2.", sep=""))
@@ -2676,11 +2742,108 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 							} else {
 									output_matrix_bor_score_1[time_point_counter,patient_counter] = NA
 							}
-						}
+						} # this should be the end of the old dropoff algorithm
 					}
-				}
+				
+				  
+				  
+				  #Yougan addition starts: we won't distinguish time_point_counter is before or after drop-off time and calculated rscore and brscore as it is
+				  
+				  
+				  if (!(is.na(cur_rel_sld)))
+				  {
+				    if ((((cur_pd_check_1 >= 0.2) & (cur_pd_check_2 >= 5)) | (cur_rel_sld >= 0.2)) ) {
+				      output_matrix_score_2[time_point_counter,patient_counter] = "PD"
+				      
+				    } else if (cur_nontarget_pd>0) {
+				      # Nontarget PD will be flagged as different, decide how to best handle with PW algorithm
+				      output_matrix_score_2[time_point_counter,patient_counter] = "PD2"
+				      
+				      #} else if ((cur_pd_check_1 < 0.2) & ((cur_rel_sld <= -1) | ((cur_nonlnsld==0)&(cur_maxln<10))) & (cur_nontarget_pd<=0) & (cur_nontarget<=0))
+				    } else if (((cur_rel_sld <= -1) | ((cur_nonlnsld==0)&(cur_maxln<10))) & (cur_nontarget_pd<=0) & (cur_nontarget<=0))
+				    {
+				      output_matrix_score_2[time_point_counter,patient_counter] = "CR"
+				      
+				      #} else if ((cur_pd_check_1 < 0.2) & (cur_rel_sld <= -.3)) {
+				    } else if (cur_rel_sld <= -.3) {
+				      output_matrix_score_2[time_point_counter,patient_counter] = "PR"
+				      
+				      
+				      #} else if ((cur_pd_check_1 < 0.2) & (cur_rel_sld < 0.2)) {
+				    } else if (cur_rel_sld < 0.2) {
+				      output_matrix_score_2[time_point_counter,patient_counter] = "SD"
+				      
+				      #} else if (((cur_pd_check_1 >= 0.2) & (cur_pd_check_2 < 5))) {
+				      #	# In this case the increase does not merit a classification
+				      #	# as PD
+				      #	if (((cur_rel_sld <= -1) | ((cur_nonlnsld==0)&(cur_maxln<10))) & (cur_nontarget_pd<=0) & (cur_nontarget<=0))
+				      #	{
+				      #		output_matrix_score_2[time_point_counter,patient_counter] = "CR"
+				      #	} else if ((cur_rel_sld <= -.3)) {
+				      #		output_matrix_score_2[time_point_counter,patient_counter] = "PR"
+				      #	} else if ((cur_rel_sld < 0.2)) {
+				      #		output_matrix_score_2[time_point_counter,patient_counter] = "SD"	
+				      #	#}
+				      #	#	output_matrix_score_2[time_point_counter,patient_counter] = output_matrix_score_2[time_point_counter-1,patient_counter]
+				      #	} else {
+				      #		# print(my_patient_ids[patient_counter])
+				      #		output_matrix_score_2[time_point_counter,patient_counter] = NA
+				      #	}
+				    } else {
+				      print(paste("Warning: no valid measure for patient ",my_patient_ids[patient_counter]," at time ",toString(cur_time),".", sep = ""))
+				      output_matrix_score_2[time_point_counter,patient_counter] = NA
+				      
+				    }
+				  } else if (!(is.na(cur_nontarget_pd))) {
+				    if (cur_nontarget_pd > 0)
+				    {
+				      # We still need to check for other sources of PD even if index measures were not taken
+				      # Nontarget PD will be flagged as different, decide how to best handle with PW algorithm
+				      output_matrix_score_2[time_point_counter,patient_counter] = "PD2"
+				      
+				    } else {
+				      output_matrix_score_2[time_point_counter,patient_counter] = NA
+				      
+				    }
+				  } else {
+				    output_matrix_score_2[time_point_counter,patient_counter] = NA
+				    
+				  }
+				  
+				  on_therapy_matrix_2[time_point_counter,patient_counter] = 1
+				  
+				  # Only look at BOR after the baseline measure, the baseline is not a response
+				  if (cur_time > 0)
+				  {
+				    # This should probably always be 2, but be safe here
+				    initial_index=(which(output_times>0))[1]
+				    if ("CR" %in% output_matrix_score_2[initial_index:time_point_counter,patient_counter])
+				    {
+				      output_matrix_bor_score_2[time_point_counter,patient_counter] = "CR"
+				    } else if ("PR" %in% output_matrix_score_2[initial_index:time_point_counter,patient_counter]) {
+				      output_matrix_bor_score_2[time_point_counter,patient_counter] = "PR"
+				    } else if ("SD" %in% output_matrix_score_2[initial_index:time_point_counter,patient_counter]) {
+				      output_matrix_bor_score_2[time_point_counter,patient_counter] = "SD"
+				    } else if ("PD" %in% output_matrix_score_2[initial_index:time_point_counter,patient_counter]) {
+				      output_matrix_bor_score_2[time_point_counter,patient_counter] = "PD"
+				    } else if ("PD2" %in% output_matrix_score_2[initial_index:time_point_counter,patient_counter]) {
+				      output_matrix_bor_score_2[time_point_counter,patient_counter] = "PD2"									
+				    } else {
+				      output_matrix_bor_score_2[time_point_counter,patient_counter] = NA
+				    }	
+				  }
+				  
+				  
+				  
+				  
+				  #Yougan addition ends
+				   
+				  # the following } ends the time_point_counter for loop
+				  }
 			} else {
 				output_matrix_score_1[1,patient_counter] = "OS"
+				output_matrix_score_2[1,patient_counter] = "OS"   #yougan comment: this is to take care cases patients don't have any lesion measurements, not even at baseline
+				
 			}
 		}
 		temp2 = matrix(NA, (length(output_times)), 1)
@@ -2694,6 +2857,14 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 		output_matrix_score = cbind(temp2,data.frame(output_matrix_score_1, check.names = FALSE))
 		output_matrix_bor_score = cbind(temp2, data.frame(output_matrix_bor_score_1, check.names = FALSE))
 		on_therapy_matrix = cbind(temp2, data.frame(on_therapy_matrix_1, check.names = FALSE))
+		
+		
+		# yougan addition starts: add data frames for the new columns to be added
+		output_matrix_score_new = cbind(temp2,data.frame(output_matrix_score_2, check.names = FALSE))
+		output_matrix_bor_score_new = cbind(temp2, data.frame(output_matrix_bor_score_2, check.names = FALSE))
+		on_therapy_matrix_new = cbind(temp2, data.frame(on_therapy_matrix_2, check.names = FALSE))
+		# yougan addition ends 
+		
 		
 	#}	
 		
@@ -2713,6 +2884,29 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 			my_table[cur_row,"ONTRT"] = on_therapy_matrix[time_point_counter,my_patient_ids[patient_counter]]
 		}
 	}
+	
+	
+	# yougan addition starts here
+	# now add new on therapy variables to the input matrix
+	
+	if (!("ONTRTNEW" %in% colnames(my_table)))
+	{
+	  my_table[,"ONTRTNEW"]=NA
+	}
+	for (patient_counter in seq_along(my_patient_ids))
+	{
+	  for (time_point_counter in seq_along(output_times))
+	  {
+	    cur_row = intersect(which(my_table[,patient_id_varname] == my_patient_ids[patient_counter]),which(my_table[,time_varname] == output_times[time_point_counter]))
+	    my_table[cur_row,"ONTRTNEW"] = on_therapy_matrix_new[time_point_counter,my_patient_ids[patient_counter]]
+	  }
+	}
+	# yougan addition ends here
+	
+	
+	
+	
+	
 
 	# Now we drop the first rows before treatment where it is not informative for response:
 	initial_index=(which(output_times>0))[1]
@@ -2721,6 +2915,11 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 	output_matrix_score = output_matrix_score[initial_index:length(output_times),]
 	output_matrix_bor_score = output_matrix_bor_score[initial_index:length(output_times),]
 	on_therapy_matrix = on_therapy_matrix[initial_index:length(output_times),]
+	
+	output_matrix_score_new = output_matrix_score_new[initial_index:length(output_times),]
+	output_matrix_bor_score_new = output_matrix_bor_score_new[initial_index:length(output_times),]
+	on_therapy_matrix_new = on_therapy_matrix_new[initial_index:length(output_times),]
+	
 
 	# Now add the response variables to the input matrix
 	if (!("RSCORE" %in% colnames(my_table)))
@@ -2742,12 +2941,43 @@ create_distribution_tables_recist = function(patient_data_filename, response_var
 			my_table[cur_row,"BRSCORE"] = output_matrix_bor_score[time_point_counter,my_patient_ids[patient_counter]]
 		}
 	}
-
+	
+	
+	# Yougan addition starts
+	# now add the new response variables to the input matrix
+	if (!("RSCORENEW" %in% colnames(my_table)))
+	{
+	  my_table[,"RSCORENEW"]=""
+	  my_table[,"RSCORENEW"]=NA
+	}
+	if (!("BRSCORENEW" %in% colnames(my_table)))
+	{
+	  my_table[,"BRSCORENEW"]=""
+	  my_table[,"BRSCORENEW"]=NA
+	}
+	for (patient_counter in seq_along(my_patient_ids))
+	{
+	  for (time_point_counter in seq_along(output_times))
+	  {
+	    cur_row = intersect(which(my_table[,patient_id_varname] == my_patient_ids[patient_counter]),which(my_table[,time_varname] == output_times[time_point_counter]))
+	    my_table[cur_row,"RSCORENEW"] = output_matrix_score_new[time_point_counter,my_patient_ids[patient_counter]]
+	    my_table[cur_row,"BRSCORENEW"] = output_matrix_bor_score_new[time_point_counter,my_patient_ids[patient_counter]]
+	  }
+	}
+	
+	# Yougan additional ends
+	
+  # Yougan comment: I don't know what are these, but will copy the same codes to the new variables
 	my_return_tables = list()
 	my_return_tables[["output_matrix"]] = output_matrix
 	my_return_tables[["output_matrix_score"]] = output_matrix_score
 	my_return_tables[["output_matrix_bor_score"]] = output_matrix_bor_score
 	my_return_tables[["on_therapy_matrix"]] = on_therapy_matrix	
+	
+	my_return_tables[["output_matrix_score_new"]] = output_matrix_score_new
+	my_return_tables[["output_matrix_bor_score_new"]] = output_matrix_bor_score_new
+	my_return_tables[["on_therapy_matrix_new"]] = on_therapy_matrix_new
+	
 	my_return_tables[["integrated_patient_data"]] = my_table
 	my_return_tables
 }

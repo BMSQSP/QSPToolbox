@@ -775,7 +775,7 @@ methods
                     elementType = simData.rowInfo{rowCounter,elementTypeIndex};
                     wshInterventionIndex = find(ismember(interventionIDs,interventionID));
                     expTime = simData.rowInfo{rowCounter,expTimeIndex};
-                    % To avoid re-seatching for the right rows on every
+                    % To avoid re-searching for the right rows on every
                     % iteration mapel, we provide the indices here 
                     if mnsdDataFlag
                         temp = find((ismember(myMnSdData{:,'interventionID'},interventionID)) & ((myMnSdData{:,'time'})==expTime) & (ismember(myMnSdData{:,'elementID'},elementID)) & (ismember(myMnSdData{:,'elementType'},elementType)));
@@ -820,8 +820,9 @@ methods
                         end						
                     end 
                     % I don't see how to avoid looping this, given the way
-                    % the data is structured.  Luckily we just get the data
+                    % the data are structured.  Luckily we just get the data
                     % once
+                    rowIndex = nan;								   
                     for vpCounter = 1 : nVPs
                         % We need to verify the desired result for the VP is
                         % present, otherwise we report the simData result as
@@ -837,8 +838,19 @@ methods
                                 curVarIndex = find(ismember(curResult.Names,elementID));
                                 curTime = curResult.Data(:,curTimeIndex);
                                 curVar = curResult.Data(:,curVarIndex);
-                                % Interpolate to get the time exactly right
-                                interpolateValue = interp1(curTime,curVar,expTime,'linear');
+                                % First check to see if the right row is
+                                % already known.  We assume the result
+                                % size is consistent across VPs.
+                                if isnan(rowIndex)
+                                    if sum(curTime == expTime) == 1
+                                        rowIndex = find(curTime == expTime);
+                                        interpolateValue = curVar(rowIndex);
+                                    else
+                                        interpolateValue = interp1(curTime,curVar,expTime,'linear');
+                                    end
+                                else
+                                    interpolateValue = curVar(rowIndex);
+                                end
                                 simData.Data(rowCounter, vpCounter) = interpolateValue;
                             else
                                 simData.Data(rowCounter, vpCounter) = nan;

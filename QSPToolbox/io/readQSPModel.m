@@ -100,7 +100,7 @@ if continueFlag
                  worksheet.model = temp.(dummyNames{1});
                  if length(modelname) > 0
                      warning(['Cannot find model with specified name, using the first: ',modelNames{1},'.'])
-                 else
+                 elseif length(modelNames) > 1
                      disp(['Model to use not specified, using the first: ',modelNames{1},'.'])
                  end
              else
