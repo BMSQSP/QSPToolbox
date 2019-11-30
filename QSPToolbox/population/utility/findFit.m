@@ -20,29 +20,14 @@ function myVPop = findFit(myVPop)
 %          gof
 %
 
+p = gcp('nocreate'); % If no pool, do not create new one.
+if isempty(p)
+    poolSize = 1;
+else
+    poolSize = p.NumWorkers;
+end
+
 optimizeType = myVPop.optimizeType;
-% We don't adjust the parallel pool status for simplex
-% since simplex cannot use parallel processing
-% we may want to use the parallel pool to run multiple
-% MAPEL runs in parallel.
-if sum(ismember({'simplex'},optimizeType)) < 1
-    if ~isempty(gcp('nocreate'))
-        delete(gcp);
-    end
-	% We will use default pool settings
-	mySimulateOptions = simulateOptions;
-	mySimulateOptions = checkNWorkers(mySimulateOptions);
-end
-
-% Create the pool early, there are a few processes that
-% may use it: both linearCalibraiton and the swarm optimization.
-if sum(ismember({'simplex'},optimizeType)) < 1
-    if ~isempty(gcp('nocreate'))
-        delete(gcp);
-    end    
-    myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
-end
-
 if strcmp(myVPop.pwStrategy, 'bin')
 	initialBinProbs = myVPop.binProbs;
 	[myNAxis, myNBins] = size(initialBinProbs);
@@ -60,7 +45,7 @@ else
 		[nTest, ~] = size(initialPWs);
 		nAdd = floor(myVPop.optimizePopSize/2-nTest);
 		if nAdd > 0
-            nBoostrapIterations = max(100,mySimulateOptions.nWorkers*5);
+            nBoostrapIterations = max(100,poolSize*5);
 			initialPWs = getInitialPWs(myVPop, initialPWs, nAdd, nBoostrapIterations);
 		end
 	end	
@@ -148,10 +133,6 @@ else
 	end	
 end
 
-% Clean up the worker pool
-if sum(ismember({'simplex'},optimizeType)) < 1
-	delete(myPool);
-end
 if strcmp(myVPop.pwStrategy, 'bin')	    
 	myProbTrans = transpose(reshape(optTransProbVect, myNBins-1, myNAxis));
 	myBinProbs = nan(myNAxis, myNBins);

@@ -179,14 +179,18 @@ if continueFlag
         jitteredWorksheet.axisProps.axisVP.coefficients(axisIndex,vpIndex) = rand(1);
     end
 
-    % Also screen the worksheet if a function is provided
-    if length(myScreenFunctionName) > 0
-        jitteredWorksheet = eval([myScreenFunctionName,'(jitteredWorksheet,newVPIDs)']);
-    end
-    
     mySimulateOptions = simulateOptions;
     mySimulateOptions.rerunExisting = false;
     mySimulateOptions.optimizeType = 'none';
+	% Inherit the pool properties
+	mySimulateOptions.poolRestart = myMapelOptions.poolRestart;
+	mySimulateOptions.poolClose = myMapelOptions.poolClose;    
+    
+    % Also screen the worksheet if a function is provided
+    if length(myScreenFunctionName) > 0
+        jitteredWorksheet = eval([myScreenFunctionName,'(jitteredWorksheet,newVPIDs,mySimulateOptions)']);
+    end
+    
     jitteredWorksheet = simulateWorksheet(jitteredWorksheet,mySimulateOptions);
 
     % Update VPIDs as some will fail simulation

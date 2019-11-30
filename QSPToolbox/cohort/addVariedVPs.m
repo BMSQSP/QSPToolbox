@@ -104,7 +104,7 @@ if continueFlag
 			continueFlag = false;
 		end	
 		if length(variedAxisIndices) < nAxis
-			warning(['All axies should be varied for localpca option in ',mfilename,'.  Exiting.'])
+			warning(['All axes should be varied for localpca option in ',mfilename,'.  Exiting.'])
 			continueFlag = false;
 		end	
 	end
@@ -184,7 +184,12 @@ if continueFlag
     elseif strcmp(myVaryAxesOptions.varyMethod,'sobol')
         newVPIDs = cell(1,myVaryAxesOptions.newPerOld * nBaseVPs);
         mySobolSet = sobolset(nRAxis);
-        %mySobolSet = scramble(mySobolSet,'MatousekAffineOwen');
+        if myVaryAxesOptions.intSeed == 0
+            disp(['Note: current behavior of Sobol sampling when intSeed is 0 is not to scramble in ',mfilename,'.'])
+        else
+            disp(['Note: current behavior of Sobol sampling when intSeed is not 0 is to scramble in ',mfilename,'.'])
+            mySobolSet = scramble(mySobolSet,'MatousekAffineOwen');
+        end
         randomCoefficients = net(mySobolSet,myVaryAxesOptions.newPerOld);
         randomCoefficients = transpose(randomCoefficients);
         for baseVPCounter = 1 : nBaseVPs
@@ -210,7 +215,12 @@ if continueFlag
         % I have left this as the unscrambled sequence
         % until I can investigate the best way to scramble
         mySobolSet = sobolset(nRAxis*2);
-        %mySobolSet = scramble(mySobolSet,'MatousekAffineOwen');
+        if myVaryAxesOptions.intSeed == 0
+            disp(['Note: current behavior of Sobol/Saltelli sampling when intSeed is 0 is not to scramble in ',mfilename,'.'])
+        else
+            disp(['Note: current behavior of Sobol/Saltelli sampling when intSeed is not 0 is to scramble in ',mfilename,'.'])
+            mySobolSet = scramble(mySobolSet,'MatousekAffineOwen');
+        end        
         randomCoefficientsA = net(mySobolSet,myVaryAxesOptions.newPerOld);      
         randomCoefficientsB = randomCoefficientsA(:,(nRAxis+1):nRAxis*2);
         randomCoefficientsA = randomCoefficientsA(:,1:nRAxis);

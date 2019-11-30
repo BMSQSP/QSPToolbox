@@ -93,8 +93,8 @@ if flagContinue
             end
         end
         if sum(~ismember(interventionsRECISTClass,myInterventionIDs)) > 0
-            warning([mfilename,' found not all RECIST classification interventions are present.  Exiting...'])
-            flagContinue = false;
+            warning([mfilename,' found not all RECIST classification interventions are present.  Proceeding, but be careful about this mismatch as there are interventions in the VPop that are not in the worksheet!'])
+            flagContinue = true;
         end    
     else
         warning([mfilename,' found no interventions to have RECIST classification times in myVPopRECIST.brTableRECIST for scoring.  Creating a simFilter for mechanistic dropouts assuming no dropouts from interventions.'])
@@ -187,7 +187,7 @@ if flagContinue
         % Nominal SD VPs
         bin2Continuous = (binEdge(1)<curData(:,2:end)) & (curSize(:,2:end)>=crCutoff);
         % Nominal PR VPs
-        bin1Continuous = (curData(:,2:end)<=binEdge(1)) & (curData(:,2:end)>=crCutoff);
+        bin1Continuous = (curData(:,2:end)<=binEdge(1)) & (curSize(:,2:end)>=crCutoff);
         curRespNotCorrected =  3 * (bin3Continuous > 0) + 2 * (bin2Continuous > 0) .* (bin3Continuous < 1) + 1 * (bin1Continuous > 0) .* (bin3Continuous < 1) .* (bin2Continuous < 1);
         
         % Need to add cumulative change from min, too

@@ -89,6 +89,9 @@ if continueFlag
 	% Enforce using effN, since
 	% we enforce using it for the VPops
     myMapelOptions.useEffN = true;
+	% Also minimize pool restarts
+	myMapelOptions.poolRestart=false;
+	myMapelOptions.poolClose=false;
 
     % Make sure results are present.  Here, we don't re-simulate VPs if 
     % results are present.
@@ -135,6 +138,19 @@ if continueFlag
         bestPVal = -1;
         myMapelOptions.minEffN = curEffN;
         myTestCounter = 0;
+		
+		% We will manually refresh the pool once each outer iteration.
+		if ~isempty(gcp('nocreate'))
+			delete(gcp);
+		end
+		if isempty(gcp('nocreate'))
+			% We will use default pool settings
+			mySimulateOptions = simulateOptions;
+			mySimulateOptions = checkNWorkers(mySimulateOptions);		
+			myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
+		end			
+		
+		
         while bestPVal < minPVal
             myTestCounter = myTestCounter + 1;
 			% We check whether to reseed with myTestCounter for repeatability of the sequence
@@ -324,6 +340,10 @@ if continueFlag
             end
         end
     end
+	% Close the pool before exiting.
+	if ~isempty(gcp('nocreate'))
+		delete(gcp);
+	end
 else
     warning(['Exiting ',mfilename, '. Returning input worksheet and hot start VPop.'])    
     newVPop = hotStartVPop;

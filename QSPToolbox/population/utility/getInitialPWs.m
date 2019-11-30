@@ -1,6 +1,7 @@
 function initialPWs = getInitialPWs(myVPop,initialPWs, nAdd, nBootstrapIterations)
 % This is a utility function to find additional starting
 % points for the hypothesis-test driven swarming approach.
+% Note: better to open pools before calling this function.
 %
 % ARGUMENTS
 %  myVPop:               An object of VPopRECISTnoBin.  Other 

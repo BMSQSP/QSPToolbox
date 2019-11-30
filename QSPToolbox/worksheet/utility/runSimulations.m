@@ -23,12 +23,17 @@ function simResults = runSimulations(exportedModel, updateValues, updateIndices,
 
 % As a precaution, restart any existing parallel
 % pools
-if ~isempty(gcp('nocreate'))
-   delete(gcp);
+if mySimulateOptions.poolRestart
+	if ~isempty(gcp('nocreate'))
+		delete(gcp);
+	end
 end
-% First check the default number of workers, if needed
-mySimulateOptions = checkNWorkers(mySimulateOptions);
-myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
+
+if isempty(gcp('nocreate'))
+	% First check the default number of workers, if needed
+	mySimulateOptions = checkNWorkers(mySimulateOptions);
+	myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
+end
 
 % in 2017a this message can cause issues, especially when
 % trying some of the global optimization methods
@@ -89,6 +94,11 @@ end
 % end    
     
 
-% Clean up the worker pool
-delete(myPool)
+% Clean up the pool, if needed
+if mySimulateOptions.poolClose
+	if ~isempty(gcp('nocreate'))
+		delete(gcp);
+	end
+end
+
 end

@@ -80,6 +80,8 @@ classdef mapelOptions
 %                    the population size to use in the optimization runs.
 %                    Default is 1000.
 % objectiveLimit:    stopping condition for optimization
+% poolClose:         Whether to close the pool at the end of the optimization  
+% poolRestart:       Whether to restart the pool at the beginning of the optimization 
 % intSeed:           (Optional) Random seed, set to -1 to avoid re-seeding
 %                    the random number generator.  Default is -1.
 % minEffN:           (Optional) Distinct from useEffN, this is an additional
@@ -109,7 +111,9 @@ classdef mapelOptions
       optimizeTimeLimit
       optimizeType
       optimizePopSize 
-	  objectiveLimit	  
+	  objectiveLimit
+	  poolClose
+	  poolRestart
       intSeed
       minEffN
    end
@@ -255,6 +259,22 @@ classdef mapelOptions
             error('Invalid objectiveLimit value')
           end
       end 	  	  
+	  
+      function obj = set.poolClose(obj,myInput)
+          if islogical(myInput)
+               obj.poolClose = myInput;
+          else
+               error(['Property poolClose in ',mfilename,' must be logical.'])
+          end
+      end  	  
+	  
+      function obj = set.poolRestart(obj,myInput)
+          if islogical(myInput)
+               obj.poolRestart = myInput;
+          else
+               error(['Property poolRestart in ',mfilename,' must be logical.'])
+          end
+      end  			  
       
       function obj = set.intSeed(obj,myIntSeed)
           if ((mod(myIntSeed,1) == 0) && (myIntSeed>=-1))
@@ -315,7 +335,11 @@ classdef mapelOptions
               case 'optimizePopSize'
                   value = obj.optimizePopSize;
               case 'objectiveLimit'
-                  value = obj.objectiveLimit;					  
+                  value = obj.objectiveLimit;	
+              case 'poolRestart'
+                  value = obj.poolRestart;
+              case 'poolClose'
+                  value = obj.poolClose;					  
               case 'intSeed'
                   value = obj.intSeed;   
               case 'minEffN'
@@ -352,7 +376,9 @@ classdef mapelOptions
           obj.optimizeTimeLimit = 10*60;
           obj.optimizeType = 'pso';
           obj.optimizePopSize = 1000;
-		  obj.objectiveLimit = -Inf;		  
+		  obj.objectiveLimit = -Inf;	
+          obj.poolClose = true;  
+		  obj.poolRestart = true;			  
           obj.intSeed = -1;   
           obj.minEffN = 0;          
       end

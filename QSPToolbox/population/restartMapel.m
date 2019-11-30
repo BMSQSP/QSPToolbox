@@ -80,6 +80,8 @@ if continueFlag
     myMapelOptions.optimizeType = myVPop.optimizeType;
     myMapelOptions.optimizePopSize = myVPop.optimizePopSize; 	
 	myMapelOptions.objectiveLimit = myVPop.objectiveLimit; 
+	myMapelOptions.poolClose = myVPop.poolClose; 
+	myMapelOptions.poolRestart = myVPop.poolRestart; 
     myMapelOptions.intSeed = myVPop.intSeed;
     myMapelOptions.minEffN = myVPop.minEffN;	
 	if isa(myVPop,'VPopRECIST') 

@@ -44,7 +44,7 @@ mySobolSampleOptions.nRandomizationsPerSample = 1024;
 mySobolSampleOptions.maxBatchSimulateN = 10000*10;
 mySobolSampleOptions.saveElementResultIDs = {'parrule_gtotal'};
 mySobolSampleOptions.saveFileName = '';
-mySobolSampleOptions.intSeed = 1;
+mySobolSampleOptions.intSeed = 0;
 mySampledWorksheet = runSobolSample(myWorksheet,mySobolSampleOptions);
 
 mySobolSensitivityOptions = sobolSensitivityOptions;

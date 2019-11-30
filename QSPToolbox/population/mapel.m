@@ -97,8 +97,34 @@ if continueFlag
     myVPop = myVPop.addDistTableSimVals();
     myVPop = myVPop.addDistTable2DSimVals();
 	myVPop = myVPop.addCorTableSimVals();
+	
+	% Get the parallel pools ready
+	optimizeType = myVPop.optimizeType;
+	if myVPop.poolRestart;
+		if ~isempty(gcp('nocreate'))
+			delete(gcp);
+		end
+	end
+
+	% Create the pool early, there are a few processes that
+	% may use it: both linearCalibration and the swarm optimization.
+	% We don't start a pool for simplex
+	% since simplex cannot use parallel processing
+	% we may want to use the parallel pool to run multiple
+	% MAPEL runs in parallel.	
+	if sum(ismember({'simplex'},optimizeType)) < 1
+		if isempty(gcp('nocreate'))
+			% We will use default pool settings
+			mySimulateOptions = simulateOptions;
+			mySimulateOptions = checkNWorkers(mySimulateOptions);		
+			myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
+		else
+			myPool = [];
+		end
+	else
+		myPool = [];
+	end
     	
-    
     if strcmp(myVPop.pwStrategy, 'bin')
         % We adopt the index table convention from the original MAPEL paper
         myIndexTable = myVPop.indexTable;
@@ -148,13 +174,13 @@ if continueFlag
                 myVPop = myVPop.addPredTableVals();
 				
 				linearCalibrationObject = LinearCalibration(myVPop,'optimOptions',myOptimOptions);
-				linearCalibrationObject = linearCalibrationObject.run();
+				linearCalibrationObject = linearCalibrationObject.run('closeParallelPoolWhenFinished',false);
 				
 				if linearCalibrationObject.OptimizationResults.exitFlag == 1
                     % Run 2x as results are sensitive to prior PW
                     % assumption
 					linearCalibrationObject = LinearCalibration(linearCalibrationObject.OptimizedVPop,'optimOptions',myOptimOptions);
-					linearCalibrationObject = linearCalibrationObject.run();					
+					linearCalibrationObject = linearCalibrationObject.run('closeParallelPoolWhenFinished',false);					
 					myInitialPWs = linearCalibrationObject.OptimizedVPop.pws;
 					if linearCalibrationObject.OptimizationResults.exitFlag == 1
 						myInitialPWs = linearCalibrationObject.OptimizedVPop.pws;
@@ -184,6 +210,16 @@ if continueFlag
     % step to diagnose and does have much computational cost            
     myVPop = myVPop.addPredTableVals();    
     myVPop = findFit(myVPop);
+	
+	% Clean up the pool, if needed
+	if myVPop.poolClose
+		if ~isempty(gcp('nocreate'))
+			delete(gcp);
+		end
+	end
+
+	
+	
 else
     myVPop = VPop;
     warning(['Unable to run ',mfilename,'.  Returning an empty VPop.'])

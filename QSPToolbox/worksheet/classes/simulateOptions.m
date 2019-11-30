@@ -28,6 +28,8 @@ classdef simulateOptions
 %                       for an optimization.  Leave as -1 to ignore.
 % optimizeSeedExisting: whether to seed an optimization with existing VPs
 %                       or to seed fully randomly
+% poolClose:            whether to close the pool at the end of the optimization  
+% poolRestart:          whether to restart the pool at the beginning of the optimization 
 % clusterID:            which cluster to use, parallel.defaultClusterProfile is default
 % nWorkers:             how many workers in the pool to use.  Set to nan to
 %                        use the default (default).
@@ -48,6 +50,8 @@ classdef simulateOptions
       optimizePopSize
       optimizeSeedExisting
       optimizeMaxIter
+	  poolClose
+	  poolRestart	
       clusterID
       nWorkers
       intSeed
@@ -78,6 +82,22 @@ classdef simulateOptions
                error('Invalid optimizeType in ',milename,'.')
           end
       end
+	  
+      function obj = set.poolClose(obj,myInput)
+          if islogical(myInput)
+               obj.poolClose = myInput;
+          else
+               error(['Property poolClose in ',mfilename,' must be logical.'])
+          end
+      end  	  
+	  
+      function obj = set.poolRestart(obj,myInput)
+          if islogical(myInput)
+               obj.poolRestart = myInput;
+          else
+               error(['Property poolRestart in ',mfilename,' must be logical.'])
+          end
+      end 	  
       
       function obj = set.rerunExisting(obj,myRerunExisting)
           if islogical(myRerunExisting)
@@ -171,6 +191,10 @@ classdef simulateOptions
                   value = obj.optimizeSeedExisting;  
               case 'optimizeMaxIter'
                   value = obj.optimizeMaxIter;  
+              case 'poolRestart'
+                  value = obj.poolRestart;
+              case 'poolClose'
+                  value = obj.poolClose;
               case 'clusterID'
                   value = obj.clusterID;  
               case 'nWorkers'
@@ -331,6 +355,8 @@ classdef simulateOptions
           obj.optimizePopSize=1000;
           obj.optimizeSeedExisting=true;  
           obj.optimizeMaxIter = -1; 
+          obj.poolClose = true;  
+		  obj.poolRestart = true;		  
           obj.clusterID = parallel.defaultClusterProfile;
           obj.nWorkers = nan;
           obj.intSeed = -1;          

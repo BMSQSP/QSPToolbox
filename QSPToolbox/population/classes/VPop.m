@@ -100,6 +100,8 @@ classdef VPop
 %                       is the population size to use in the optimization 
 %                       runs. Default is 1000.
 %  objectiveLimit:		stopping condition for optimization
+%  poolClose:           Whether to close the pool at the end of the optimization  
+%  poolRestart:         Whether to restart the pool at the beginning of the optimization 
 %  intSeed:             A non-negative integer seed to initialize the 
 %                       random number generator.  Set to -1 to avoid
 %                       changing the state of the random number generator.
@@ -145,7 +147,9 @@ properties
     optimizeTimeLimit
     optimizeType
     optimizePopSize
-	objectiveLimit	
+	objectiveLimit
+	poolClose
+	poolRestart	
     intSeed  
     tol
     nIters
@@ -299,7 +303,7 @@ methods
           else
             error('Invalid optimizePopSize value')
           end
-      end  
+      end  	 
 
       function obj = set.objectiveLimit(obj,myObjectiveLimit)
           if ((isnumeric(myObjectiveLimit) == true))
@@ -307,7 +311,23 @@ methods
           else
             error('Invalid objectiveLimit value')
           end
-      end 	  
+      end 	 
+
+      function obj = set.poolClose(obj,myInput)
+          if islogical(myInput)
+               obj.poolClose = myInput;
+          else
+               error(['Property poolClose in ',mfilename,' must be logical.'])
+          end
+      end  	  
+	  
+      function obj = set.poolRestart(obj,myInput)
+          if islogical(myInput)
+               obj.poolRestart = myInput;
+          else
+               error(['Property poolRestart in ',mfilename,' must be logical.'])
+          end
+      end  		  
       
       function obj = set.intSeed(obj,myIntSeed)
           if ((mod(myIntSeed,1) == 0) && (myIntSeed>=-1))
@@ -402,7 +422,11 @@ methods
               case 'optimizePopSize'
                   value = obj.optimizePopSize;
               case 'objectiveLimit'
-                  value = obj.objectiveLimit;					  
+                  value = obj.objectiveLimit;		
+              case 'poolRestart'
+                  value = obj.poolRestart;
+              case 'poolClose'
+                  value = obj.poolClose;	
               case 'intSeed'
                   value = obj.intSeed;             
               case 'tol'
@@ -1267,7 +1291,9 @@ methods
           obj.gofDist = [];          
 		  obj.gofDist2D = [];  
 		  obj.gofCor = [];
-          obj.gof = [];          
+          obj.gof = [];     
+          obj.spreadOut = 0;
+          obj.minIndPVal = 0;		  
           obj.spreadOut = 0;
           obj.minIndPVal = 0;			  
           obj.useEffN = false;
@@ -1276,6 +1302,8 @@ methods
           obj.optimizeType = 'pso';    
           obj.optimizePopSize = 1000;    
 		  obj.objectiveLimit = -Inf;
+          obj.poolClose = true;  
+		  obj.poolRestart = true;			  
           obj.intSeed = -1;
           obj.tol = 1E-3;
           obj.nIters = 10000;

@@ -51,12 +51,17 @@ clear baseValues
 
 % As a precaution, restart any existing parallel
 % pools
-if ~isempty(gcp('nocreate'))
-   delete(gcp);
+if mySimulateOptions.poolRestart;
+	if ~isempty(gcp('nocreate'))
+		delete(gcp);
+	end
 end
-% First check the default number of workers, if needed
-mySimulateOptions = checkNWorkers(mySimulateOptions);
-myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
+
+if isempty(gcp('nocreate'))
+	% First check the default number of workers, if needed
+	mySimulateOptions = checkNWorkers(mySimulateOptions);
+	myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
+end
 
 % in 2017a this message can cause issues, especially when
 % trying some of the global optimization methods
@@ -199,6 +204,11 @@ for axisCounter = 1 : length(allAxisDefIDs)
     end
 end
 
-% Clean up the worker pool
-delete(gcp)
+% Clean up the pool, if needed
+if mySimulateOptions.poolClose
+	if ~isempty(gcp('nocreate'))
+		delete(gcp);
+	end
+end
+
 end
