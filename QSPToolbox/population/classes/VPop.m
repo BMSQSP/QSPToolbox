@@ -750,20 +750,43 @@ methods
            end              
            if ~isempty(myDistTable2D)
                distData2DFlag = true;
+               myDataSource1 = myDistTable2D(:,rowInfoNames2D1);
+               myDataSource2 = myDistTable2D(:,rowInfoNames2D2);
+               myDataSource1.Properties.VariableNames = rowInfoNames;
+               myDataSource2.Properties.VariableNames = rowInfoNames;
+               myDataSource = [myDataSource; myDataSource1];
+               myDataSource = [myDataSource; myDataSource2];
 		   end
            if ~isempty(myCorTable)
-               corDataFlag = true;			   
-           end									 
+               corDataFlag = true;		
+               myDataSource1 = myCorTable(:,rowInfoNames2D1);
+               myDataSource2 = myCorTable(:,rowInfoNames2D2);
+               myDataSource1.Properties.VariableNames = rowInfoNames;
+               myDataSource2.Properties.VariableNames = rowInfoNames;
+               myDataSource = [myDataSource; myDataSource1];
+               myDataSource = [myDataSource; myDataSource2];               
+           end								 
            [nrows,ncols] = size(myDataSource);
            if nrows < 1
-               warning(['No mnSDTable, binTable, or distTable assigned before calling getSimData in ',mfilename,'. The data to get is not known. Exiting.'])
+               warning(['No mnSDTable, binTable, distTable, distTable2D, or corTable assigned before calling getSimData in ',mfilename,'. The data to get is not known. Exiting.'])
                continueFlag = false;
            end
            if continueFlag
                % Eliminate duplicate rows
                myDataSource = unique(myDataSource, 'rows');
                myDataSource = sortrows(myDataSource,{'interventionID','elementID','time','elementType'},{'ascend','ascend','ascend','ascend'});
-
+           end
+           
+           if continueFlag
+               myCheckVars = myDataSource.('elementID');
+               myMissingVars = ~ismember(myCheckVars,myWorksheet.simProps.saveElementResultIDs);
+               myMissingVars = myCheckVars(myMissingVars);
+               if length(myMissingVars) > 0
+                   disp(['Missing needed variables for ',mfilename,' in myWorksheet.simProps.saveElementResultIDs.  They are: ',strjoin(myMissingVars,', '),'.  Attempting to continue...'])
+               end
+           end
+               
+           if continueFlag   
                [nEntries, ~] = size(myDataSource);           
 
                % Info on each row of simvalues

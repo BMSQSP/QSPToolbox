@@ -842,7 +842,9 @@ methods
            % from the experimental summaries that will be paired
            % with real data.
            rowInfoNames = {'expVarID','interventionID','elementID','elementType','time'};
-		   rowInfoNames2D = {'expVarID1','expVarID2','interventionID1','interventionID2','elementID1','elementID2','elementType1','elementType2','time1','time2'};																																							
+		   rowInfoNames2D = {'expVarID1','expVarID2','interventionID1','interventionID2','elementID1','elementID2','elementType1','elementType2','time1','time2'};	
+           rowInfoNames2D1 = {'expVarID1','interventionID1','elementID1','elementType1','time1'};
+           rowInfoNames2D2 = {'expVarID2','interventionID2','elementID2','elementType2','time2'};
            brInfoNames = {'expVarID','interventionID','elementID','elementType','time'};
            rInfoNames = brInfoNames;
            myDataSource = cell2table(cell(0,5), 'VariableNames', rowInfoNames);
@@ -860,9 +862,21 @@ methods
            end          
            if ~isempty(myDistTable2D)
                distData2DFlag = true;
+               myDataSource1 = myDistTable2D(:,rowInfoNames2D1);
+               myDataSource2 = myDistTable2D(:,rowInfoNames2D2);
+               myDataSource1.Properties.VariableNames = rowInfoNames;
+               myDataSource2.Properties.VariableNames = rowInfoNames;
+               myDataSource = [myDataSource; myDataSource1];
+               myDataSource = [myDataSource; myDataSource2];
 		   end
            if ~isempty(myCorTable)
-               corDataFlag = true;			   
+               corDataFlag = true;		
+               myDataSource1 = myCorTable(:,rowInfoNames2D1);
+               myDataSource2 = myCorTable(:,rowInfoNames2D2);
+               myDataSource1.Properties.VariableNames = rowInfoNames;
+               myDataSource2.Properties.VariableNames = rowInfoNames;
+               myDataSource = [myDataSource; myDataSource1];
+               myDataSource = [myDataSource; myDataSource2];               
            end
            if ~isempty(myBRTableRECIST)
                brDataFlag = true;
@@ -873,7 +887,7 @@ methods
 		   
            [nrows,ncols] = size(myDataSource);
            if nrows < 1
-               warning(['No mnSDTable, binTable, or distTable assigned before calling getSimData in ',mfilename,'. The data to get is not known. Exiting.'])
+               warning(['No mnSDTable, binTable, distTable, distTable2D, or corTable assigned before calling getSimData in ',mfilename,'. The data to get is not known. Exiting.'])
                continueFlag = false;
            end
            
@@ -883,7 +897,19 @@ methods
                % Eliminate duplicate rows
                myDataSource = unique(myDataSource, 'rows');
                myDataSource = sortrows(myDataSource,{'interventionID','elementID','time','elementType'},{'ascend','ascend','ascend','ascend'});
-
+           end
+           
+           if continueFlag
+               myCheckVars = myDataSource.('elementID');
+               myMissingVars = ~ismember(myCheckVars,myWorksheet.simProps.saveElementResultIDs);
+               myMissingVars = myCheckVars(myMissingVars);
+               if length(myMissingVars) > 0
+                   disp(['Missing needed variables for ',mfilename,' in myWorksheet.simProps.saveElementResultIDs.  They are: ',strjoin(myMissingVars,', '),'.  Attempting to continue...'])
+               end
+           end
+               
+           if continueFlag    
+               
                [nEntries, ~] = size(myDataSource);
 
                % Info on each row of simvalues
