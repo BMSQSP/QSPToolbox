@@ -779,10 +779,13 @@ methods
            
            if continueFlag
                myCheckVars = myDataSource.('elementID');
-               myMissingVars = ~ismember(myCheckVars,myWorksheet.simProps.saveElementResultIDs);
-               myMissingVars = myCheckVars(myMissingVars);
-               if length(myMissingVars) > 0
-                   disp(['Missing needed variables for ',mfilename,' in myWorksheet.simProps.saveElementResultIDs.  They are: ',strjoin(myMissingVars,', '),'.  Attempting to continue...'])
+               % If the length is 0, all variables should be written.
+               if length(myWorksheet.simProps.saveElementResultIDs) > 0
+                   myMissingVars = ~ismember(myCheckVars,myWorksheet.simProps.saveElementResultIDs);
+                   myMissingVars = myCheckVars(myMissingVars);
+                   if length(myMissingVars) > 0
+                       disp(['Missing needed variables for ',mfilename,' in myWorksheet.simProps.saveElementResultIDs.  They are: ',strjoin(myMissingVars,', '),'.  Attempting to continue...'])
+                   end
                end
            end
                
