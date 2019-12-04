@@ -1,13 +1,11 @@
 function plotHandle = plotDistCDFVPop(myVPop, myPlotOptions)
-% This function takes the distribution data in a VPop distribution table
+% This function takes the 2D distribution data in a VPop distribution table
 % to plot the experimental data side-by-side with the population
 % to facilitate diagnosing fitting during
 % the population calibration/prevalence weighting process.
 %
 % ARGUMENTS
-% myVPop:           (required) A VPop.  Note that both the 
-%                   experimental and simulation result fields should be 
-%                   populated
+% myVPop:           (required) A VPop.  Note there should be a distTable2D.
 % myPlotOptions:    (optional) A plotOptions structure.
 %                   Note that not all arguments are used.
 %
@@ -50,7 +48,7 @@ if flagContinue
 end
 
 if (flagContinue)
-    [myNPlots, ~] = size(myVPop.distTable);
+    [myNPlots, ~] = size(myVPop.distTable2D);
     if myNPlots < 1
         flagContinue = false;
         warning(['Invalid VPop.distTable for ',mfilename,'.'])        
@@ -59,10 +57,12 @@ end
 
 
 if (flagContinue)
-    myTable = myVPop.distTable;
-    
+    myTable = myVPop.distTable2D;
+    plotNames1 = cell(1, myNPlots);
+    plotNames2 = cell(1, myNPlots);
     for rowCounter = 1 : myNPlots
-        plotNames{rowCounter} = {myTable{rowCounter,'interventionID'}{1},myTable{rowCounter,'elementID'}{1},num2str(myTable{rowCounter,'time'})};
+        plotNames1{rowCounter} = {myTable{rowCounter,'interventionID1'}{1},myTable{rowCounter,'elementID1'}{1},num2str(myTable{rowCounter,'time1'})};
+		plotNames2{rowCounter} = {myTable{rowCounter,'interventionID2'}{1},myTable{rowCounter,'elementID2'}{1},num2str(myTable{rowCounter,'time2'})};
     end
     
 end
@@ -79,15 +79,15 @@ if (flagContinue)
         predW = myTable{plotCounter,'predProbs'}{1};
         expSample = myTable{plotCounter,'expSample'}{1};
         predSample = myTable{plotCounter,'predSample'}{1};
-		SC = myTable{plotCounter,'combinedPoints'}{1};
-        expInd = myTable{plotCounter,'expCombinedIndices'}{1};;
-        predInd = myTable{plotCounter,'simCombinedIndices'}{1};;		
-		[CDF1, CDF2] = alignCDFsPreGrid(SC, expInd, predInd, expW, predW);
-        plot(SC,CDF1,'k-',SC,CDF2,'r-','LineWidth',3);
-        ylim([0 1]);
-        xlim([min(SC) max(SC)]);
+		
+		hold on
+		scatter(predSample(1,:),predSample(2,:),500*predW,'bo');
+		scatter(expSample(1,:),expSample(2,:),500*expW,'ro','filled');
+		hold off
+		
         grid on
-        title(gca,plotNames{plotCounter},'interpreter','none','FontWeight','Normal');
+        xlabel(plotNames1{plotCounter},'interpreter','none','FontWeight','Normal');
+		ylabel(plotNames2{plotCounter},'interpreter','none','FontWeight','Normal');
         set(gca,'box','on');
         set(gca,'fontsize', 10);
         
@@ -97,7 +97,7 @@ if (flagContinue)
         theDate = date;
         formatOut = 'yymmdd';
         theDate = datestr(theDate,formatOut);
-        print(['VPopDistCDF_',theDate,'.tif'],'-dtiff','-r300');
+        print(['VPopDistCDF2D_',theDate,'.tif'],'-dtiff','-r300');
     end
 end
 
