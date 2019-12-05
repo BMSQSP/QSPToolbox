@@ -93,7 +93,10 @@ if flagContinue
     % Also check against the "logged" states to write.
     % These are different from all model parameters, states, compartments
     % as some things, like fixed model parameters, will not be available.
+    initialSetting = myWorksheet.model.ConfigSet.RunTimeOptions.StatesToLog;
+    myWorksheet.model.ConfigSet.RunTimeOptions.StatesToLog = 'all';
     testLog=(myWorksheet.model.ConfigSet.RunTimeOptions.StatesToLog);
+    myWorksheet.model.ConfigSet.RunTimeOptions.StatesToLog = initialSetting;
     nStatesLogged = length(testLog);
     checkCellArray = cell(1,nStatesLogged);
     for checkCounter = 1: nStatesLogged
@@ -102,10 +105,10 @@ if flagContinue
 	missingIndices = find(~ismember(myWorksheet.simProps.saveElementResultIDs,['time',checkCellArray]));
     if(length(missingIndices) > 0)
 		if length(missingIndices) >= length(myWorksheet.simProps.saveElementResultIDs)
-			warning(['Unable to verify any specified myWorksheet.simProps.saveElementResultIDs as logged model states in call to ',mfilename,'.'])
+			warning(['Unable to verify any specified myWorksheet.simProps.saveElementResultIDs as allowed logged model states in call to ',mfilename,'.'])
 			flagContinue = false;
 		else
-			disp(['Unable to verify some indicated saveElementResultIDs as elements as logged model states in call to ', mfilename,'.  Proceeding with allowed expected model output variables.'])
+			disp(['Unable to verify some indicated saveElementResultIDs as elements as allowed logged model states in call to ', mfilename,'.  Proceeding with allowed expected model output variables.'])
 			myStr = sprintf('%s, ', myWorksheet.simProps.saveElementResultIDs{missingIndices});
 			myStr(end-1:end) = [];
 			disp(['Note some variables will be dropped from myWorksheet.simProps.saveElementResultIDs: ',myStr,'.'])
