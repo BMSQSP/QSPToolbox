@@ -12,16 +12,17 @@ function mySimulateOptions = checkNWorkers(mySimulateOptions)
 %
 if isnan(mySimulateOptions.nWorkers)
 	mySettings = parallel.Settings;
+    clusterCheck = parcluster(mySimulateOptions.clusterID);
+    if isnumeric(mySettings.Pool.PreferredNumWorkers)
+        % First try getting the value from parallel.settings, but cap in
+        % case a silly value was entered.
+        mySimulateOptions.nWorkers = min(clusterCheck.NumWorkers,mySettings.Pool.PreferredNumWorkers);
+    else
+        mySimulateOptions.nWorkers = clusterCheck.NumWorkers;
+    end
+    % The local scheduler tends to be listed this way, but this is not
+    % guaranteed.
 	mySchedulerComponent = [mySimulateOptions.clusterID,'SchedulerComponent'];
-	for checkCounter = 1 : length(mySettings.SchedulerComponents)
-		if isequal(mySettings.SchedulerComponents(checkCounter).Name,mySchedulerComponent)
-            % 'Use Default' is sometimes given
-            if ~isnumeric(mySettings.SchedulerComponents(checkCounter).NumWorkers)
-                mySimulateOptions.nWorkers = mySettings.Pool.PreferredNumWorkers;
-            else
-                mySimulateOptions.nWorkers = mySettings.SchedulerComponents(checkCounter).NumWorkers;
-            end
-        end
-	end	
+    foundNWorkers = false;
 end
 end
