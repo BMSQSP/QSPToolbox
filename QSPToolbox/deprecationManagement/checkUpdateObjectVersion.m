@@ -44,13 +44,13 @@ if continueFlag
 		% The transition was made around in-house rev1043.	
 		if sum(ismember(myInputObject.binTable.Properties.VariableNames,'binEdge1')) > 0
 			myInputObject = updateBinTableFormat(myInputObject)
-			warning(['Deprecated binTable automatically patched.  You may want to manually verify initial columns are correct.'])
+			disp(['Deprecated binTable format automatically patched in ',mfilename,'.  You may want to manually verify the columns are correct.'])
 		end
     end
     myUpdatedObject = myInputObject;
 	if isa(myInputObject, 'VPopRECISTnoBin') 
 		% VPopRECISTnoBin objects are deprecated.
-		warning(['Deprecated VPopRECISTnoBin format detected.  Attempting to patch to the new combined VPopRECIST version automatically.'])
+		disp(['Deprecated VPopRECISTnoBin format detected in ',mfilename,'.  Attempting to patch to the new combined VPopRECIST version automatically.'])
 		myUpdatedObject = VPopRECIST;
         myUpdatedObject.coeffsTable=myInputObject.coeffsTable;	
 		myUpdatedObject.coeffsDist=myInputObject.coeffsDist;
@@ -94,10 +94,10 @@ if continueFlag
         myUpdatedObject.absALDVar = myInputObject.absALDVar;
         myUpdatedObject.crCutoff = myInputObject.crCutoff;            
         myUpdatedObject.recistSimFilter = myInputObject.recistSimFilter;		
-		warning(['VPopRECISTnoBin automatically updated.  You may want to manually verify it looks OK.'])		
+		disp(['VPopRECISTnoBin automatically updated.  You may want to manually verify it looks OK.'])		
 	elseif isa(myInputObject, 'mapelOptionsRECISTnoBin')
 		% mapelOptionsRECISTnoBin objects are deprecated.
-		warning(['Deprecated mapelOptionsRECISTnoBin format detected.  Attempting to patch to the new combined mapelOptionsRECIST version automatically.'])
+		disp(['Deprecated mapelOptionsRECISTnoBin format detected in ',mfilename,'.  Attempting to patch to the new combined mapelOptionsRECIST version automatically.'])
 		myUpdatedObject = mapelOptionsRECIST;
         myUpdatedObject.expData = myInputObject.expData;
         myUpdatedObject.mnSDTable = myInputObject.mnSDTable;
@@ -140,18 +140,76 @@ if continueFlag
         myUpdatedObject.relSLDvar = myInputObject.relSLDvar;
         myUpdatedObject.absALDVar = myInputObject.absALDVar;
         myUpdatedObject.crCutoff = myInputObject.crCutoff;  
-		warning(['mapelOptionsRECISTnoBin automatically updated.  You may want to manually verify it looks OK.'])	
+		disp(['mapelOptionsRECISTnoBin automatically updated in ',mfilename,'.  You may want to manually verify it looks OK.'])	
 	end
 	if isa(myUpdatedObject, 'VPopRECIST') || isa(myUpdatedObject, 'VPop')
         [nRows, nCols] = size(myUpdatedObject.distTable2D);
         if nRows > 0
             if sum(ismember(myUpdatedObject.distTable2D.Properties.VariableNames,{'combinedQuadrants'})) > 0
                 myUpdatedObject.distTable2D.('combinedQuadrants') = [];
-                warning(['VPop/VPopRECIST distTable2D automatically updated to remove combinedQuadrants.  You may want to manually verify it looks OK.'])
+                disp(['VPop/VPopRECIST distTable2D automatically updated to remove combinedQuadrants in ',mfilename,'.  You may want to manually verify it looks OK.'])
             end
         end
     end
-	
+    % Also add the subpopulation number column, if needed.
+	myUpdatedObject = updateTablesWithSubpopReference(myUpdatedObject);
+    % Also check if the new predIndices columns are added to the mnSDTable and binTable
+    commonNames = loadCommonNames();
+	if isa(myUpdatedObject, 'VPopRECIST') || isa(myUpdatedObject, 'VPop') || isa(myUpdatedObject, 'mapelOptionsRECIST') || isa(myUpdatedObject, 'mapelOptions')   
+        myMnSDTable = myUpdatedObject.mnSDTable;
+        [nRows, ~] = size(myMnSDTable);
+        if nRows > 0
+            if sum(ismember(myMnSDTable.Properties.VariableNames,'predIndices')) < 1
+                predIndices = repmat({{nan}},nRows,1);
+                if isa(myUpdatedObject,'VPop') || isa(myUpdatedObject,'mapelOptions')
+                    tableVariableNames = commonNames.VPOPTABLEVARNAMESFIXED;
+                    nDataHeaderCols = length(commonNames.VPOPTABLEVARNAMESFIXED);
+                else
+                    tableVariableNames = commonNames.VPOPRECISTTABLEVARNAMESFIXED;
+                    nDataHeaderCols = length(commonNames.VPOPRECISTTABLEVARNAMESFIXED);
+                end
+                tableVariableNames = [tableVariableNames,{'weightMean', 'weightSD', 'expN', 'expMean', 'expSD', 'predN', 'predIndices', 'predMean', 'predSD'}];
+                myMnSDTable = [myMnSDTable, cell2table(predIndices)];
+                myMnSDTable = myMnSDTable(:,tableVariableNames);
+                myUpdatedObject.mnSDTable = myMnSDTable;
+                disp(['mnSDTable table automatically updated to include predIndices column in ',mfilename,'.'])
+            end
+        end
+    end
+	if isa(myUpdatedObject, 'VPopRECIST') || isa(myUpdatedObject, 'VPop') || isa(myUpdatedObject, 'mapelOptionsRECIST') || isa(myUpdatedObject, 'mapelOptions')   
+        myBinTable = myUpdatedObject.binTable;
+        [nRows, ~] = size(myBinTable);
+        if nRows > 0
+            if sum(ismember(myBinTable.Properties.VariableNames,'predIndices')) < 1
+                predIndices = repmat({{nan}},nRows,1);
+                if isa(myUpdatedObject,'VPop') || isa(myUpdatedObject,'mapelOptions')
+                    tableVariableNames = commonNames.VPOPTABLEVARNAMESFIXED;
+                    nDataHeaderCols = length(commonNames.VPOPTABLEVARNAMESFIXED);
+                else
+                    tableVariableNames = commonNames.VPOPRECISTTABLEVARNAMESFIXED;
+                    nDataHeaderCols = length(commonNames.VPOPRECISTTABLEVARNAMESFIXED);
+                end
+                tableVariableNames = [tableVariableNames,{'weight','binEdges','expN','expBins','predN','predIndices','predBins'}];
+                myBinTable = [myBinTable, cell2table(predIndices)];
+                myBinTable = myBinTable(:,tableVariableNames);
+                myUpdatedObject.binTable = myBinTable;
+                disp(['binTable automatically updated to include predIndices column in ',mfilename,'.'])
+            end
+        end
+    end
+    if isa(myUpdatedObject, 'VPopRECIST') || isa(myUpdatedObject, 'VPop')
+        % Also make sure these are up-to-date, in case an earlier version
+        % is loaded
+        if ~isempty(myUpdatedObject.subpopTable)
+            myUpdatedObject=myUpdatedObject.addTableSimVals;
+        else
+            disp(['No subpopTable available in the current ',class(myUpdatedObject),' object in ',mfilename,'.  Be sure to run createSubpopTable() with the relevant worksheet, and then run the addTableSimVals to make sure the data is up-to-date.'])
+        end
+    else
+        if isempty(myUpdatedObject.subpopTable)
+            disp(['No subpopTable available in the current ',class(myUpdatedObject),' object in ',mfilename,'.  Be sure to run createSubpopTable() with the relevant worksheet.'])
+        end
+    end
 else
 	myUpdatedObject = myInputObject;
 	warning(['Unable to run ',mfilename,'. Returning input object.'])

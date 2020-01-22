@@ -11,10 +11,12 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
 %  originalIndices: Original (background) VP indices.
 %                    For example, PDF density from this region is
 %                    subtracted from the observed before scoring
+%                    Note these should be sorted in ascending order.
 %  newIndices:      Indices of the VPs in the VPop to evaluate scores for.
 %                    if these indices are not included in the
 %                    originalIndices, they will not contribute to density
 %                    that has been "found."
+%                    Note these should be sorted in ascending order.
 %
 % RETURNS:
 %  vpScores:        A nScores x nVPID matrix of score values.  High
@@ -61,16 +63,11 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
         interventionElementWeight(curRows) = 1/length(curRows);
     end
     addScoreWBIWeights = repmat(interventionElementWeight,1,length(newIndices));
-    
+
+	myMnSdData = testVPop.mnSDTable;
+	[nMnSdRows, nMnSdCols] = size(myMnSdData);    
+
     for rowCounter = 1 : nTestOutcomes
-        curSimVals = testVPop.simData.Data(rowCounter,:);
-        newVals = curSimVals(newIndices);
-        originalValsSort = sort(curSimVals(originalIndices),'ascend');    
-        originalValsSort =originalValsSort(find(~isnan(originalValsSort)));
-        curSimNonNANIndices = find(~isnan(curSimVals));
-        curSimVals = curSimVals(curSimNonNANIndices);
-        newNonNANIndices = find(~isnan(newVals));
-        newVals = newVals(newNonNANIndices);
         
         simTime = testVPop.simData.rowInfo{rowCounter,simTimeCol};
         interventionID = testVPop.simData.rowInfo{rowCounter,interventionIDCol};
@@ -79,8 +76,42 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
         % If this is a RECIST VPop, we need to get RECIST-filtered
         % observed experimental data...
         
+        foundSubpop = false;
         expDataRow = find((ismember(testVPop.expData{:,'time'},simTime))&(ismember(testVPop.expData{:,'interventionID'},interventionID))&(ismember(testVPop.expData{:,'elementID'},elementID))&(ismember(testVPop.expData{:,'elementType'},elementType)));
-		
+        if ~isempty(expDataRow)
+            subpopNo = testVPop.expData{expDataRow,'subpopNo'};
+            vpIndicesSubpop = testVPop.subpopTable{subpopNo,'vpIndices'}{1};
+            foundSubpop = true;
+        elseif nMnSdRows > 0
+			mnSDRow = find((ismember(myMnSdData{:,'time'},simTime))&(ismember(myMnSdData{:,'interventionID'},interventionID))&(ismember(myMnSdData{:,'elementID'},elementID))&(ismember(myMnSdData{:,'elementType'},elementType)));
+            if ~isempty(mnSDRow)
+                subpopNo = testVPop.mnSDTable{mnSDRow,'subpopNo'};
+                vpIndicesSubpop = testVPop.subpopTable{subpopNo,'vpIndices'}{1};
+                foundSubpop = true;
+            end
+        end
+
+        if ~foundSubpop
+            % Otherwise, we assume it is "all"
+            subpopNo = 1;
+            vpIndicesSubpop = testVPop.subpopTable{subpopNo,'vpIndices'}{1};
+        end
+
+        newIndicesSubPop = ismembc(newIndices,vpIndicesSubpop);
+        newIndicesSubPop = newIndices(newIndicesSubPop);
+        originalIndicesSubPop = ismembc(originalIndices,vpIndicesSubpop);
+        originalIndicesSubPop = originalIndices(originalIndicesSubPop);
+
+        allSimVals = testVPop.simData.Data(rowCounter,:);
+        curSimVals = allSimVals(vpIndicesSubpop);
+        newVals = allSimVals(newIndicesSubPop);
+        originalValsSort = sort(allSimVals(originalIndicesSubPop),'ascend');    
+        originalValsSort =originalValsSort(find(~isnan(originalValsSort)));
+        curSimNonNANIndices = find(~isnan(curSimVals));
+        curSimVals = curSimVals(curSimNonNANIndices);
+        newNonNANIndices = find(~isnan(newVals));
+        newVals = newVals(newNonNANIndices);		
+
 		if ~isempty(expDataRow)
 			
 			curExpVals = testVPop.expData{expDataRow,vpopDataCol1Index:end};
@@ -136,11 +167,8 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
 			% things we could do, for example if calibrating summary statistics
 			% we could look at the theoretical PDF assuming normality
 			% given the available summary data, and fill needed regions there.
-			myMnSdData = testVPop.mnSDTable;
-			[nMnSdRows, nMnSdCols] = size(myMnSdData);
 			setToZero=false;
 			if nMnSdRows > 0
-				mnSDRow = find((ismember(myMnSdData{:,'time'},simTime))&(ismember(myMnSdData{:,'interventionID'},interventionID))&(ismember(myMnSdData{:,'elementID'},elementID))&(ismember(myMnSdData{:,'elementType'},elementType)));
 				if ~isempty(mnSDRow)
 					if ((myMnSdData{mnSDRow,'weightMean'}>0) & (myMnSdData{mnSDRow,'weightSD'}>0))
 					
@@ -236,7 +264,7 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
     end 
     newScoresWBIMax = max(newScoresWBIMax,[],1);
     
-    if isa(testVPop,'VPopRECIST') || isa(testVPop,'VPopRECISTnoBin')
+    if isa(testVPop,'VPopRECIST')
         % Reset the RSCORE with PW=1 to get the RSCOREs in the source VPop
         testVPop.pws = (1/length(testVPop.pws)) * ones(1,length(testVPop.pws));
         testVPop = testVPop.addPredTableVals();
@@ -258,10 +286,15 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
                 expPDF = myRTableRECIST{rowCounter,{'expCR','expPR','expSD','expPD'}};
                 simPDF = myRTableRECIST{rowCounter,{'predCR','predPR','predSD','predPD'}};
                 curWeights = ((expPDF - simPDF) > 0) .* (expPDF - simPDF);
-                addScore(rowCounter,:) = (curSimValues(rowCounter,:)==0) .* curWeights(1);
-                addScore(rowCounter,:) = addScore(rowCounter,:)+(curSimValues(rowCounter,:)==1) .* curWeights(2);
-                addScore(rowCounter,:) = addScore(rowCounter,:)+(curSimValues(rowCounter,:)==2) .* curWeights(3);
-                addScore(rowCounter,:) = addScore(rowCounter,:)+(curSimValues(rowCounter,:)==3) .* curWeights(4);
+                % Only VPs in the current subpop can "get credit"
+                subpopNo = myRTableRECIST{rowCounter,'subpopNo'};
+                vpIndicesSubpop = testVPop.subpopTable{subpopNo,'vpIndices'}{1};
+                vpIndicesNewSubpopSubset = ismembc(newIndices, vpIndicesSubpop);
+
+                addScore(rowCounter,vpIndicesNewSubpopSubset) = (curSimValues(rowCounter,:)==0) .* curWeights(1);
+                addScore(rowCounter,vpIndicesNewSubpopSubset) = addScore(rowCounter,vpIndicesNewSubpopSubset)+(curSimValues(rowCounter,vpIndicesNewSubpopSubset)==1) .* curWeights(2);
+                addScore(rowCounter,vpIndicesNewSubpopSubset) = addScore(rowCounter,vpIndicesNewSubpopSubset)+(curSimValues(rowCounter,vpIndicesNewSubpopSubset)==2) .* curWeights(3);
+                addScore(rowCounter,vpIndicesNewSubpopSubset) = addScore(rowCounter,vpIndicesNewSubpopSubset)+(curSimValues(rowCounter,vpIndicesNewSubpopSubset)==3) .* curWeights(4);
             end
             newVPScoresR = sum(addScore.^2,1);
 			%newVPScoresR = max(addScore.^2,[],1);
@@ -271,19 +304,17 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
 	if flagCheck2D
 		[n2DComparisons, ~] = size(testVPop.distTable2D);
 		if (n2DComparisons > 0)
-			addScore = zeros(n2DComparisons,length(newIndices));
-            % As a precaution, restart any existing parallel 
-            % pools 
-%             if ~isempty(gcp('nocreate'))
-%                 delete(gcp);
-%             end
-%             parpool;            
+			addScore = zeros(n2DComparisons,length(newIndices));           
             for rowCounter = 1 : n2DComparisons
                 expSample = testVPop.distTable2D{rowCounter,'expSample'}{1};
                 simSample = testVPop.distTable2D{rowCounter,'predSample'}{1};
+
 				simPWs = testVPop.distTable2D{rowCounter,'predProbs'}{1};
 				% We need to get the predIndices, i.e. the indices that are kept from
 				% the original simulation results after applying mechanistic dropouts.
+                % These indices also already account for the subpops.
+                % subpopNo = testVPop.distTable2D{rowCounter,'subpopNo'};
+                % vpIndicesSubpop = testVPop.subpopTable{subpopNo,'vpIndices'}{1};
 				predIndices = testVPop.distTable2D{rowCounter,'predIndices'}{1};
 				[PDFexp, PDFsim, combinedPoints] = align2DPDFs(expSample, simSample, simPWs);
 				% We evaluate values from new VPs that haven't dropped out.  i.e.
@@ -312,9 +343,7 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
                     % for positions for ones that drop out
                     addScore(rowCounter,newIndicesNotDropout(newValInd)) = pdfDiff(scInd);
                 end
-            end
-%             % Clean up the worker pool
-%             delete(gcp)            
+            end      
 			newVPScores2D = sum(addScore.^2,1);
 		else
 			flagCheck2D = false;
@@ -322,7 +351,7 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
 	end
     
 	
-    if isa(testVPop,'VPopRECIST') || isa(testVPop,'VPopRECISTnoBin')
+    if isa(testVPop,'VPopRECIST')
 		if ~flagCheck2D
 			vpScores = [newVPScoresWBI;newVPScoresR;newScoresWBIMax;vpScores];
 		else

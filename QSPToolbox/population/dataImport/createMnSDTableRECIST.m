@@ -37,8 +37,8 @@ function myMnSDTableRECIST = createMnSDTableRECIST(myWorksheet,myExpDataIDs,Pati
 
 continueFlag = true;
 
-tableVariableNamesFixed = {'time', 'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID','PatientIDVar','TRTVar','BRSCOREVar','RSCOREVar'};
-tableVariableNames = [tableVariableNamesFixed,{'weightMean', 'weightSD', 'expN', 'expMean', 'expSD', 'predN', 'predMean', 'predSD'}];
+commonNames = loadCommonNames();
+tableVariableNames = [commonNames.VPOPRECISTTABLEVARNAMESFIXED,{'weightMean', 'weightSD', 'expN', 'expMean', 'expSD', 'predN', 'predIndices', 'predMean', 'predSD'}];
 myMnSDTableRECIST = cell2table(cell(0,length(tableVariableNames)));
 myMnSDTableRECIST.Properties.VariableNames = tableVariableNames;
 
@@ -110,6 +110,7 @@ if continueFlag
     expMean = nan(0,1);
     expSD = nan(0,1);
     expTime = nan(0,1);
+	subpopNo = nan(0,1);
     interverventionIDCell = cell(0,1);
     elementIDCell = cell(0,1);
     elementTypeCell = cell(0,1);
@@ -203,6 +204,9 @@ if continueFlag
                 curDataRows = find(selectData{curRows,timeVar} == curTimes(curTimeCounter));
                 curData = selectData{curRows(curDataRows),curVar};
                 if length(curDataRows) >= 2
+					% When initially transferring the data over,
+					% assume it is from the "all" subpop.
+					subpopNo = [subpopNo; 1];
                     expN = [expN; length(curDataRows)];
                     expMean = [expMean; mean(curData)];
                     expSD = [expSD; std(curData)];
@@ -222,7 +226,7 @@ if continueFlag
         end
     end
     
-    myMnSDTableRECIST = table(expTime,interverventionIDCell,elementIDCell,elementTypeCell,expDataIDCell,expTimeVarIDCell,expVarIDCell,PatientIDCell,TRTCell,BRSCORECell,RSCORECell,ones(length(expTime),1),ones(length(expTime),1),expN,expMean,expSD,nan(length(expTime),1),nan(length(expTime),1),nan(length(expTime),1));
+    myMnSDTableRECIST = table(subpopNo, expTime,interverventionIDCell,elementIDCell,elementTypeCell,expDataIDCell,expTimeVarIDCell,expVarIDCell,PatientIDCell,TRTCell,BRSCORECell,RSCORECell,ones(length(expTime),1),ones(length(expTime),1),expN,expMean,expSD,nan(length(expTime),1),repmat({{nan}},length(expTime),1),nan(length(expTime),1),nan(length(expTime),1));
     % We also filter where SD > 0.  SD = 0 can show up when normalizing
     % to a baseline value, and it doesn't make sense to calibrate
     % the baseline value to zero.

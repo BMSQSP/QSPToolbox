@@ -54,7 +54,7 @@ if flagContinue
 
     elseif strcmp(class(myRTE), 'responseTypeElementBounds')
         theInterventionIndex = find(ismember(getInterventionIDs(myWorksheet),get(myRTE,'interventionID')));
-        theInterventionResults = myWorksheet.results(theInterventionIndex, :);        
+        theInterventionResults = myWorksheet.results(theInterventionIndex, :);     
         myResultClasses = cellfun(@class,theInterventionResults, 'UniformOutput', false);
         flagVPcheck = sum(strcmp(myResultClasses,'struct'));
         if flagVPcheck < nVPs

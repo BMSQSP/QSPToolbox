@@ -38,10 +38,10 @@ function myBinTableRECIST = createBinTableRECIST(myWorksheet,myExpDataIDs,Patien
 %  myBinTableRECIST
 
 % TODO: Add proofing of inputs
-continueFlag = true;
 
-tableVariableNamesFixed = {'time', 'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID','PatientIDVar','TRTVar','BRSCOREVar','RSCOREVar'};
-tableVariableNames = [tableVariableNamesFixed,{'weight','binEdges','expN','expBins','predN','predBins'}];
+continueFlag = true;
+commonNames = loadCommonNames();
+tableVariableNames = [commonNames.VPOPRECISTTABLEVARNAMESFIXED,{'weight','binEdges','expN','expBins','predN', 'predIndices','predBins'}];
 myBinTableRECIST = cell2table(cell(0,length(tableVariableNames)));
 myBinTableRECIST.Properties.VariableNames = tableVariableNames;
 
@@ -191,8 +191,10 @@ if continueFlag
                     if max(curData) > min(curData)
                         curProbs = wtdBinProb(curData', ones(1, length(curData))/length(curData), myBinEdgeValues);
                         expN = length(curData);
-                        curRow = {curTimes(curTimeCounter), interventionID, mySimVars{varCounter}, mySimVarTypes{varCounter}, myExpDataID, timeVar, curVar, PatientIDVar, TRTVar, BRSCOREVar, RSCOREVar};
-						curRow = [curRow,{1,{myBinEdgeValues}, expN, {curProbs}, nan, {nan(1,nBins)}}];
+						% When initially transferring the data over,
+						% assume it is from the "all" subpop.						
+                        curRow = {1, curTimes(curTimeCounter), interventionID, mySimVars{varCounter}, mySimVarTypes{varCounter}, myExpDataID, timeVar, curVar, PatientIDVar, TRTVar, BRSCOREVar, RSCOREVar};
+						curRow = [curRow,{1,{myBinEdgeValues}, expN, {curProbs}, nan, {nan}, {nan(1,nBins)}}];
                         curRow = cell2table(curRow);
                         curRow.Properties.VariableNames = myBinTableRECIST.Properties.VariableNames; 
                         myBinTableRECIST = [myBinTableRECIST; curRow];

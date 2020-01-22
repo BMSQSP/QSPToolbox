@@ -83,6 +83,7 @@ if continueFlag
     testVPop.distTable = newVPop.distTable;
     testVPop.distTable2D = newVPop.distTable2D;   
     testVPop.corTable = newVPop.corTable;
+    testVPop.subpopTable = newVPop.subpopTable;
     if isa(newVPop,'VPopRECIST') || isa(newVPop,'VPopRECISTnoBin')
         testVPop.brTableRECIST = newVPop.brTableRECIST;
         testVPop.rTableRECIST = newVPop.rTableRECIST;        
@@ -95,9 +96,8 @@ if continueFlag
 		testVPop = testVPop.assignIndices(myWorksheet, myMapelOptions);
     end
     testVPop = testVPop.getSimData(myWorksheet);
-    testVPop = testVPop.addDistTableSimVals();  
-    testVPop = testVPop.addDistTable2DSimVals();
-	testVPop = testVPop.addCorTableSimVals();
+	testVPop.subpopTable = updateSubpopTableVPs(testVPop.subpopTable, myWorksheet);
+    testVPop = testVPop.addTableSimVals();  
     % For evaluation
     % coerce pws to be the same.
     testVPop.pws = ones(1,nOriginalVPs)./nOriginalVPs;
@@ -248,6 +248,7 @@ if continueFlag
     testVPop.distTable = newVPop.distTable;
     testVPop.distTable2D = newVPop.distTable2D;   
     testVPop.corTable = newVPop.corTable;
+    testVPop.subpopTable = newVPop.subpopTable;    
     if isa(newVPop,'VPopRECIST') || isa(newVPop,'VPopRECISTnoBin')
         testVPop.brTableRECIST = newVPop.brTableRECIST;
         testVPop.rTableRECIST = newVPop.rTableRECIST;        
@@ -260,20 +261,20 @@ if continueFlag
 		testVPop = testVPop.assignIndices(jitteredWorksheet, myMapelOptions);
     end
     testVPop = testVPop.getSimData(jitteredWorksheet);
-    testVPop = testVPop.addDistTableSimVals();  
-    testVPop = testVPop.addDistTable2DSimVals();
-	testVPop = testVPop.addCorTableSimVals();
+	testVPop.subpopTable = updateSubpopTableVPs(testVPop.subpopTable, jitteredWorksheet);
+    testVPop = testVPop.addTableSimVals();  
     % For evaluation
     % coerce pws to be the same.
     testVPop.pws = ones(1,length(curVPIDs))./length(curVPIDs);
     testVPop = testVPop.addPredTableVals();    
     
 	% Now get the score matrix for the new VPs
-    if isa(newVPop,'VPopRECISTnoBin')
-        newVPScores = scoreWorksheetVPsLC(testVPop,originalIndices,newIndices);
-    else
+    % We can remove the LC scoring option for now
+    % if isa(newVPop,'VPopRECIST')
+    %     newVPScores = scoreWorksheetVPsLC(testVPop,originalIndices,newIndices);
+    % else
         newVPScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices);
-    end
+    % end
 
 
     newPassNames = cell(1,0);

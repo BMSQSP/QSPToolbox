@@ -33,6 +33,7 @@ myVPop.binTable = myMapelOptions.binTable;
 myVPop.distTable = myMapelOptions.distTable; 
 myVPop.distTable2D = myMapelOptions.distTable2D;
 myVPop.corTable = myMapelOptions.corTable;
+myVPop.subpopTable = myMapelOptions.subpopTable;
 myVPop.expData = myMapelOptions.expData;
 myVPop.spreadOut = myMapelOptions.spreadOut;
 myVPop.minIndPVal = myMapelOptions.minIndPVal;

@@ -102,12 +102,12 @@ if continueFlag
 end
   
 if continueFlag
-    tableVariableNamesFixed = {'time', 'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID', 'PatientIDVar', 'TRTVar', 'BRSCOREVar', 'RSCOREVar'};
+    commonNames = loadCommonNames();
     [nPreviousRows, nPreviousColumns] = size(previousExpDataTable);
     if nPreviousRows >= 1
         previousVariableNames = previousExpDataTable.Properties.VariableNames;
-        previousPatientIDs = setdiff(previousVariableNames,tableVariableNamesFixed);        
-        if sum(ismember(tableVariableNamesFixed, previousVariableNames)) ~= length(tableVariableNamesFixed)
+        previousPatientIDs = setdiff(previousVariableNames,commonNames.VPOPRECISTTABLEVARNAMESFIXED);        
+        if sum(ismember(commonNames.VPOPRECISTTABLEVARNAMESFIXED, previousVariableNames)) ~= length(commonNames.VPOPRECISTTABLEVARNAMESFIXED)
             continueFlag = false;
             warning(['When providing a previousExpDataTable to ',mfilename,', the VariableNames must include: ',strjoin(tableVariableNamesFixed,', '),'.'])
         %elseif sum(strncmpi('expVal',diffNames,6)) ~= length(diffNames)
@@ -120,9 +120,9 @@ if continueFlag
     else
         existingN = 0;
 		previousPatientIDs = cell(1,0);
-        myExpDataTable = cell2table(cell(0,length(tableVariableNamesFixed)));
-        myExpDataTable.Properties.VariableNames = tableVariableNamesFixed;
-        myExpDataTable.Properties.VariableDescriptions = tableVariableNamesFixed;
+        myExpDataTable = cell2table(cell(0,length(commonNames.VPOPRECISTTABLEVARNAMESFIXED)));
+        myExpDataTable.Properties.VariableNames = commonNames.VPOPRECISTTABLEVARNAMESFIXED;
+        myExpDataTable.Properties.VariableDescriptions = commonNames.VPOPRECISTTABLEVARNAMESFIXED;
     end
 end
 
@@ -206,7 +206,7 @@ if continueFlag
 		
 		% Find the indices for pre-existing Patient IDs in the current row
 		% TODO: expect this is slow, try to speed up
-		initialCells = {curTime, myInterventionID, elementID, elementType, expDataID, expTimeVarID, expVarID,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar};
+		initialCells = {1, curTime, myInterventionID, elementID, elementType, expDataID, expTimeVarID, expVarID,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar};
 		previousVariableNames = myExpDataTable.Properties.VariableDescriptions;
 		foundMate = [];
 		curRow = nan(1,length(previousVariableNames)-length(initialCells));
@@ -243,4 +243,5 @@ if continueFlag
     end
 else
     warning(['Unable to complete ',mfilename,', exiting.'])
+    myExpDataTable = [];
 end

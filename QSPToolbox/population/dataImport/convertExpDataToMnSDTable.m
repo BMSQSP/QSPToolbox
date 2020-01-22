@@ -37,29 +37,32 @@ if continueFlag
 end
 
 if continueFlag
+    commonNames = loadCommonNames();
     [nRows, ~] = size(myVPop.expData);
     if isa(myVPop,'VPop') || isa(myVPop,'mapelOptions')
-        nDataHeaderCols = 8;
+        tableVariableNames = commonNames.VPOPTABLEVARNAMESFIXED;
+		nDataHeaderCols = length(commonNames.VPOPTABLEVARNAMESFIXED);
     else
-        nDataHeaderCols = 11;
+        tableVariableNames = commonNames.VPOPRECISTTABLEVARNAMESFIXED;
+		nDataHeaderCols = length(commonNames.VPOPRECISTTABLEVARNAMESFIXED);
     end
     for rowCounter = 1 : nRows
         if rowCounter == 1
-            tableVariableNames = myVPop.expData.Properties.VariableNames(1:nDataHeaderCols);
-            tableVariableNames = [tableVariableNames,{'weightMean', 'weightSD', 'expN', 'expMean', 'expSD', 'predN', 'predMean', 'predSD'}];
+            tableVariableNames = [tableVariableNames,{'weightMean', 'weightSD', 'expN', 'expMean', 'expSD', 'predN', 'predIndices', 'predMean', 'predSD'}];
             myMnSDTable = cell2table(cell(0,length(tableVariableNames)));
             myMnSDTable.Properties.VariableNames = tableVariableNames;
         end
         curData = myVPop.expData{rowCounter,nDataHeaderCols+1:end};
         curData = curData(~isnan(curData));
         curRow = table2cell(myVPop.expData(rowCounter,1:nDataHeaderCols));
-        curRow = [curRow,{1, 1, length(curData), mean(curData), std(curData), nan, nan, nan}];
+        curRow = [curRow,{1, 1, length(curData), mean(curData), std(curData), nan, {nan}, nan, nan}];
         curRow = cell2table(curRow);
         curRow.Properties.VariableNames = myMnSDTable.Properties.VariableNames; 
         myMnSDTable = [myMnSDTable; curRow];   
     end
 else
     warning(['Unable to complete ',mfilename,', exiting.'])
+	myMnSDTable = [];
 end            
 
 end

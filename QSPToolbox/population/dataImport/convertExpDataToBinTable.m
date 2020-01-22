@@ -42,11 +42,14 @@ if continueFlag
 end
 
 if continueFlag
+    commonNames = loadCommonNames();
     [nRows, ~] = size(myVPop.expData);
     if isa(myVPop,'VPop') || isa(myVPop,'mapelOptions')
-        nDataHeaderCols = 8;
+        tableVariableNames = commonNames.VPOPTABLEVARNAMESFIXED;
+		nDataHeaderCols = length(commonNames.VPOPTABLEVARNAMESFIXED);
     else
-        nDataHeaderCols = 11;
+        tableVariableNames = commonNames.VPOPRECISTTABLEVARNAMESFIXED;
+		nDataHeaderCols = length(commonNames.VPOPRECISTTABLEVARNAMESFIXED);
     end
     uniqueExpDataTime = unique(myVPop.expData{:,'time'});
 	% Bins will be set to capture
@@ -56,9 +59,8 @@ if continueFlag
 	binPercentiles = (1 : 1: (nBins-1))*binPercentiles;	
     for rowCounter = 1 : nRows
         if rowCounter == 1
-            tableVariableNames = myVPop.expData.Properties.VariableNames(1:nDataHeaderCols);
             %tableVariableNames = [tableVariableNames,{'weight','binEdge1','binEdge2','binEdge3','expN','expBin1','expBin2','expBin3','expBin4','predN','predBin1','predBin2','predBin3','predBin4'}];
-			tableVariableNames = [tableVariableNames,{'weight','binEdges','expN','expBins','predN','predBins'}];
+			tableVariableNames = [tableVariableNames,{'weight','binEdges','expN','expBins','predN','predIndices','predBins'}];
             myBinTable = cell2table(cell(0,length(tableVariableNames)));
             myBinTable.Properties.VariableNames = tableVariableNames;
         end
@@ -72,13 +74,14 @@ if continueFlag
 		myBinEdgeValues = prctile(allCurVarValues, binPercentiles);
         curProbs = wtdBinProb(curData, ones(1, length(curData))/length(curData), myBinEdgeValues);
         expN = length(curData);
-        curRow = [curRow,{1,{myBinEdgeValues}, expN, {curProbs}, nan, {nan(1,nBins)}}];        
+        curRow = [curRow,{1,{myBinEdgeValues}, expN, {curProbs}, nan, {nan},{nan(1,nBins)}}];        
         curRow = cell2table(curRow);
         curRow.Properties.VariableNames = myBinTable.Properties.VariableNames; 
         myBinTable = [myBinTable; curRow];   
     end
 else
     warning(['Unable to complete ',mfilename,', exiting.'])
+	myBinTable = [];
 end            
 
 end

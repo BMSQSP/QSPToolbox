@@ -87,11 +87,21 @@ if (flagContinue)
     simToPlot = nan(nSubPlot,nVPs);
     expToPlot = cell(nSubPlot,0);
     plotNames = cell(nSubPlot,0);
+
+    commonNames = loadCommonNames();
+    if isa(myVPop,'VPop')
+        tableVariableNames = commonNames.VPOPTABLEVARNAMESFIXED;
+		nDataHeaderCols = length(commonNames.VPOPTABLEVARNAMESFIXED);
+    else
+        tableVariableNames = commonNames.VPOPRECISTTABLEVARNAMESFIXED;
+		nDataHeaderCols = length(commonNames.VPOPRECISTTABLEVARNAMESFIXED);
+    end
+
     for rowCounter = 1 : length(keepRows)
         simRow = rowMap(rowCounter,1);
         expRow = rowMap(rowCounter,2);
         curVPData = myVPop.simData.Data(simRow, :);
-        curExpData = myVPop.expData{expRow, 9:end};
+        curExpData = myVPop.expData{expRow, (nDataHeaderCols+1):end};
         curExpData = curExpData(~isnan(curExpData));
         simToPlot(rowCounter,:) = curVPData;
         expToPlot{rowCounter} = curExpData;

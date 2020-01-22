@@ -150,7 +150,6 @@ if continueFlag
 			myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
 		end			
 		
-		
         while bestPVal < minPVal
             myTestCounter = myTestCounter + 1;
 			% We check whether to reseed with myTestCounter for repeatability of the sequence
@@ -169,6 +168,7 @@ if continueFlag
                     newVPop.recistSimFilter = createRECISTSimFilter(myWorksheet, newVPop);                    
                 end		
 				newVPop = newVPop.getSimData(myWorksheet);
+                newVPop.subpopTable = updateSubpopTableVPs(newVPop.subpopTable,myWorksheet);
 				if ismember(newVPop.pwStrategy,'bin')
 					newVPop = newVPop.assignIndices(myWorksheet, myMapelOptions);
 					% We assume the old bin probs are compatible
@@ -315,6 +315,9 @@ if continueFlag
                     wsIterCounter = wsIterCounter + 1;
                     [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.gaussianStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.nUnweightedParents, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
                     saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]); 
+                    % We need to update the mapelOptions subpopTables with
+                    % the new VPs.
+                    % myMapelOptions.subpopTable = updateSubpopTableVPs(myMapelOptions.subpopTable, myWorksheet);
                     if verbose
                         disp(['Unable to find an acceptable VPop with initial worksheet in ',num2str(nTries),' VPop fit restarts, added ', num2str(length(newPassNames)), ' VPs to the worksheet in ',mfilename,' to start worksheet iteration ',num2str(wsIterCounter),'.'])
                     end       
@@ -332,6 +335,9 @@ if continueFlag
                 % Get ready to expand VPs
                 wsIterCounter = wsIterCounter+1;
                 [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet, oldVPop, myMapelOptions, suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.gaussianStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.nUnweightedParents, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
+                % We need to update the mapelOptions subpopTables with
+                % the new VPs.
+                % myMapelOptions.subpopTable = updateSubpopTableVPs(myMapelOptions.subpopTable, myWorksheet);
                 % Save the new worksheet that will be used.
                 saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);   
                 if verbose

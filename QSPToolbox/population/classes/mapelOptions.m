@@ -2,22 +2,26 @@ classdef mapelOptions
 % Options and data required to to run MAPEL
 %
 % expData:           (Required) Contains experimental data.  Must be
-%                    populated before calling MAPEL.
-% mnSDTable:         (Required) Contains mean/SD data to match.  Must be
-%                    populated with experimental data before calling MAPEL.
-% binTable:          (Required) containing data on a binned pdf function to
-%                    match.  Must be populated with 
-%                    experimental data before calling MAPEL.
-%                    or leave unassigned if no bin targets.		   
-% distTable:         (Required) containing data on a cdf function to
-%                    match.  Must be
-%                    populated with experimental data before calling MAPEL,
-%                    or leave unassigned if no distribution targets.
-% distTable2D:       (Required) containing data on a 2D pdf function to
-%                    match.  Must be
-%                    populated with experimental data before calling MAPEL,
-%                    or leave unassigned if no 2D distribution targets.
-% corTable:															   
+%                     populated before calling MAPEL.
+% mnSDTable:         (Optional) Contains mean/SD data to match.  Must be
+%                     populated with experimental data before calling MAPEL,
+%                     or leave unassigned if no mean/SD targets.
+% binTable:          (Optional) Containing data on a binned pdf function to
+%                     match.  Must be 
+%                     populated with experimental data before calling MAPEL,
+%                     or leave unassigned if no bin targets.
+% distTable:         (Optional) Contains data on a cdf function to
+%                     match.  Must be
+%                     populated with experimental data before calling MAPEL,
+%                     or leave unassigned if no distribution targets.
+% distTable2D:       (Optional) Contains data on a 2D pdf function to
+%                     match.  Must be
+%                     populated with experimental data before calling MAPEL,
+%                     or leave unassigned if no 2D distribution targets.
+% corTable:	         (Optional) A table to enable calibrating pairwise correlations.
+%                     Leave unassigned if there are not correlation targets to match.
+% subpopTable:       Contains criteria to create subpopulations
+%                     from simulated VPs.												   
 % pwStrategy:	     Strategy for the optimization.  Allowed values:
 %                     'direct' (default value) If this is set then PWs are optimized directly
 %                     'bin'     specified in a strategy similar to teh original MAPEL algorithm 
@@ -74,8 +78,9 @@ classdef mapelOptions
 % optimizeTimeLimit: (Optional) Time limit to stop the solver, does not 
 %                    apply to the simplex method.  Default is 10*60 s,
 %                    which will not be sufficient in many cases.
-% optimizeType:      (Optional) "pso," "ga," or "simplex".  Default is
-%                    "pso"
+% optimizeType:      Type of optimization algorithm to employ: "pso,"
+%                     "ga," "simplex," or "surrogate."  Default is
+%                     "pso".
 % optimizePopSize:   (Optional) only applies to "pso" and "ga".  This is
 %                    the population size to use in the optimization runs.
 %                    Default is 1000.
@@ -96,6 +101,7 @@ classdef mapelOptions
       distTable      
 	  distTable2D		
 	  corTable
+	  subpopTable	  
       pwStrategy
       nBins
       initialProbs
@@ -143,6 +149,10 @@ classdef mapelOptions
       function obj = set.corTable(obj,myCorTable)
           obj.corTable = myCorTable;
       end 	  
+	  
+      function obj = set.subpopTable(obj,mySubPopTable)
+          obj.subpopTable = mySubPopTable;
+      end	  
 
       function obj = set.pwStrategy(obj,myPWStrategy)
           if sum(ismember({'direct','bin'},lower(myPWStrategy))) == 1
@@ -237,12 +247,12 @@ classdef mapelOptions
       end  
       
       function obj = set.optimizeType(obj,myOptimizeType)
-          if sum(ismember({'pso','ga','simplex'},lower(myOptimizeType))) == 1
+          if sum(ismember({'pso','ga','simplex','surrogate'},lower(myOptimizeType))) == 1
               obj.optimizeType = lower(myOptimizeType);
           else
-              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," or "simplex."'])
+              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," "simplex," or "surrogate."'])
           end
-      end        
+      end      
       
       function obj = set.optimizePopSize(obj,myPopulationSize)
           if ((isnumeric(myPopulationSize) == true) && (myPopulationSize >= 0))
@@ -306,6 +316,8 @@ classdef mapelOptions
                   value = obj.distTable2D;
               case 'corTable'
                   value = obj.corTable;	
+              case 'subpopTable'
+                  value = obj.subpopTable;					  
               case 'pwStrategy'
                   value = obj.pwStrategy;
               case 'nBins'
@@ -361,6 +373,7 @@ classdef mapelOptions
           obj.distTable = [];          
 		  obj.distTable2D = []; 
 		  obj.corTable = []; 
+          obj.subpopTable = []; 			  
 		  obj.pwStrategy = 'direct';								  
           obj.nBins = 2;
           obj.initialProbs = [];

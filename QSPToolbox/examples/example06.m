@@ -20,6 +20,9 @@ myMapelOptions = mapelOptions;
 % MAPEL version, we matched mean, standard deviation, and binned data.
 myMapelOptions.expData = convertResponseTypeToExpDataTable(myWorksheet, 'N87_agx', 'USUBJID');
 myMapelOptions.mnSDTable = convertExpDataToMnSDTable(myMapelOptions);
+% We create a default subpopTable for 'all', since there are noise
+% subpopulations of special interest for this calibration.
+myMapelOptions.subpopTable=createSubpopTable(myWorksheet);
 % Note that this will automatically generate the bin table for now.
 % Sometimes, we may want to create our own bin tables rather than using the
 % default bin edges.

@@ -13,32 +13,32 @@ classdef VPopRECIST
 %
 % PROPERTIES:
 %  coeffsTable:  (Don't manipulate) A nAxis X nVP matrix with VP the
-%                coefficients
+%                 coefficients used for prevalence weights with the bin pw strategy
 %  coeffsDist:   (Don't manipulate) A nVP X vVP matrix with VP the
-%                distance for the coefficients
+%                 distance for the axis coefficients
 %  pwStrategy:	 Strategy for the optimization.  Allowed values:
 %                 'direct' (default value) If this is set then PWs are optimized directly
 %                 'bin'     specified in a strategy similar to teh original MAPEL algorithm 
 %  indexTable:   (Don't manipulate) A nAxis X nVP table that indicates in which 
-%                axis bin each VP falls into.  This is usually populated at 
-%                the beginning of the MAPEL algorithm by the assignIndices
-%                method.  ONLY NEEDED FOR BIN PWSTRATEGY
+%                 axis bin each VP falls into.  This is usually populated at 
+%                 the beginning of the MAPEL algorithm by the assignIndices
+%                 method.  ONLY NEEDED FOR BIN PWSTRATEGY
 %  binEdges:     (Don't manipulate) Edges for the axis bins. These are also
-%                populated by the assignIndices method.
+%                 populated by the assignIndices method.
 %  binMidPoints: (Don't manipulate) Mid points for the axis bins, populated
-%                by the assignIndices method.  ONLY NEEDED FOR BIN PWSTRATEGY
+%                 by the assignIndices method.  ONLY NEEDED FOR BIN PWSTRATEGY
 %  binProbs:     (Don't manipulate) Probabilities for each axis bin.  These are directly
-%                varied in the optimization, and the results are used
+%                 varied in the optimization, and the results are used
 %                to calculate the individual prevalence weights.  ONLY NEEDED FOR BIN PWSTRATEGY
 %  pws:          (Don't manipulate) A 1xnVP vector of prevalence weights,
 %                which are calculated based on the assignPWs.
-%  coefficients: a nAxisxnVP matrix of VP parameter coefficients.  ONLY NEEDED FOR BIN PWSTRATEGY
+%  coefficients: a nAxisxnVP matrix of VP parameter coefficients.
 %  expData:      (Don't manipulate) A table of experimental data used to
-%                guide optimization.  It is usually taken from the
-%                mapelOptions.
+%                 guide optimization.  It is usually taken from the
+%                 mapelOptions.
 %  simData:      (Don't manipulate) A table of simulation results that 
-%                pairs to the experimental data.  Usually assigned in
-%                MAPEL.
+%                 pairs to the experimental data.  Usually assigned in
+%                 MAPEL.
 %  mnSDTable:    (Don't manipulate) Summary table of experimental and 
 %                simulated (weighted) mean and standard deviation.  Usually
 %                copied from the mapelOptions and updated with
@@ -61,6 +61,8 @@ classdef VPopRECIST
 %  corTable:	 (Don't manipulate) A table to enable calibrating pairwise correlations
 %  brTableRECIST: (Don't manipulate) A table with best RECIST responses
 %  rTableRECIST: (Don't manipulate) A table with RECIST responses to better 
+%  subpopTable:  (Don't manipulate) Contains criteria to create subpopulations
+%                 from simulated VPs.
 %                calibrate the distributions at each time step
 %  gofMn:        (Don't manipulate) Goodness of fit statistics for 
 %                individual endpoint/time mean comparisons between data
@@ -100,7 +102,7 @@ classdef VPopRECIST
 %                fall below the target.
 %  optimizeTimeLimit:   Time limit for optimizing the VPop in s.
 %  optimizeType:        Type of optimization algorithm to employ: "pso,"
-%                       "ga," or "simplex".  Default is
+%                       "ga," "simplex," or "surrogate."  Default is
 %                       "pso".
 %  optimizePopSize:     Number of solutions to try in each optimization
 %                       generation.  Only applies to "pso" and "ga".  This 
@@ -137,15 +139,14 @@ properties
     pws
     expData
     simData      
-    % We combine simulation and experimental results
-    % into the same table.
     mnSDTable
     binTable
     distTable
 	distTable2D
 	corTable
     brTableRECIST
-    rTableRECIST    
+    rTableRECIST  
+	subpopTable	
     gofMn
     gofSD
     gofBin
@@ -217,11 +218,11 @@ methods
           end
           obj.binProbs = myBinProbs;
       end
-
+	  
       function obj = set.pws(obj,myPWs)
           obj.pws = myPWs;
       end
-
+	  
       function obj = set.mnSDTable(obj,myMnSDTable)
           obj.mnSDTable = myMnSDTable;
       end
@@ -246,6 +247,10 @@ methods
       function obj = set.rTableRECIST(obj,myRTableRECIST)
           obj.rTableRECIST = myRTableRECIST;
       end 
+
+      function obj = set.subpopTable(obj,mySubpopTable)
+          obj.subpopTable = mySubpopTable;
+      end	  	  
       
       function obj = set.expData(obj,myExpData)
           obj.expData = myExpData;
@@ -324,12 +329,12 @@ methods
       end  
       
       function obj = set.optimizeType(obj,myOptimizeType)
-          if sum(ismember({'pso','ga','simplex'},lower(myOptimizeType))) == 1
+          if sum(ismember({'pso','ga','simplex','surrogate'},lower(myOptimizeType))) == 1
               obj.optimizeType = lower(myOptimizeType);
           else
-              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," or "simplex"'])
+              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," "simplex," or "surrogate."'])
           end
-      end          
+      end         
       
       function obj = set.optimizePopSize(obj,myPopulationSize)
           if ((isnumeric(myPopulationSize) == true) && (myPopulationSize >= 0))
@@ -428,7 +433,7 @@ methods
               case 'binProbs'
                   value = obj.binProbs;   
               case 'pws'
-                  value = obj.pws; 
+                  value = obj.pws; 				  			  
               case 'mnSDTable'
                   value = obj.mnSDTable; 
               case 'binTable'
@@ -442,7 +447,9 @@ methods
               case 'brTableRECIST'
                   value = obj.brTableRECIST;   
               case 'rTableRECIST'
-                  value = obj.rTableRECIST;   
+                  value = obj.rTableRECIST; 
+              case 'subpopTable'
+                  value = obj.subpopTable; 				  
               case 'expData'
                   value = obj.expData;                  
               case 'simData'
@@ -649,14 +656,15 @@ methods
            
            % If we re-calculate PWs, eliminate any
            % previous PW-dependent properties - i.e. those
-           % that start with "pred"
+           % that start with "pred" except predIndices
            myMnSDTable = obj.mnSDTable;
            [nRows, nCols] = size(myMnSDTable);
            if nRows > 0
-                myString = 'pred';
-                varNames = myMnSDTable.Properties.VariableNames;
-                myPos = find(strncmpi(myString,varNames,length(myString)));
-                nanifyVars = varNames(myPos);
+                % myString = 'pred';
+                % varNames = myMnSDTable.Properties.VariableNames;
+                % myPos = find(strncmpi(myString,varNames,length(myString)));
+                % nanifyVars = varNames(myPos);
+                nanifyVars = {'predN','predMean','predSD'};
                 for varCounter = 1 : length(nanifyVars)
                     myMnSDTable.(nanifyVars{varCounter}) = nan(nRows,1);
                 end
@@ -666,10 +674,11 @@ methods
            myBinTable = obj.binTable;
            [nRows, nCols] = size(myBinTable);
            if nRows > 0
-                myString = 'pred';
-                varNames = myBinTable.Properties.VariableNames;
-                myPos = find(strncmpi(myString,varNames,length(myString)));
-                nanifyVars = varNames(myPos);
+                % myString = 'pred';
+                % varNames = myBinTable.Properties.VariableNames;
+                % myPos = find(strncmpi(myString,varNames,length(myString)));
+                % nanifyVars = varNames(myPos);
+                nanifyVars = {'predN','predBins'};             
                 for varCounter = 1 : length(nanifyVars)
                     myBinTable.(nanifyVars{varCounter}) = nan(nRows,1);
                 end
@@ -758,7 +767,15 @@ methods
                     myRTable.(nanifyVars{varCounter}) = nan(nRows,1);
                 end	   
            end
-           obj.rTableRECIST = myRTable;             
+           obj.rTableRECIST = myRTable;   
+          
+           myTable = obj.subpopTable;
+           [nRows, nCols] = size(myTable);
+           if nRows > 1
+                nanifyVars = 'predW';
+                myTable.(nanifyVars{varCounter})(2:end) = nan(nRows-1,1);
+           end
+           obj.subpopTable = myTable; 
            
            obj.gofMn = [];
            obj.gofSD = [];
@@ -1192,42 +1209,106 @@ methods
            end
       end
 
-      function obj = addDistTableSimVals(obj)   
+      function obj = addTableSimVals(obj)   
           % Here we simply get sim values that are
           % fixed during optimization and add them to the 
-          % dist table.  This is done at initialization to speed
+          % tables.  This is done at initialization to speed
           % execution.
           %
           % ARGUMENTS
           %  (self):      Note that the following properties should be
           %               initialized (experimental and simulation data) 
           %               before calling this method:
+          %                mnSDTable
+          %                binTable
           %                distTable
+          %                distTable2D
           %                simData
+          %                corTable	
+          %                subpopTable
           %
           % RETURNS
           %  (self):      The VPop object is returned, but with updated
           %               properties:
-          %                distTable	
+          %                mnSDTable
+          %                binTable
+          %                distTable
+          %                distTable2D
+          %                simData
+          %                corTable	
+          %                subpopTable
           
 
-          myDistTable = obj.distTable;          		  
-          
+         
+		  mySubpopTable = obj.subpopTable;		
           mySimData = obj.simData.Data;
-          
           mySimRowInfo = obj.simData.rowInfo;
-          
           mySimColNames = obj.simData.rowInfoNames;
-          distRowsTarget = obj.simData.distRows;
-          distRowsSource = find(distRowsTarget>0); 		
-          
           simInterventionIDCol = find(ismember(mySimColNames, 'interventionID'));
           simTimeCol = find(ismember(mySimColNames, 'time'));
           simElementIDCol = find(ismember(mySimColNames, 'elementID'));
           simElementTypeCol = find(ismember(mySimColNames, 'elementType'));                        
 		  
+
+          myTable = obj.mnSDTable;
+          rowsTarget = obj.simData.mnSDRows;
+          rowsSource = find(rowsTarget>0); 	
+          if ~isempty(rowsSource)
+			   mySubpopNo = myTable.('subpopNo');          
+               vpIndicesSubpop = mySubpopTable.('vpIndices');
+               rowsTarget = rowsTarget(rowsSource);
+              % 2 step assignment to speed execution
+              % first to matrix, then convert back to table.
+              [nRows, ~] = size(myTable);          
+              curSimValues = nan(nRows,  size(mySimData,2));
+              curSimValues(rowsTarget,:) = (mySimData(rowsSource, :));
+              [curSimValues, I] = sort(curSimValues, 2, 'ascend');
+              for rowCounter = 1 : nRows
+				  subpopIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};			
+                  % Should account for subpops
+                  keepIndices = find(~isnan(curSimValues(rowCounter,:)));
+				  keepIndicesRef = find(ismember(keepIndices, subpopIndices));	                  
+                  keepIndices = keepIndices(keepIndicesRef);
+                  curVals = curSimValues(rowCounter,keepIndices);                 
+                  % myTable.('predSample'){rowCounter} = curVals;
+				  myTable.('predIndices'){rowCounter} = I(rowCounter,keepIndices);
+              end
+              obj.mnSDTable = myTable;												
+          end  
+
+          myTable = obj.binTable;
+          rowsTarget = obj.simData.binRows;
+          rowsSource = find(rowsTarget>0); 	
+          if ~isempty(rowsSource)
+			   mySubpopNo = myTable.('subpopNo');          
+               vpIndicesSubpop = mySubpopTable.('vpIndices');
+               rowsTarget = rowsTarget(rowsSource);
+              % 2 step assignment to speed execution
+              % first to matrix, then convert back to table.
+              [nRows, ~] = size(myTable);          
+              curSimValues = nan(nRows,  size(mySimData,2));
+              curSimValues(rowsTarget,:) = (mySimData(rowsSource, :));
+              [curSimValues, I] = sort(curSimValues, 2, 'ascend');
+              for rowCounter = 1 : nRows
+				  subpopIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};			
+                  % Should account for subpops
+                  keepIndices = find(~isnan(curSimValues(rowCounter,:)));
+				  keepIndicesRef = find(ismember(keepIndices, subpopIndices));	                  
+                  keepIndices = keepIndices(keepIndicesRef);
+                  curVals = curSimValues(rowCounter,keepIndices);                 
+                  % myTable.('predSample'){rowCounter} = curVals;
+				  myTable.('predIndices'){rowCounter} = I(rowCounter,keepIndices);
+              end
+              obj.binTable = myTable;												
+          end  
+
+          myDistTable = obj.distTable;
+          distRowsTarget = obj.simData.distRows;
+          distRowsSource = find(distRowsTarget>0); 	
           if ~isempty(distRowsSource)
-              distRowsTarget = distRowsTarget(distRowsSource);
+			   mySubpopNo = myDistTable.('subpopNo');          
+               vpIndicesSubpop = mySubpopTable.('vpIndices');
+               distRowsTarget = distRowsTarget(distRowsSource);
           
               % 2 step assignment to speed execution
               % first to matrix, then convert back to table.
@@ -1239,9 +1320,14 @@ methods
               [curSimValues, I] = sort(curSimValues, 2, 'ascend');
               for rowCounter = 1 : nDistRows
                   
+				  subpopIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};			
+                  % Should account for subpops
                   keepIndices = find(~isnan(curSimValues(rowCounter,:)));
-                  curVals = curSimValues(rowCounter,keepIndices);                  
-                  myDistTable.('predSample'){rowCounter} = curVals(keepIndices);
+				  keepIndicesRef = find(ismember(keepIndices, subpopIndices));	                  
+                  keepIndices = keepIndices(keepIndicesRef);
+                  
+                  curVals = curSimValues(rowCounter,keepIndices);                 
+                  myDistTable.('predSample'){rowCounter} = curVals;
 				  myDistTable.('predIndices'){rowCounter} = I(rowCounter,keepIndices);
                   % Also get the indices to align the exp and sim samples
                   sample1 = myDistTable.('expSample'){rowCounter};
@@ -1253,49 +1339,19 @@ methods
               obj.distTable = myDistTable;												
           end   
 
-      end
-
-      function obj = addDistTable2DSimVals(obj)   
-          % Here we simply get sim values that are
-          % fixed during optimization and add them to the 
-          % dist table.  This is done at initialization to speed
-          % execution.
-          %
-          % ARGUMENTS
-          %  (self):      Note that the following properties should be
-          %               initialized (experimental and simulation data) 
-          %               before calling this method:
-          %                distTable2D
-          %                simData
-          %
-          % RETURNS
-          %  (self):      The VPop object is returned, but with updated
-          %               properties:
-          %                distTable2D	
-
-          myDistTable = obj.distTable2D;          		  
-          
-          mySimData = obj.simData.Data;
-          
-          mySimRowInfo = obj.simData.rowInfo;
-          
-          mySimColNames = obj.simData.rowInfoNames;
+          myDistTable2D = obj.distTable2D;
           distRowsTarget1 = obj.simData.distRows2D(:,1);
 		  distRowsTarget2 = obj.simData.distRows2D(:,2);
           distRowsSource1 = find(~cellfun(@isempty,distRowsTarget1));
-          distRowsSource2 = find(~cellfun(@isempty,distRowsTarget2));		  
-          
-          simInterventionIDCol = find(ismember(mySimColNames, 'interventionID'));
-          simTimeCol = find(ismember(mySimColNames, 'time'));
-          simElementIDCol = find(ismember(mySimColNames, 'elementID'));
-          simElementTypeCol = find(ismember(mySimColNames, 'elementType'));                        
-		  
+          distRowsSource2 = find(~cellfun(@isempty,distRowsTarget2));
           if ~isempty(distRowsSource1)
+              mySubpopNo = myDistTable.('subpopNo');
+              vpIndicesSubpop = mySubpopTable.('vpIndices');
               distRowsTarget1 = distRowsTarget1(distRowsSource1);
 			  distRowsTarget2 = distRowsTarget2(distRowsSource2);
               % 2 step assignment to speed execution
               % first to matrix, then convert back to table.
-              [nDistRows, nDistCols] = size(myDistTable);
+              [nDistRows, nDistCols] = size(myDistTable2D);
               curSimValues1 = nan(nDistRows,  size(mySimData,2));
               curSimValues2 = nan(nDistRows,  size(mySimData,2));
               % We need a loop for the assignment
@@ -1314,51 +1370,26 @@ methods
 			  % Unlike the 1D case we won't pre-sort
               for rowCounter = 1 : nDistRows
                   keepIndices = find(~isnan(curSimValues1(rowCounter,:)) & ~isnan(curSimValues2(rowCounter,:)));
+				  subpopIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};			
+                  % Should account for subpops
+				  keepIndicesRef = find(ismember(keepIndices, subpopIndices));	                  
+                  keepIndices = keepIndices(keepIndicesRef);                  
+                  
                   curVals = [curSimValues1(rowCounter,keepIndices); curSimValues2(rowCounter,keepIndices)];          
-                  myDistTable.('predSample'){rowCounter} = curVals;
-				  myDistTable.('predIndices'){rowCounter} = keepIndices;
+                  myDistTable2D.('predSample'){rowCounter} = curVals;
+				  myDistTable2D.('predIndices'){rowCounter} = keepIndices;
               end
               obj.distTable2D = myDistTable;												
-          end   
+          end               
 
-      end	  
-
-      function obj = addCorTableSimVals(obj)   
-          % Here we simply get sim values that are
-          % fixed during optimization and add them to the 
-          % correlation table.  This is done at initialization to speed
-          % execution.
-          %
-          % ARGUMENTS
-          %  (self):      Note that the following properties should be
-          %               initialized (experimental and simulation data) 
-          %               before calling this method:
-          %                corTable
-          %                simData
-          %
-          % RETURNS
-          %  (self):      The VPop object is returned, but with updated
-          %               properties:
-          %                corTable	
-
-          myCorTable = obj.corTable;          		  
-          
-          mySimData = obj.simData.Data;
-          
-          mySimRowInfo = obj.simData.rowInfo;
-          
-          mySimColNames = obj.simData.rowInfoNames;
+          myCorTable = obj.corTable;
           corRowsTarget1 = obj.simData.corRows(:,1);
 		  corRowsTarget2 = obj.simData.corRows(:,2);
           corRowsSource1 = find(~cellfun(@isempty,corRowsTarget1));
-          corRowsSource2 = find(~cellfun(@isempty,corRowsTarget2));		  
-          
-          simInterventionIDCol = find(ismember(mySimColNames, 'interventionID'));
-          simTimeCol = find(ismember(mySimColNames, 'time'));
-          simElementIDCol = find(ismember(mySimColNames, 'elementID'));
-          simElementTypeCol = find(ismember(mySimColNames, 'elementType'));                        
-		  
+          corRowsSource2 = find(~cellfun(@isempty,corRowsTarget2));	
           if ~isempty(corRowsSource1)
+              mySubpopNo = myCorTable.('subpopNo');
+              vpIndicesSubpop = mySubpopTable.('vpIndices'); 
               corRowsTarget1 = corRowsTarget1(corRowsSource1);
 			  corRowsTarget2 = corRowsTarget2(corRowsSource2);
               % 2 step assignment to speed execution
@@ -1384,14 +1415,19 @@ methods
 			  %curSimValues2 = curSimValues2(:,I);
               for rowCounter = 1 : nCorRows
                   keepIndices = find(~isnan(curSimValues1(rowCounter,:)) & ~isnan(curSimValues2(rowCounter,:)));
+				  subpopIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};			
+                  % Should account for subpops
+				  keepIndicesRef = find(ismember(keepIndices, subpopIndices));	                  
+                  keepIndices = keepIndices(keepIndicesRef);                       
                   curVals = [curSimValues1(rowCounter,keepIndices); curSimValues2(rowCounter,keepIndices)];          
                   myCorTable.('predSample'){rowCounter} = curVals;
 				  myCorTable.('predIndices'){rowCounter} = keepIndices;
               end
               obj.corTable = myCorTable;												
-          end   
+          end             
 
-      end	        
+      end
+
       
       function obj = addPredTableVals(obj)
           % Once we have read the simData and generated a pw vector,
@@ -1408,7 +1444,8 @@ methods
           %                distTable2D
           %                corTable		  
 		  %				   brTableRECIST
-		  %				   rTableRECIST		  
+		  %				   rTableRECIST	
+		  %                subpopTable
           %                simData
           %
           % RETURNS
@@ -1421,6 +1458,7 @@ methods
           %                corTable	
 		  %				   brTableRECIST		  
 		  %				   rTableRECIST
+		  %                subpopTable			  
           
           myMnSdData = obj.mnSDTable;
           myBinTable = obj.binTable;
@@ -1429,12 +1467,13 @@ methods
 		  myCorTable = obj.corTable;
           myBRTableRECIST = obj.brTableRECIST;
           myRTableRECIST = obj.rTableRECIST;
-          
+		  mySubpopTable = obj.subpopTable;
+		  
+		  vpIndicesSubpop = mySubpopTable.('vpIndices');
           
           mySimData = obj.simData.Data;
           myBRData = obj.simData.brData;
           myRData = obj.simData.rData;
-          
           
           mySimRowInfo = obj.simData.rowInfo;
           myBRRowInfo = obj.simData.brRowInfo;
@@ -1469,30 +1508,20 @@ methods
           
               mnSDRows = obj.simData.mnSDRows;
               mnSDRows = mnSDRows(find(mnSDRows>0));
+			  mySubpopNo = myMnSdData.('subpopNo');
 
-              %  myExpMnSdData has colnames
-              % {'time', 'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID', 'weight', 'expN', 'expMean', 'expSD', 'simN', 'simMean', 'simSD'}
-              % We want to match to keep:
               [nMnSdRows, nMnSdCols] = size(myMnSdData);          
 
               % 2 step assignment to speed execution
               % first to matrix, then convert back to table.
               curMean = nan(nMnSdRows,1);
               curPredN = nan(nMnSdRows,1);
-              curSD = nan(nMnSdRows,1);
+              curSD = nan(nMnSdRows,1);						 
               curSimValues = nan(nMnSdRows,length(myPWs));
               curSimValues(mnSDRowsTarget,:) = (mySimData(mnSDRowsSource, :));
-
+              keepIndices = myMnSdData.('predIndices');
               for rowCounter = 1 : nMnSdRows
-                   % Note that if any simulation result values are NaN, then 
-                   % these summary stats will be nan as well.  So, the default 
-                   % behavior is that failed simulation runs will preclude 
-                   % calculation of population statistics, which seems a 
-                   % desirable failure mode.
-                       
-                   keepIndices = find(~isnan(curSimValues(rowCounter,:)));
-                   curPWs = myPWs(keepIndices) / sum(myPWs(keepIndices));
-
+                   curPWs = myPWs(keepIndices{rowCounter}) / sum(myPWs(keepIndices{rowCounter}));
                    if obj.useEffN
                            curN = 1/sum(curPWs.^2);
                    else
@@ -1505,8 +1534,8 @@ methods
                           curN = length(myPWs);
                    end                          
                    curPredN(rowCounter) = curN;   
-                   curMean(rowCounter) = wtdMean(curSimValues(rowCounter,keepIndices),curPWs);
-                   curSD(rowCounter) = wtdStd(curSimValues(rowCounter,keepIndices),curPWs);
+                   curMean(rowCounter) = wtdMean(curSimValues(rowCounter,keepIndices{rowCounter}),curPWs);
+                   curSD(rowCounter) = wtdStd(curSimValues(rowCounter,keepIndices{rowCounter}),curPWs);
               end
 
               myMnSdData.('predN') = (curPredN);
@@ -1514,6 +1543,7 @@ methods
               myMnSdData.('predSD') = (curSD);     
               obj.mnSDTable = myMnSdData;
           end
+		  
           if ~isempty(binRowsSource)
               binRowsTarget = binRowsTarget(binRowsSource);
           
@@ -1524,12 +1554,12 @@ methods
               curPredN = nan(nBinRows,1);
               curSimValues = nan(nBinRows,length(myPWs));
               curSimValues(binRowsTarget,:) = (mySimData(binRowsSource, :));
-              binEdgeValues = myBinTable{:,'binEdges'};          
-
+              binEdgeValues = myBinTable{:,'binEdges'};
+			  
+			  mySubpopNo = myBinTable.('subpopNo');
+              keepIndices = myBinTable.('predIndices');
               for rowCounter = 1 : nBinRows
-                   
-                   keepIndices = find(~isnan(curSimValues(rowCounter,:)));
-                   curPWs = myPWs(keepIndices) / sum(myPWs(keepIndices)); 
+                   curPWs = myPWs(keepIndices{rowCounter}) / sum(myPWs(keepIndices{rowCounter}));
                    if obj.useEffN
                        curN = 1/sum(curPWs.^2);
                    else
@@ -1541,9 +1571,8 @@ methods
                        % curN = sum(myPWs >= obj.pwCutoff);
                        curN = length(myPWs);
                    end
-                   
                    curPredN(rowCounter) = curN;
-                   curProbs{rowCounter} = wtdBinProb(curSimValues(rowCounter,keepIndices), curPWs, binEdgeValues{rowCounter});
+                   curProbs{rowCounter} = wtdBinProb(curSimValues(rowCounter,keepIndices{rowCounter}), curPWs, binEdgeValues{rowCounter});
               end
               myBinTable.('predN') = (curPredN);
               myBinTable.('predBins') = curProbs;     
@@ -1551,7 +1580,6 @@ methods
           end
 		  
          if ~isempty(distRowsSource)
-          
 			  [nDistRows, nDistCols] = size(myDistTable); 
 			  assignPWs = cell(nDistRows,1);
               assignN = nan(nDistRows,1);
@@ -1580,7 +1608,8 @@ methods
               myDistTable.('predN') = (assignN);
 			  myDistTable.('predProbs') = (assignPWs);
               obj.distTable = myDistTable;														
-         end 		  
+         end
+		 
          if ~isempty(myDistTable2D)
 			  distRowsTarget1 = obj.simData.distRows2D(:,1);
 			  distRowsTarget2 = obj.simData.distRows2D(:,2);
@@ -1616,6 +1645,7 @@ methods
 			  myDistTable2D.('predProbs') = (assignPWs);
               obj.distTable2D = myDistTable2D;														
          end 		
+		 
          if ~isempty(myCorTable)
 			  corRowsTarget1 = obj.simData.corRows(:,1);
 			  corRowsTarget2 = obj.simData.corRows(:,2);
@@ -1628,7 +1658,7 @@ methods
 			  keepIndices = myCorTable.('predIndices');
               for rowCounter = 1 : nCorRows
                    % We have already found these
-                   curPWs = myPWs(keepIndices{rowCounter}) / sum(myPWs(keepIndices{rowCounter})); 
+                   curPWs = myPWs(keepIndices{rowCounter}) / sum(myPWs(keepIndices{rowCounter}));  
                    if obj.useEffN
                        curN = 1/sum(curPWs.^2);
                    else
@@ -1663,23 +1693,20 @@ methods
               curSimValues = nan(nBRRows,length(myPWs));
               curSimValues(brRowsTarget,:) = (myBRData(brRowsSource, :));
               binEdgeValues = [.9,1.9,2.9];     
-              
-              if obj.useEffN
-                  curN = 1/sum(myPWs.^2);
-              else
-                  % We could use the PW cutoff here, but it seems this
-                  % encourages the optimizer to try to push the weight onto a
-                  % few VPs to decrease N.  Instead, let's use the number of
-                  % VPs for the purpose of statistical comparison, especially
-                  % during optimization.
-                  % curN = sum(myPWs >= obj.pwCutoff);
-                  curN = length(myPWs);
-              end
+			  
+			  mySubpopNo = myBRTableRECIST.('subpopNo');
 
               for rowCounter = 1 : nBRRows
+				   curIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};
                    % 'binEdge1','binEdge2','binEdge3'
-                   curPredN(rowCounter) = curN;
-                   curProbs(rowCounter,:) = wtdBinProb(curSimValues(rowCounter,:), myPWs, binEdgeValues);
+				   curPWs = myPWs(curIndices);
+				   curPWs = curPWs./sum(curPWs);
+				   if obj.useEffN
+						curPredN(rowCounter) = 1/sum(curPWs.^2);
+				   else
+						curPredN(rowCounter) = length(myPWs);
+				   end
+                   curProbs(rowCounter,:) = wtdBinProb(curSimValues(rowCounter,curIndices), curPWs, binEdgeValues);
               end
               myBRTableRECIST.('predN') = (curPredN);
               myBRTableRECIST.('predCR') = (curProbs(:,1));
@@ -1696,25 +1723,21 @@ methods
               curPredN = nan(nRRows,1);
               curSimValues = nan(nRRows,length(myPWs));
               curSimValues(rRowsTarget,:) = (myRData(rRowsSource, :));
-              binEdgeValues = [.9,1.9,2.9];     
+              binEdgeValues = [.9,1.9,2.9];   
+
+			  mySubpopNo = myBRTableRECIST.('subpopNo');
                             
-              if obj.useEffN
-                  curN = 1/sum(myPWs.^2);
-              else
-                  % We could use the PW cutoff here, but it seems this
-                  % encourages the optimizer to try to push the weight onto a
-                  % few VPs to decrease N.  Instead, let's use the number of
-                  % VPs for the purpose of statistical comparison, especially
-                  % during optimization.
-                  % curN = sum(myPWs >= obj.pwCutoff);
-                  curN = length(myPWs);
-              end
-              
               for rowCounter = 1 : nRRows
-                  
-                   curPredN(rowCounter) = curN;
-                   %curProbs(rowCounter,:) = wtdBinProb(curSimValues(rowCounter,keepIndices), curPWs, binEdgeValues);
-                   curProbs(rowCounter,:) = wtdBinProb(curSimValues(rowCounter,:), myPWs, binEdgeValues);
+				   curIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};			  
+                   % 'binEdge1','binEdge2','binEdge3'
+				   curPWs = myPWs(curIndices);
+				   curPWs = curPWs./sum(curPWs);
+				   if obj.useEffN
+						curPredN(rowCounter) = 1/sum(curPWs.^2);
+				   else
+						curPredN(rowCounter) = length(myPWs);
+				   end
+                   curProbs(rowCounter,:) = wtdBinProb(curSimValues(rowCounter,curIndices), curPWs, binEdgeValues);
               end
               myRTableRECIST.('predN') = (curPredN);
               myRTableRECIST.('predCR') = (curProbs(:,1));
@@ -1723,7 +1746,18 @@ methods
               myRTableRECIST.('predPD') = (curProbs(:,4));     
               obj.rTableRECIST = myRTableRECIST;
           end              
-          
+		  
+          [nSubpopRows, nSubpopCols] = size(mySubpopTable);		
+		  if nSubpopRows > 1
+            curProbs = ones(nSubpopRows,1);
+			for rowCounter = 2 : nSubpopRows
+				curIndices = vpIndicesSubpop{rowCounter};
+				curPWs = myPWs(curIndices);
+				curProbs(rowCounter) = sum(curPWs);
+			end
+            mySubpopTable.('predW') = (curProbs);
+			obj.subpopTable = mySubpopTable;
+		  end
       end
 
       function obj = VPopRECIST()
@@ -1736,14 +1770,17 @@ methods
           obj.binEdges = [];
           obj.binMidPoints = [];
           obj.binProbs = [];
+          % obj.vpIDs = cell(1,0);		  
           obj.pws = [];
+          % obj.subpopTable = [];		  
           obj.mnSDTable = [];
           obj.binTable = [];
           obj.distTable = [];         
           obj.distTable2D = [];	
 		  obj.corTable = [];
           obj.brTableRECIST = [];
-          obj.rTableRECIST = [];          
+          obj.rTableRECIST = [];   
+          obj.subpopTable = [];
           obj.expData = [];          
           obj.simData = [];
           obj.gofMn = [];

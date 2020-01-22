@@ -62,9 +62,8 @@ if flagContinue
 	end
 
 	myVPop = myVPop.assignCoeffs(myWorksheet);
-	myVPop = myVPop.addDistTableSimVals();
-	myVPop = myVPop.addDistTable2DSimVals();
-	myVPop = myVPop.addCorTableSimVals();    
+	myVPop.subpopTable = updateSubpopTableVPs(myVPop.subpopTable, myWorksheet);
+	myVPop = myVPop.addTableSimVals();  
 	myVPop = myVPop.addPredTableVals();
     myVPop = evaluateGOF(myVPop);
 

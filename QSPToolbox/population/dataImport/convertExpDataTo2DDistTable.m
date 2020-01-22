@@ -47,12 +47,9 @@ if continueFlag
 end
 
 if continueFlag
+    commonNames = loadCommonNames();
     nRows = length(myExpVars1);
-    if isa(myVPop,'VPop') || isa(myVPop,'mapelOptions')
-        nDataHeaderCols = 7;
-    else
-        nDataHeaderCols = 11;
-    end
+
     for rowCounter = 1 : nRows
         myExpVars1Cur = myExpVars1{rowCounter};
         myExpVars2Cur = myExpVars2{rowCounter};
@@ -66,26 +63,34 @@ if continueFlag
             % This is not yest supported as we will have yet to add
             % PatientIDVar for non-RECIST
             if isa(myVPop,'VPop') || isa(myVPop,'mapelOptions')
-                tableVariableNames = {'time1','time2','interventionID1','interventionID2','elementID1','elementID2','elementType1','elementType2','expDataID1','expDataID2','expTimeVarID1','expTimeVarID2','expVarID1','expVarID2'};
+                tableVariableNames = commonNames.VPOP2DTABLEVARNAMESFIXED;
+                nDataHeaderCols = length(tableVariableNames);
+                oldTableVariableNames = commonNames.VPOPEXPTABLEVARNAMESFIXED;
+                nOldDataHeaderCols = length(oldTableVariableNames);
             else
-                tableVariableNames = {'time1','time2','interventionID1','interventionID2','elementID1','elementID2','elementType1','elementType2','expDataID1','expDataID2','expTimeVarID1','expTimeVarID2','expVarID1','expVarID2','PatientIDVar1','PatientIDVar2','TRTVar1','TRTVar2','BRSCOREVar1','BRSCOREVar2','RSCOREVar1','RSCOREVar2'};
+                tableVariableNames = commonNames.VPOPRECIST2DTABLEVARNAMESFIXED;
+                nDataHeaderCols = length(tableVariableNames);
+                oldTableVariableNames = commonNames.VPOPRECISTEXPTABLEVARNAMESFIXED;
+                nOldDataHeaderCols = length(oldTableVariableNames);                
             end
-            oldTableVariableNames = myVPop.expData.Properties.VariableNames(1:nDataHeaderCols);
             tableVariableNames = [tableVariableNames,{'weight','expN', 'expSample', 'predN', 'predIndices', 'predSample', 'predProbs'}];
             myDistTable = cell2table(cell(0,length(tableVariableNames)));
             myDistTable.Properties.VariableNames = tableVariableNames;
         end
         sourceRow1 = find(ismember(myVPop.expData.('expVarID'),myExpVars1Cur) & ismember(myVPop.expData.('time'),mySimTimepoints1Cur) & ismember(myVPop.expData.('interventionID'),myInterventions1Cur));
         sourceRow2 = find(ismember(myVPop.expData.('expVarID'),myExpVars2Cur) & ismember(myVPop.expData.('time'),mySimTimepoints2Cur) & ismember(myVPop.expData.('interventionID'),myInterventions2Cur));
-        curData = myVPop.expData{[sourceRow1,sourceRow2],nDataHeaderCols+1:end};
+        curData = myVPop.expData{[sourceRow1,sourceRow2],nOldDataHeaderCols+1:end};
         curData = curData(:,find(min(~isnan(curData),[],1)));
         %[~,idx] = sort(curData(1,:),'ascend');
         %curData=curData(:,idx);
         [~,nEntries] = size(curData);
+		if ~isequal(myVPop.expData{sourceRow1,'subpopNo'},myVPop.expData{sourceRow2,'subpopNo'})
+			disp(['Attempting to correlate different subpopulations in ',mfilename,' for rows ',num2str(sourceRow1),' and ',num2str(sourceRow2),'.  Assuming the first of the pair.'])
+		end
         if isa(myVPop,'VPop') || isa(myVPop,'mapelOptions')
-            curRow = {myVPop.expData{sourceRow1,'time'},myVPop.expData{sourceRow2,'time'},myVPop.expData{sourceRow1,'interventionID'},myVPop.expData{sourceRow2,'interventionID'},myVPop.expData{sourceRow1,'elementID'},myVPop.expData{sourceRow2,'elementID'},myVPop.expData{sourceRow1,'elementType'},myVPop.expData{sourceRow2,'elementType'},myVPop.expData{sourceRow1,'expDataID'},myVPop.expData{sourceRow2,'expDataID'},myVPop.expData{sourceRow1,'expTimeVarID'},myVPop.expData{sourceRow2,'expTimeVarID'},myVPop.expData{sourceRow1,'expVarID'},myVPop.expData{sourceRow2,'expVarID'},myVPop.expData{sourceRow1,'PatientIDVar'},myVPop.expData{sourceRow2,'PatientIDVar'}};
+            curRow = {myVPop.expData{sourceRow1,'subpopNo'},myVPop.expData{sourceRow1,'time'},myVPop.expData{sourceRow2,'time'},myVPop.expData{sourceRow1,'interventionID'},myVPop.expData{sourceRow2,'interventionID'},myVPop.expData{sourceRow1,'elementID'},myVPop.expData{sourceRow2,'elementID'},myVPop.expData{sourceRow1,'elementType'},myVPop.expData{sourceRow2,'elementType'},myVPop.expData{sourceRow1,'expDataID'},myVPop.expData{sourceRow2,'expDataID'},myVPop.expData{sourceRow1,'expTimeVarID'},myVPop.expData{sourceRow2,'expTimeVarID'},myVPop.expData{sourceRow1,'expVarID'},myVPop.expData{sourceRow2,'expVarID'},myVPop.expData{sourceRow1,'PatientIDVar'},myVPop.expData{sourceRow2,'PatientIDVar'}};
         else
-            curRow = {myVPop.expData{sourceRow1,'time'},myVPop.expData{sourceRow2,'time'},myVPop.expData{sourceRow1,'interventionID'},myVPop.expData{sourceRow2,'interventionID'},myVPop.expData{sourceRow1,'elementID'},myVPop.expData{sourceRow2,'elementID'},myVPop.expData{sourceRow1,'elementType'},myVPop.expData{sourceRow2,'elementType'},myVPop.expData{sourceRow1,'expDataID'},myVPop.expData{sourceRow2,'expDataID'},myVPop.expData{sourceRow1,'expTimeVarID'},myVPop.expData{sourceRow2,'expTimeVarID'},myVPop.expData{sourceRow1,'expVarID'},myVPop.expData{sourceRow2,'expVarID'},myVPop.expData{sourceRow1,'PatientIDVar'},myVPop.expData{sourceRow2,'PatientIDVar'},myVPop.expData{sourceRow1,'TRTVar'},myVPop.expData{sourceRow2,'TRTVar'},myVPop.expData{sourceRow1,'BRSCOREVar'},myVPop.expData{sourceRow2,'BRSCOREVar'},myVPop.expData{sourceRow1,'RSCOREVar'},myVPop.expData{sourceRow2,'RSCOREVar'}};
+            curRow = {myVPop.expData{sourceRow1,'subpopNo'},myVPop.expData{sourceRow1,'time'},myVPop.expData{sourceRow2,'time'},myVPop.expData{sourceRow1,'interventionID'},myVPop.expData{sourceRow2,'interventionID'},myVPop.expData{sourceRow1,'elementID'},myVPop.expData{sourceRow2,'elementID'},myVPop.expData{sourceRow1,'elementType'},myVPop.expData{sourceRow2,'elementType'},myVPop.expData{sourceRow1,'expDataID'},myVPop.expData{sourceRow2,'expDataID'},myVPop.expData{sourceRow1,'expTimeVarID'},myVPop.expData{sourceRow2,'expTimeVarID'},myVPop.expData{sourceRow1,'expVarID'},myVPop.expData{sourceRow2,'expVarID'},myVPop.expData{sourceRow1,'PatientIDVar'},myVPop.expData{sourceRow2,'PatientIDVar'},myVPop.expData{sourceRow1,'TRTVar'},myVPop.expData{sourceRow2,'TRTVar'},myVPop.expData{sourceRow1,'BRSCOREVar'},myVPop.expData{sourceRow2,'BRSCOREVar'},myVPop.expData{sourceRow1,'RSCOREVar'},myVPop.expData{sourceRow2,'RSCOREVar'}};
         end 
         curRow = [curRow,{1, nEntries, {curData}, nan, {nan}, {nan}, {nan}}];
         curRow = cell2table(curRow);
@@ -94,6 +99,7 @@ if continueFlag
     end
 else
     warning(['Unable to complete ',mfilename,', exiting.'])
+	myDistTable = [];
 end            
 
 end

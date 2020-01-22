@@ -11,7 +11,7 @@ function myVPop = removeVPopInterventions(myVPop, myInterventionIDs)
 %  newVPop:         The new VPop with the interventions removed.
 %
 % TODO: ADD MORE CHECKING OF INPUTS
-%
+% 
 
 % Drop unneeded rows from simData
 if ~isempty(myVPop.simData)
@@ -27,6 +27,15 @@ distData2DFlag = false;
 corDataFlag = false;
 brDataFlag = false;	
 rDataFlag = false;	
+
+subpopInterventions = cell(1,0);
+for cellCounter = 1:numel(myMapelOptions.subpopTable{:,'interventionID'})
+	subpopInterventions = [subpopInterventions, myMapelOptions.subpopTable{cellCounter,'interventionID'}{1}];
+end
+
+if sum(ismember(myInterventionIDs, subpopInterventions)) > 0
+	warning(['Unable to remove specified interventions in ',mfilename,'.  Removing interventions used to specify subpopulations is not currently supported.  Exiting...'])
+end
 
 % Next scan through the VPop 
 myMnSDTable = myVPop.mnSDTable;

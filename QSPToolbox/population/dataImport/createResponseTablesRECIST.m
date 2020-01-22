@@ -112,8 +112,8 @@ if nStopTrials > 0
     end
 end
 
-tableVariableNamesFixed = {'time', 'expVarID', 'interventionID','elementID','elementType', 'expDataID', 'expTimeVarID','PatientIDVar','TRTVar','BRSCOREVar','RSCOREVar'};
-tableVariableNames = [tableVariableNamesFixed,{'weight','expN','expCR','expPR','expSD','expPD','predN','predCR','predPR','predSD','predPD'}];
+commonNames = loadCommonNames();
+tableVariableNames = [commonNames.VPOPRECISTRESPONSETABLEVARNAMESFIXED,{'weight','expN','expCR','expPR','expSD','expPD','predN','predCR','predPR','predSD','predPD'}];
 myBRTableRECIST = cell2table(cell(0,length(tableVariableNames)));
 myBRTableRECIST.Properties.VariableNames = tableVariableNames;
 myRTableRECIST = cell2table(cell(0,length(tableVariableNames)));
@@ -212,7 +212,7 @@ if continueFlag
             nPD = sum(ismember(curData,'PD'));
             expN = nCR+nPR+nSD+nPD;
             curProbs = [nCR, nPR, nSD, nPD] / expN;
-            curRow = {allTimes(timeCounter), 'BRSCORE', interventionID, 'BRSCORE','derived',myExpDataID, timeVar,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar};
+            curRow = {1, allTimes(timeCounter), 'BRSCORE', interventionID, 'BRSCORE','derived',myExpDataID, timeVar,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar};
             curRow = [curRow,{1, expN, curProbs(1), curProbs(2), curProbs(3), curProbs(4), nan, nan, nan, nan, nan}];
             curRow = cell2table(curRow);
             curRow.Properties.VariableNames = myBRTableRECIST.Properties.VariableNames; 
@@ -286,7 +286,7 @@ if continueFlag
             nPD = sum(ismember(curData,'PD'));
             expN = nCR+nPR+nSD+nPD;
             curProbs = [nCR, nPR, nSD, nPD] / expN;
-            curRow = {allTimes(timeCounter), 'RSCORE', interventionID, 'RSCORE','derived',myExpDataID, timeVar,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar};
+            curRow = {1, allTimes(timeCounter), 'RSCORE', interventionID, 'RSCORE','derived',myExpDataID, timeVar,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar};
             curRow = [curRow,{1, expN, curProbs(1), curProbs(2), curProbs(3), curProbs(4), nan, nan, nan, nan, nan}];
             curRow = cell2table(curRow);
             curRow.Properties.VariableNames = myRTableRECIST.Properties.VariableNames; 

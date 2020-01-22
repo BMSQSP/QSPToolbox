@@ -3,6 +3,11 @@ function myExpDataTable = createExpDataTable(myWorksheet, myInterventionID, elem
 % into a format that can
 % can be used in the population weighting algorithms.
 %
+% Note myExpDataTable currently assumes the data is intended the
+% all VPs.  If you wish to map to a different subopulation,
+% you can edit the subpopNo reference for each row entry after
+% the table is made.
+%
 % ARGUMENTS
 % myWorksheet:           a worksheet containing the data
 % myInterventionID:      the ID of the worksheet intervention to map the 
@@ -86,7 +91,8 @@ if continueFlag
 end
   
 if continueFlag
-    tableVariableNamesFixed = {'time', 'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID', 'PatientIDVar'};
+    commonNames = loadCommonNames();
+    tableVariableNamesFixed = commonNames.VPOPEXPTABLEVARNAMESFIXED;
     [nPreviousRows, nPreviousColumns] = size(previousExpDataTable);
     if nPreviousRows >= 1
         previousVariableNames = previousExpDataTable.Properties.VariableNames;
@@ -137,7 +143,7 @@ if continueFlag
 		
 		% Find the indices for pre-existing Patient IDs in the current row
 		% TODO: expect this is slow, try to speed up
-		initialCells = {curTime, myInterventionID, elementID, elementType, expDataID, expTimeVarID, expVarID, PatientIDVar};
+		initialCells = {1, curTime, myInterventionID, elementID, elementType, expDataID, expTimeVarID, expVarID, PatientIDVar};
 		previousVariableNames = myExpDataTable.Properties.VariableDescriptions;
        
 		foundMate = [];

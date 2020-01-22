@@ -58,6 +58,7 @@ if continueFlag
     myMapelOptions.distTable = myVPop.distTable;
     myMapelOptions.distTable2D = myVPop.distTable2D;
 	myMapelOptions.corTable = myVPop.corTable;
+    myMapelOptions.subpopTable = myVPop.subpopTable;
 	myMapelOptions.pwStrategy = myVPop.pwStrategy;
 	if strcmp(myVPop.pwStrategy, 'bin')
 		[nAxis, nBins] = size(myVPop.binProbs);

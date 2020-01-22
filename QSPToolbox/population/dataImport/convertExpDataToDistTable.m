@@ -37,15 +37,17 @@ if continueFlag
 end
 
 if continueFlag
+    commonNames = loadCommonNames();
     [nRows, ~] = size(myVPop.expData);
     if isa(myVPop,'VPop') || isa(myVPop,'mapelOptions')
-        nDataHeaderCols = 8;
+        tableVariableNames = commonNames.VPOPTABLEVARNAMESFIXED;
+		nDataHeaderCols = length(commonNames.VPOPTABLEVARNAMESFIXED);
     else
-        nDataHeaderCols = 11;
+        tableVariableNames = commonNames.VPOPRECISTTABLEVARNAMESFIXED;
+		nDataHeaderCols = length(commonNames.VPOPRECISTTABLEVARNAMESFIXED);
     end
     for rowCounter = 1 : nRows
         if rowCounter == 1
-            tableVariableNames = myVPop.expData.Properties.VariableNames(1:nDataHeaderCols);
             tableVariableNames = [tableVariableNames,{'weight','expN', 'expSample', 'predN', 'predIndices','predSample', 'predProbs','expCombinedIndices','simCombinedIndices','combinedPoints'}];
             myDistTable = cell2table(cell(0,length(tableVariableNames)));
             myDistTable.Properties.VariableNames = tableVariableNames;
@@ -60,6 +62,7 @@ if continueFlag
     end
 else
     warning(['Unable to complete ',mfilename,', exiting.'])
+	myDistTable = [];
 end            
 
 end

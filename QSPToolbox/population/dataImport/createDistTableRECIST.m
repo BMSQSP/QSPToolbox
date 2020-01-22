@@ -37,7 +37,8 @@ function myDistTableRECIST = createDistTableRECIST(myWorksheet,myExpDataIDs,Pati
 
 continueFlag = true;
 
-tableVariableNamesFixed = {'time', 'interventionID', 'elementID', 'elementType', 'expDataID', 'expTimeVarID', 'expVarID', 'PatientIDVar', 'TRTVar', 'BRSCOREVar', 'RSCOREVar'};
+commonNames = loadCommonNames();
+tableVariableNamesFixed = commonNames.VPOPRECISTTABLEVARNAMESFIXED;
 tableVariableNames = [tableVariableNamesFixed,{'weight','expN', 'expSample', 'predN', 'predIndices','predSample', 'predProbs','expCombinedIndices','simCombinedIndices','combinedPoints'}];
 myDistTableRECIST = cell2table(cell(0,length(tableVariableNames)));
 myDistTableRECIST.Properties.VariableNames = tableVariableNames;
@@ -178,8 +179,10 @@ if continueFlag
                     % than the smallest.  Sometimes when normailizing to
                     % baseline variables with zero variability are created
                     % at T=0 and it makes sense to filter these.
-                    if max(curData) > min(curData)					
-                        newRow = {curTimes(curTimeCounter), interventionID, mySimVars{varCounter}, mySimVarTypes{varCounter}, myExpDataID, timeVar, curVar, PatientIDVar, TRTVar, BRSCOREVar, RSCOREVar};
+                    if max(curData) > min(curData)		
+						% When initially transferring the data over,
+						% assume it is from the "all" subpop.						
+                        newRow = {1, curTimes(curTimeCounter), interventionID, mySimVars{varCounter}, mySimVarTypes{varCounter}, myExpDataID, timeVar, curVar, PatientIDVar, TRTVar, BRSCOREVar, RSCOREVar};
                         newRow = [newRow,{1, length(curData), {sort(curData,'ascend')}, nan, {nan}, {nan}, {nan},{nan},{nan},{nan}}];
                         newRow = cell2table(newRow);
                         %newRow = table(curTimes(curTimeCounter), interventionID, mySimVars{varCounter}, mySimVarTypes{varCounter}, myExpDataID, timeVar, curVar,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar1, length(curData), {sort(curData,'ascend')}, nan, {nan}, {nan}, {nan},{nan},{nan},{nan})

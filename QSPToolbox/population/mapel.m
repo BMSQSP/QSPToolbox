@@ -56,12 +56,17 @@ if continueFlag
         if ~isa(myWorksheet,'VPop') && ~isa(myWorksheet,'VPopRECIST')
             myVPop = myVPop.assignIndices(myWorksheet, myMapelOptions);
             myVPop = myVPop.getSimData(myWorksheet);
+			% myVPop.vpIDs = getVPIDs(myWorksheet);
 			myVPop = myVPop.assignCoeffs(myWorksheet);
             if myVPop.spreadOut > 0
                 myVPop.coeffsDist = single(pdist2(myVPop.coeffsTable',myVPop.coeffsTable'));
             end
+            % Also enforce an update of the subpopulation table if a
+            % worksheet is provided
+            myVPop.subpopTable = updateSubpopTableVPs(myVPop.subpopTable, myWorksheet);            
         else
             myVPop.simData = myWorksheet.simData;
+			% myVPop.vpIDs = myWorksheet.vpIDs;
             myVPop.indexTable = myWorksheet.indexTable;
             myVPop.binEdges = myWorksheet.binEdges;
             myVPop.binMidPoints = myWorksheet.binMidPoints;
@@ -73,34 +78,35 @@ if continueFlag
     else %noBin
         if ~isa(myWorksheet,'VPop') && ~isa(myWorksheet,'VPopRECIST')
             myVPop = myVPop.getSimData(myWorksheet);
+			% myVPop.vpIDs = getVPIDs(myWorksheet);
             myVPop = myVPop.assignCoeffs(myWorksheet);
             if myVPop.spreadOut > 0
                 myVPop.coeffsDist = single(pdist2(myVPop.coeffsTable',myVPop.coeffsTable'));
             end
+            % Also enforce an update of the subpopulation table if a
+            % worksheet is provided
+            myVPop.subpopTable = updateSubpopTableVPs(myVPop.subpopTable, myWorksheet);   
         else
             myVPop.simData = myWorksheet.simData;
+			% myVPop.vpIDs = myWorksheet.vpIDs;
             % PWs will still be taken from the mapelOptions (later)
             myVPop.coeffsTable = myWorksheet.coeffsTable;
             if myVPop.spreadOut > 0
                 myVPop.coeffsDist = single(pdist2(myVPop.coeffsTable',myVPop.coeffsTable'));
-            end
+            end         
         end
     end
     												
     if myVPop.intSeed > -1
         rng(myVPop.intSeed, 'twister');
     end        
-	
     % Also assign the now static sim data into the bin tables initially
-    % rather than during execution to reduce table assignments and
-    % recalculating the 1D mesh.
-    myVPop = myVPop.addDistTableSimVals();
-    myVPop = myVPop.addDistTable2DSimVals();
-	myVPop = myVPop.addCorTableSimVals();
+    % rather than during execution to reduce table assignments.
+    myVPop = myVPop.addTableSimVals();
 	
 	% Get the parallel pools ready
 	optimizeType = myVPop.optimizeType;
-	if myVPop.poolRestart;
+	if myVPop.poolRestart
 		if ~isempty(gcp('nocreate'))
 			delete(gcp);
 		end
