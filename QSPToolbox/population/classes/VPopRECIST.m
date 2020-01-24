@@ -1339,7 +1339,7 @@ methods
               obj.distTable = myDistTable;												
           end   
 
-          myDistTable2D = obj.distTable2D;
+          myDistTable = obj.distTable2D;
           distRowsTarget1 = obj.simData.distRows2D(:,1);
 		  distRowsTarget2 = obj.simData.distRows2D(:,2);
           distRowsSource1 = find(~cellfun(@isempty,distRowsTarget1));
@@ -1351,7 +1351,7 @@ methods
 			  distRowsTarget2 = distRowsTarget2(distRowsSource2);
               % 2 step assignment to speed execution
               % first to matrix, then convert back to table.
-              [nDistRows, nDistCols] = size(myDistTable2D);
+              [nDistRows, nDistCols] = size(myDistTable);
               curSimValues1 = nan(nDistRows,  size(mySimData,2));
               curSimValues2 = nan(nDistRows,  size(mySimData,2));
               % We need a loop for the assignment
@@ -1376,8 +1376,8 @@ methods
                   keepIndices = keepIndices(keepIndicesRef);                  
                   
                   curVals = [curSimValues1(rowCounter,keepIndices); curSimValues2(rowCounter,keepIndices)];          
-                  myDistTable2D.('predSample'){rowCounter} = curVals;
-				  myDistTable2D.('predIndices'){rowCounter} = keepIndices;
+                  myDistTable.('predSample'){rowCounter} = curVals;
+				  myDistTable.('predIndices'){rowCounter} = keepIndices;
               end
               obj.distTable2D = myDistTable;												
           end               
