@@ -1,6 +1,6 @@
 function myVPs = resamplePCASpace(myNeighborsAndSelf,myVPIndex,relStd,nChildren,outputBounds)
-% This function transform VPs into PCA space, resamples around the VPs,
-% and transforms back.
+% This function transform VPs into PCA space, resamples around the parent VP
+% according to their variance, and transforms the new VPs back.
 %
 % ARGUMENTS
 %  myNeighborsAndSelf: matrix with VP of interest and neightbording VPs.

@@ -43,9 +43,16 @@ classdef expandVPopEffNOptions
 %                       Default = 0; 
 %  varyMethod :        Method to use to guide resampling.  See varyAxesOptions,
 %                       currently allowed values are 'gaussian' and 'localPCA'
-%  gaussianStd:        Degree of normalized gaussian noise to add to children of
+%  resampleStd:        Degree of normalized variability to add to children of
 %                       highest weighted VPs in each iteration when resampling. 
 %                       Default = 0.05;
+%                       If the varyMethod is gaussian, this is the std of
+%                       the resampling in the normalized units of the axis,
+%                       and values < 1 are appropriate.
+%                       If the varyMethod is localPCA, this is the standard
+%                       deviation relative to the PCA result, and values
+%                       greater than 1 should help to increase the
+%                       variability in the VPs.
 %  maxNewPerOld:       Maximum number of VPs to keep per old parent VP for each iteration.
 %                       This number can be exceeded if allowed by maxNewPerIter and the number of
 %                       parent VPs, but in the case when there aren't enough maxNewPerIter at least
@@ -56,7 +63,14 @@ classdef expandVPopEffNOptions
 %                       and the ones that are not weighted but look like they may be
 %                       useful are included.
 %                       Default = 2;
-%  screenFunctionName  A string with a name for a VP screening function.
+%  plausibleResponseTypeIDs A cell array of responseTypeIDs that will be used
+%                       as a post-simulation check to make sure VPs are
+%                       plasuble.  If left blank, all worksheet
+%                       responseTypes will be used.  Note VPs will be
+%                       screened for plausibility relative to the starting
+%                       worksheet.
+%  screenFunctionName  A string with a name for a VP pre-simulation
+%                       screening function.
 %                       The function will be called every iteration when
 %                       VPs are expanded.  The function should be in a file
 %                       in the MATLAB path with the same filename, do 
@@ -86,9 +100,10 @@ classdef expandVPopEffNOptions
 		restartPVal
 		expandRandomStart
 		varyMethod
-		gaussianStd
+		resampleStd
 		maxNewPerOld
 		nUnweightedParents
+        plausibleResponseTypeIDs
         screenFunctionName
 		selectByParent
 		verbose
@@ -330,12 +345,12 @@ classdef expandVPopEffNOptions
           end
       end 
 	  
-      function obj = set.gaussianStd(obj,myGaussianStd)
+      function obj = set.resampleStd(obj,myValue)
           failFlag = false;
-          if isnumeric(myGaussianStd) 
-              if isequal(size(myGaussianStd),[1 1])
-                  if (myGaussianStd >= 0)
-                      obj.gaussianStd = myGaussianStd;
+          if isnumeric(myValue) 
+              if isequal(size(myValue),[1 1])
+                  if (myValue >= 0)
+                      obj.resampleStd = myValue;
                   else
                       failFlag = true;
                   end
@@ -346,7 +361,7 @@ classdef expandVPopEffNOptions
               failFlag = true;
           end
           if failFlag
-              error(['Invalid gaussianStd specified for ',mfilename,'. A number >= 0 should be specified.'])
+              error(['Invalid resampleStd specified for ',mfilename,'. A number >= 0 should be specified.'])
           end
       end     	
 
@@ -389,6 +404,14 @@ classdef expandVPopEffNOptions
               error(['Invalid nUnweightedParents specified for ',mfilename,'. A number >= 0 should be specified.'])
           end
       end
+      
+	  function obj = set.plausibleResponseTypeIDs(obj,myValue)
+          if iscell(myValue)
+               obj.plausibleResponseTypeIDs = myValue;
+          else
+               error(['Property plausibleResponseTypeIDs in ',milename,' must be a cell.'])
+          end
+      end        
       
 	  function obj = set.screenFunctionName(obj,myScreenFunctionName)
           if ischar(myScreenFunctionName)
@@ -443,12 +466,14 @@ classdef expandVPopEffNOptions
                   value = obj.expandRandomStart;
               case 'varyMethod'
                   value = obj.varyMethod;				  
-              case 'gaussianStd'
-                  value = obj.gaussianStd;
+              case 'resampleStd'
+                  value = obj.resampleStd;
               case 'maxNewPerOld'
                   value = obj.maxNewPerOld;	
               case 'nUnweightedParents'
                   value = obj.nUnweightedParents;
+              case 'plausibleResponseTypeIDs'
+                  value = obj.plausibleResponseTypeIDs;                  
               case 'screenFunctionName'
                   value = obj.screenFunctionName;
               case 'selectByParent'
@@ -478,9 +503,10 @@ classdef expandVPopEffNOptions
 		  obj.restartPVal = 1E-4;
 		  obj.expandRandomStart = 0;
 		  obj.varyMethod = 'gaussian';
-		  obj.gaussianStd = 0.05;
+		  obj.resampleStd = 0.05;
 		  obj.maxNewPerOld = 2;
 		  obj.nUnweightedParents = 2;
+          obj.plausibleResponseTypeIDs = {};
           obj.screenFunctionName = '';
 		  obj.selectByParent = true;
 		  obj.verbose = true;		  

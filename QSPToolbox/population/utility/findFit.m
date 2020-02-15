@@ -50,7 +50,14 @@ if strcmp(myVPop.pwStrategy, 'bin')
             addInitialProbsTrans(addInitialProbsTrans<-1*pi/2) = -1*pi/2; 
             transProbVect = [transProbVect;addInitialProbsTrans];
         end
-        [nTest, lProbs] = size(transProbVect);   
+        [nTest, lProbs] = size(transProbVect);  
+        if (nTest < myVPop.optimizePopSize)
+            % Supplement with more initial points from a Sobol sample
+            mySobolSet = sobolset(lProbs);
+            mySobolSet = scramble(mySobolSet,'MatousekAffineOwen');
+            transProbVect = [transProbVect;net(mySobolSet,myVPop.optimizePopSize - nTest)*pi()-pi()/2];
+            [nTest, ~] = size(transProbVect);
+        end        
     end
 else
 	initialPWs=myVPop.pws;
@@ -67,7 +74,14 @@ else
 	myPWTrans = nan(nTest,lProbs);
 	for transCounter = 1 : nTest
 		myPWTrans(transCounter,:)=hyperTransform(initialPWs(transCounter,:));
-	end
+    end
+    if (nTest < myVPop.optimizePopSize) && ~(ismember(optimizeType,{'simplex'}))
+        % Supplement with more initial points from a Sobol sample
+        mySobolSet = sobolset(lProbs);
+        mySobolSet = scramble(mySobolSet,'MatousekAffineOwen');
+        myPWTrans = [myPWTrans;net(mySobolSet,myVPop.optimizePopSize - nTest)*pi()-pi()/2];
+        [nTest, ~] = size(myPWTrans);
+    end
 end
 
 % We'll strip away unnecessary data for the workers
@@ -230,7 +244,7 @@ elseif sum(ismember({'surrogate'},optimizeType)) > 0
     %     end
     disp(['Exited a set of iterations of surrogate optimization, with current best objective of ',num2str(fVals(optIndex)),'.  Attempting to refine in PSO.'])
     optimizeType = 'pso'; 
-elseif sum(ismember({'ga'},optimizeType)) > 0
+elseif sum(ismember({'ga','gapso'},optimizeType)) > 0
     optimOptions = gaoptimset;
     optimOptions.Display = 'diagnose';
     optimOptions.MaxTime = myVPop.optimizeTimeLimit;
@@ -243,14 +257,18 @@ elseif sum(ismember({'ga'},optimizeType)) > 0
 	if strcmp(myVPop.pwStrategy, 'bin')	
 		optimOptions.InitialPopulation = transProbVect;        
 		[optTransProbVect,fVal,exitFlag,output] = ga(anonymousFunction,lProbs,[],[],[],[],ones(1,lProbs)*-pi/2,ones(1,lProbs)*pi/2,[],optimOptions);
+		% Overwrite the first solution in transProbVect in case this is a gapaso run so we can use this start point
+		transProbVect(1,:) = optTransProbVect;
     else
         optimOptions.InitialPopulation = myPWTrans;    
 		[optTransPWsVect,fVal,exitFlag,output] = ga(anonymousFunction,lProbs,[],[],[],[],ones(1,lProbs)*-pi/2,ones(1,lProbs)*pi/2,[],optimOptions);		
+		% Overwrite the first solution in transProbVect in case this is a gapaso run so we can use this start point
+		myPWTrans(1,:) = optTransPWsVect;		
 	end	
 end
 
 % Separate statement for pso since this may be called as a secondary type.
-if sum(ismember({'pso'},optimizeType)) > 0
+if sum(ismember({'pso','gapso'},optimizeType)) > 0
     optimOptions = optimoptions('particleswarm');
     optimOptions.Display = 'iter';
     optimOptions.MaxTime = myVPop.optimizeTimeLimit;

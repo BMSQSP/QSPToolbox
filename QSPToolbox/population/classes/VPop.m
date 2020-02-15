@@ -92,10 +92,16 @@ classdef VPop
 %                fall below the target.
 %  optimizeTimeLimit:   Time limit for optimizing the VPop in s.
 %  optimizeType:        Type of optimization algorithm to employ: "pso,"
-%                       "ga," "simplex," or "surrogate."  Default is
+%                       "ga," "gapso," "simplex," or "surrogate."  Default is
 %                       "pso".
+%						 "ga" - MATLAB's GA
+%						 "pso" - MATLAB's PSO
+%						 "gapso" - MATLAB's GA, polished by MATLAB's PSO
+%						 "simplex" - MATLAB's simplex
+%						 "surrogate" - a short run of MATLAB's surrogate,
+%                                      polished by MATLAB's PSO
 %  optimizePopSize:     Number of solutions to try in each optimization
-%                       generation.  Only applies to "pso" and "ga".  This 
+%                       generation.  Most directly impacts GA and PSO steps.  This 
 %                       is the population size to use in the optimization 
 %                       runs. Default is 1000.
 %  objectiveLimit:		stopping condition for optimization
@@ -292,10 +298,10 @@ methods
       end  
       
       function obj = set.optimizeType(obj,myOptimizeType)
-          if sum(ismember({'pso','ga','simplex','surrogate'},lower(myOptimizeType))) == 1
+          if sum(ismember({'pso','ga','gapso','simplex','surrogate'},lower(myOptimizeType))) == 1
               obj.optimizeType = lower(myOptimizeType);
           else
-              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," "simplex," or "surrogate."'])
+              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," "gapso," "simplex," or "surrogate."'])
           end
       end       
       

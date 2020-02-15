@@ -137,6 +137,9 @@ if continueFlag
         curData.(RSCOREVar) = new_variable;  
         % We are just looking for BR, so this filter makes sense
         curData = curData(find(ismember(curData{:,BRSCOREVar},{'PD','SD','PR','CR'})),:);
+        
+        
+        
         % Now also filter once a patient hits CR, PD
         curPatientIDs = unique(curData{:,PatientIDVar},'stable');
         nPatients = length(curPatientIDs);
@@ -170,8 +173,15 @@ if continueFlag
         selectData.(RSCOREVar) = new_variable;          
 
         % We want a full matrix with nTimePoint x nVP with the BRSCORE.
+        % We also want to remove times that are missing a RSCORE measure
+        % Sometimes missing values are entered as blanks
+        selectData = selectData(find(~ismember(selectData{:,RSCOREVar},{' ',char(0)})),:);
+        
         allTimes = unique(selectData{:,timeVar});
         allTimes = sort(allTimes,'ascend');
+        if sum(allTimes == 2105) > 0
+            allTimes;
+        end
         % This may be redundant.  That is, we don't expect a response
         % unless we are beyond startTime anyway.
         allTimes = allTimes(find(allTimes>startTime));

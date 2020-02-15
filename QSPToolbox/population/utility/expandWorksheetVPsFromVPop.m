@@ -1,4 +1,4 @@
-function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,newVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, varyMethod, gaussianStd, maxNewPerOld, nUnweightedParents, selectByParent, myScreenFunctionName)
+function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,newVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, varyMethod, gaussianStd, maxNewPerOld, nUnweightedParents, selectByParent, myScreenFunctionName)
 % This function expands a worksheet given a VPop.  It selected out VPs to expand around,
 % samples for new VPs, scores the "children" based on available data, and adds
 % the best children to the worksheet.
@@ -13,12 +13,7 @@ function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,ne
 %                       incrementing to avoid issues with repeated VPIDs.
 %  maxNewPerIter:      maximum new VPs we can add per iteration.  Set to 
 %                       -1 to use the VPop effN
-%  testBounds:         a cell array of bounds for the response Types.
-%                       there's a quirky formatting here where each cell
-%                       is the limits on the coutput of non-axis
-%                       rows of the values field of createResponseSummaryTable.
-%                       TODO: update this to take a cell array of
-%                       standard outputs of evaluateResponseType
+%  myScreenTable:      a screen table to idenify VPs to keep
 %  expandCohortSize:   size of the cohort to generate for testing
 %  varyMethod:         method for resampling.  i.e. 'gaussian' or 'localPCA'
 %  gaussianStd:        standard deviation for the re-sampled parameters.
@@ -74,9 +69,9 @@ if continueFlag
         testVPop = VPop;
     elseif isa(newVPop,'VPopRECIST')
         testVPop = VPopRECIST;
-    elseif isa(newVPop,'VPopRECISTnoBin')
-        testVPop = VPopRECISTnoBin;
     end
+    testVPop.pwStrategy = newVPop.pwStrategy;
+    
     testVPop.expData = newVPop.expData;
     testVPop.mnSDTable = newVPop.mnSDTable;
     testVPop.binTable = newVPop.binTable;
@@ -84,7 +79,7 @@ if continueFlag
     testVPop.distTable2D = newVPop.distTable2D;   
     testVPop.corTable = newVPop.corTable;
     testVPop.subpopTable = newVPop.subpopTable;
-    if isa(newVPop,'VPopRECIST') || isa(newVPop,'VPopRECISTnoBin')
+    if isa(newVPop,'VPopRECIST') 
         testVPop.brTableRECIST = newVPop.brTableRECIST;
         testVPop.rTableRECIST = newVPop.rTableRECIST;        
         testVPop.relSLDvar = newVPop.relSLDvar;
@@ -92,7 +87,7 @@ if continueFlag
         testVPop.crCutoff = newVPop.crCutoff;             
         testVPop.recistSimFilter = createRECISTSimFilter(myWorksheet, testVPop);
     end
-    if ~isa(newVPop,'VPopRECISTnoBin')
+    if isequal(newVPop.pwStrategy,'direct')
 		testVPop = testVPop.assignIndices(myWorksheet, myMapelOptions);
     end
     testVPop = testVPop.getSimData(myWorksheet);
@@ -192,45 +187,19 @@ if continueFlag
     end
     
     jitteredWorksheet = simulateWorksheet(jitteredWorksheet,mySimulateOptions);
-
-    % Update VPIDs as some will fail simulation
     curVPIDs = getVPIDs(jitteredWorksheet);
+    originalIndices = (find(ismember(curVPIDs,originalVPIDs)));
     newIndices = (find(~ismember(curVPIDs,originalVPIDs)));
-    newVPIDs = curVPIDs(newIndices);
+    newVPIDs = curVPIDs(newIndices);     
 
     % Identify the VPs that don't fulfill the worksheet response
     % as well as those in the initial worksheet in order to filter
     % them.
-    newInvalidIndices = nan(1,0);
-    for responseTypeCounter = 1 : nResponseTypes
-        curTable = createResponseSummaryTable(jitteredWorksheet, allResponseTypeIDs{responseTypeCounter});
-        curInvalidIndices = find(sum(curTable.values((nAxis+1):end,newIndices)>testBounds{responseTypeCounter},1)>0);
-        if length(curInvalidIndices) > 0
-            newInvalidIndices = [newInvalidIndices, curInvalidIndices];
-        end
-    end
-
-    % Get the new VPs in the worksheet that look OK
-    allChildrenNames = newVPIDs;
-    if length(newInvalidIndices) > 0
-        newInvalidIndices = sort(unique(newInvalidIndices),'ascend');
-        newInvalidIDs = newVPIDs(newInvalidIndices);
-        newValidIndices = find(~ismember(allChildrenNames,newInvalidIDs));
-        allChildrenNames = allChildrenNames(newValidIndices);
-    else
-        newValidIndices = nan(1,0);
-        allChildrenNames = cell(1,0);
-    end
-
-    % Just keep the valid VPs
-    jitteredWorksheet = copyWorksheet(jitteredWorksheet,[originalVPIDs,allChildrenNames]);
+    jitteredWorksheet = screenWorksheetVPs(jitteredWorksheet, myScreenTable, true, newVPIDs);
     curVPIDs = getVPIDs(jitteredWorksheet);
     originalIndices = (find(ismember(curVPIDs,originalVPIDs)));
     newIndices = (find(~ismember(curVPIDs,originalVPIDs)));
-    newVPIDs = curVPIDs(newIndices);
-
-    
-    
+    newVPIDs = curVPIDs(newIndices); 
     
     % We create a "dummy" vpop object to help identify
     % areas where we may need to expand the range in simulated

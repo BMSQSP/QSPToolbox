@@ -23,10 +23,6 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
 %                    scores indicate more useful VPs.
 %
 
-	flagCheck2D = false;
-	if ~isa(testVPop,'VPop')
-		flagCheck2D = true;
-    end	
     
     [nTestOutcomes,~] = size(testVPop.simData.rowInfo);
     ExpandIncreaseSimDataRows = nan(0,1);
@@ -301,7 +297,6 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
         end
     end
 	
-	if flagCheck2D
 		[n2DComparisons, ~] = size(testVPop.distTable2D);
 		if (n2DComparisons > 0)
 			addScore = zeros(n2DComparisons,length(newIndices));           
@@ -348,7 +343,6 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
 		else
 			flagCheck2D = false;
 		end
-	end
     
 	
     if isa(testVPop,'VPopRECIST')

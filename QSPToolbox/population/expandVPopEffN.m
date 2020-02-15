@@ -1,4 +1,4 @@
-function [myWorksheet, newVPop] = expandVPopEffN(myWorksheet,refWorksheet,myExpandVPopEffNOptions,myMapelOptions, hotStartVPop)
+function [myWorksheet, newVPop] = expandVPopEffN(myWorksheet,myExpandVPopEffNOptions,myMapelOptions, hotStartVPop)
 % This function takes a worksheet, options object
 % mapelOptions object, as well as a reference 
 % worksheet for response type bounds,
@@ -16,10 +16,6 @@ function [myWorksheet, newVPop] = expandVPopEffN(myWorksheet,refWorksheet,myExpa
 % 
 % ARGUMENTS:
 %  myWorksheet:             A worksheet to expand
-%  refWorksheet:            A reference worksheet to use for testBounds.  This should
-%                            have the same response types and axes as myWorksheet.
-%                            It could be a repeat of myWorksheet if
-%                            you just want to maintain current bounds.
 %  myExpandVPopEffNOptions: An expandVPopEffNOptions object
 %  myMapelOptions:          A mapelOptions object
 %  hotStartVPop:            A VPop object, will try to hot
@@ -39,17 +35,15 @@ function [myWorksheet, newVPop] = expandVPopEffN(myWorksheet,refWorksheet,myExpa
 %
 
 continueFlag = false;
-if nargin > 5
-    warning(['Too many input arguments to ',mfilename, '. Arguments should be: myWorksheet, refWorksheet, myExpandVPopEffNOptions, and myMapelOptions. Optionally: hotStartVPop.'])
+if nargin > 4
+    warning(['Too many input arguments to ',mfilename, '. Arguments should be: myWorksheet, myExpandVPopEffNOptions, and myMapelOptions. Optionally: hotStartVPop.'])
     continueFlag = false;
     hotStartVPop = '';    
-elseif nargin > 4
-    continueFlag = true;
 elseif nargin > 3
     continueFlag = true;
     hotStartVPop = '';
 else 
-    warning(['Insufficient input arguments to ',mfilename, '. Arguments should be: myWorksheet, refWorksheet, myExpandVPopEffNOptions, and myMapelOptions. Optionally: hotStartVPop.'])
+    warning(['Insufficient input arguments to ',mfilename, '. Arguments should be: myWorksheet, myExpandVPopEffNOptions, and myMapelOptions. Optionally: hotStartVPop.'])
     continueFlag = false;
 end
 
@@ -61,13 +55,21 @@ if continueFlag
     if ~ismember(class(myMapelOptions),{'mapelOptions','mapelOptionsRECIST','mapelOptionsRECISTnoBin'})
         warning(['Argument myMapelOptions to ',mfilename, ' should be of class mapelOptions or mapelOptionsRECIST or mapelOptionsRECISTnobin.'])
         continueFlag = false;
-    end    
-    if ~isequal(myWorksheet.responseTypes,refWorksheet.responseTypes)
-        warning(['The response types for myWorksheet and refWorksheet should be the same in ',mfilename, '.'])
-        continueFlag = false;
-    end         
+    end      
 end 
     
+if continueFlag
+    allResponseTypeIDs = getResponseTypeIDs(myWorksheet);
+    if length(myExpandVPopEffNOptions.plausibleResponseTypeIDs) == 0
+        myExpandVPopEffNOptions.plausibleResponseTypeIDs = allResponseTypeIDs;
+        disp(['No plausibleResponseTypeIDs defined by myExpandVPopEffNOptions in call to ',mfilename, '.  Using all worksheet responseTypeIDs.'])
+        continueFlag = true;
+    elseif sum(ismember(myExpandVPopEffNOptions.plausibleResponseTypeIDs,allResponseTypeIDs)) < length(myExpandVPopEffNOptions.plausibleResponseTypeIDs)
+        warning(['The response types for myExpandVPopEffNOptions were not all found in the worksheet provided to ',mfilename, '.'])
+        continueFlag = false;
+    end   
+end
+
 if continueFlag    
     suffix = myExpandVPopEffNOptions.suffix;
     wsIterCounter = myExpandVPopEffNOptions.wsIterCounter;
@@ -96,21 +98,11 @@ if continueFlag
     % Make sure results are present.  Here, we don't re-simulate VPs if 
     % results are present.
     myWorksheet = simulateWorksheet(myWorksheet);
-    refWorksheet = simulateWorksheet(refWorksheet);    
-    allResponseTypeIDs = getResponseTypeIDs(myWorksheet);
-    nResponseTypes = length(allResponseTypeIDs);
 
-    % Get the responseType evaluation results
-    % so we can enforce these as criteria new VPs will need pass.
-    % We repopulated these before re-simulating the worksheet.
-    myCoeffs = getVPCoeffs(refWorksheet);
-    [nAxis, ~] = size(myCoeffs);
-    myResponseSummaryTables = cell(1,nResponseTypes);
-    testBounds = cell(1,nResponseTypes);
-    for responseTypeCounter = 1 : nResponseTypes
-        myResponseSummaryTables{responseTypeCounter} = createResponseSummaryTable(refWorksheet, allResponseTypeIDs{responseTypeCounter});
-        testBounds{responseTypeCounter} = max(myResponseSummaryTables{responseTypeCounter}.values((nAxis+1):end,:),[],2);
-    end
+    % Create a screen table
+    % so we can enforce new VPs will need pass within bounds
+    % set by the starting worksheet.
+    myScreenTable = createScreenTable(myWorksheet, myExpandVPopEffNOptions.plausibleResponseTypeIDs, true);
 
     if (~ismember(class(hotStartVPop),{'VPop','VPopRECIST'}))
         nVPopsFound = 0;
@@ -128,6 +120,17 @@ if continueFlag
 		end  
 		myMapelOptions.intSeed=-1;
 	end	
+	
+	% We will manually refresh the pool once at the start.
+	if ~isempty(gcp('nocreate'))
+		delete(gcp);
+	end
+	if isempty(gcp('nocreate'))
+		% We will use default pool settings
+		mySimulateOptions = simulateOptions;
+		mySimulateOptions = checkNWorkers(mySimulateOptions);		
+		myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
+	end		
 
     while curEffN < (targetEffN + effNDelta)
 		% Set the initial best p value to a negative
@@ -137,18 +140,7 @@ if continueFlag
 		% if calibrations fail.
         bestPVal = -1;
         myMapelOptions.minEffN = curEffN;
-        myTestCounter = 0;
-		
-		% We will manually refresh the pool once each outer iteration.
-		if ~isempty(gcp('nocreate'))
-			delete(gcp);
-		end
-		if isempty(gcp('nocreate'))
-			% We will use default pool settings
-			mySimulateOptions = simulateOptions;
-			mySimulateOptions = checkNWorkers(mySimulateOptions);		
-			myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
-		end			
+        myTestCounter = 0;		
 		
         while bestPVal < minPVal
             myTestCounter = myTestCounter + 1;
@@ -313,7 +305,7 @@ if continueFlag
             if (mod(myTestCounter,nTries) == 0) && (nVPopsFound > 0) && ~((newVPop.gof > minPVal) && (1/sum(newVPop.pws.^2) >= curEffN))
                 if expandCohortSize > 0
                     wsIterCounter = wsIterCounter + 1;
-                    [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.gaussianStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.nUnweightedParents, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
+                    [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.resampleStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.nUnweightedParents, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
                     saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]); 
                     % We need to update the mapelOptions subpopTables with
                     % the new VPs.
@@ -334,7 +326,7 @@ if continueFlag
             if expandCohortSize > 0
                 % Get ready to expand VPs
                 wsIterCounter = wsIterCounter+1;
-                [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet, oldVPop, myMapelOptions, suffix,wsIterCounter, maxNewPerIter, testBounds, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.gaussianStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.nUnweightedParents, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
+                [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet, oldVPop, myMapelOptions, suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.resampleStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.nUnweightedParents, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
                 % We need to update the mapelOptions subpopTables with
                 % the new VPs.
                 % myMapelOptions.subpopTable = updateSubpopTableVPs(myMapelOptions.subpopTable, myWorksheet);

@@ -68,8 +68,7 @@ if continueFlag
     
     % get names of all mechanistic axes (Parameters)
     myAxisDefs = getAxisDefIDs(myWorksheet)';
-    % get and define certain numbers
-    myInterventionIDs = getInterventionIDs(myWorksheet);
+    % define number of Interventions, SampleTimes and OutputVariables
     nInterventionIDs = length(myInterventionIDs);
     nTimes = length(mySampleTimes);
     nOutputs = length(myOutputVariables);

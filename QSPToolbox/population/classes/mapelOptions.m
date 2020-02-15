@@ -39,15 +39,19 @@ classdef mapelOptions
 %                     - if set to -1, we will try to find a near optimum starting
 %                       point based on a linearized problem formulation.
 %                       ONLY USED IN DIRECT PWSTRATEGY		  
-% randomStart:       (Optional) If 0, the initial 
-%                    parameters are not perturbed in anyway.  Otherwise the 
-%                    transformed initial bin probabilities are perturbed  
-%                    with random (normally distributed) noise that has
-%                    normalized standard deviation of the specified value.  
-%                    If no initialProbs are specified, a value of zero 
-%                    results in uniform bin probabilities and a value >0 
-%                    results in uniform normal initial bin probabilities  
-%                    (renormalized so the margin is 1).
+% randomStart:       (Optional) 
+%					 - If 0 (default), the initial 
+%                      parameters are not perturbed in anyway.  
+%                    - If greater than 0, the 
+%                      transformed initial probabilities are perturbed  
+%                      with random (normally distributed) noise that has
+%                      normalized standard deviation of the specified value.  
+%                      Suggest a value less than 1.
+%                    - If initialProbs/initialPWs are not specified, a value of zero 
+%					   results in uniform initial probabilities
+%                    - If initialProbs/initialPWs are not specified, a value > 0 
+%                      results in uniformly sampled initial probabilities,
+%                      renormalized 
 % nIters:            (Optional) number of iterations for the simplex 
 %                    solver, ignored for other optimizeType options.  The
 %                    default is 10,000.
@@ -79,9 +83,15 @@ classdef mapelOptions
 %                    apply to the simplex method.  Default is 10*60 s,
 %                    which will not be sufficient in many cases.
 % optimizeType:      Type of optimization algorithm to employ: "pso,"
-%                     "ga," "simplex," or "surrogate."  Default is
+%                     "ga," "gapso," "simplex," or "surrogate."  Default is
 %                     "pso".
-% optimizePopSize:   (Optional) only applies to "pso" and "ga".  This is
+%						"ga" - MATLAB's GA
+%						"pso" - MATLAB's PSO
+%						"gapso" - MATLAB's GA, polished by MATLAB's PSO
+%						"simplex" - MATLAB's simplex
+%						"surrogate" - a short run of MATLAB's surrogate,
+%                                     polished by MATLAB's PSO
+% optimizePopSize:   (Optional) most directly impacts GA and PSO steps.  This is
 %                    the population size to use in the optimization runs.
 %                    Default is 1000.
 % objectiveLimit:    stopping condition for optimization
@@ -247,10 +257,10 @@ classdef mapelOptions
       end  
       
       function obj = set.optimizeType(obj,myOptimizeType)
-          if sum(ismember({'pso','ga','simplex','surrogate'},lower(myOptimizeType))) == 1
+          if sum(ismember({'pso','ga','gapso','simplex','surrogate'},lower(myOptimizeType))) == 1
               obj.optimizeType = lower(myOptimizeType);
           else
-              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," "simplex," or "surrogate."'])
+              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," "gapso," "simplex," or "surrogate."'])
           end
       end      
       

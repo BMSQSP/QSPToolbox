@@ -140,7 +140,7 @@ if continueFlag
             for newVPCounter = 1 : myVaryAxesOptions.newPerOld
                 newVPIDs{1, newVPCounter + (baseVPCounter-1) * myVaryAxesOptions.newPerOld} = [myVaryAxesOptions.baseVPIDs{baseVPCounter},additionalIDString,num2str(newVPCounter)];
             end
-        end
+        end   
     elseif strcmp(myVaryAxesOptions.varyMethod,'gaussian')
         newVPIDs = cell(1,myVaryAxesOptions.newPerOld * nBaseVPs);
         randomCoefficients = nan(nRAxis,myVaryAxesOptions.newPerOld * nBaseVPs);
@@ -155,21 +155,49 @@ if continueFlag
         indicesNeg = find(randomCoefficients < 0);
         randomCoefficients(indicesNeg) = 0;
         indicesBig = find(randomCoefficients > 1);
-        randomCoefficients(indicesBig) = 1;     
+        randomCoefficients(indicesBig) = 1;    
     elseif strcmp(myVaryAxesOptions.varyMethod,'localpca')
         newVPIDs = cell(1,myVaryAxesOptions.newPerOld * nBaseVPs);
         randomCoefficients = nan(nRAxis,myVaryAxesOptions.newPerOld * nBaseVPs);
+		% Transpose VPs from columns to rows for pdist2
 		vpDistance = pdist2(existingVPCoefficients',existingVPCoefficients');
         for baseVPCounter = 1 : nBaseVPs
 			% Find the VPs closest to the current base
             curDistance = vpDistance(baseVPIndices(baseVPCounter),:);
 			% Get just enough for a square matrix so we can compute principal components
-			[B, sortI] = sort(curDistance,'ascend');
-			localCoeffs = existingVPCoefficients(:,sortI(1:(nAxis+1)));
-			% Bounds will be adjusted in the function
-			randomCoefficients(:, ((baseVPCounter-1) * myVaryAxesOptions.newPerOld + 1) : (baseVPCounter*myVaryAxesOptions.newPerOld)) = resamplePCASpace(localCoeffs,1,myVaryAxesOptions.gaussianStd,myVaryAxesOptions.newPerOld,[zeros(nAxis,1),ones(nAxis,1)]);
-            for newVPCounter = 1 : myVaryAxesOptions.newPerOld
-                newVPIDs{1, newVPCounter + (baseVPCounter-1) * myVaryAxesOptions.newPerOld} = [myVaryAxesOptions.baseVPIDs{baseVPCounter},additionalIDString,num2str(newVPCounter)];
+			[~, sortI] = sort(curDistance,'ascend');
+            % Exclude VPs that are too close.
+            % This is a bit arbitrary.
+            excludeI = find(curDistance<=1E-8);
+            sortI = setdiff(sortI, excludeI);
+            sortI = [baseVPIndices(baseVPCounter), sortI];
+			% Check for linear independence
+            % This will iterate until a set of
+            % basis vectors of sufficient number are found,
+            % Starting with the nearest VPs and expanding.
+            existingVPCoefficients = existingVPCoefficients(:,sortI);
+            % Check independence of the non-parent VPs
+            [addBasisVPCoefficients, VPind] = getLinearIndependentVectors(existingVPCoefficients(:,2:end));
+            addBasisVPCoefficients = [existingVPCoefficients(:,1),addBasisVPCoefficients];
+            VPind = [1, (VPind+1)];
+            
+            if length(VPind) >= nAxis + 1
+                % Bounds will be adjusted in the function
+                randomCoefficients(:, ((baseVPCounter-1) * myVaryAxesOptions.newPerOld + 1) : (baseVPCounter*myVaryAxesOptions.newPerOld)) = resamplePCASpace(addBasisVPCoefficients,1,myVaryAxesOptions.gaussianStd,myVaryAxesOptions.newPerOld,[zeros(nAxis,1),ones(nAxis,1)]);
+                for newVPCounter = 1 : myVaryAxesOptions.newPerOld
+                    newVPIDs{1, newVPCounter + (baseVPCounter-1) * myVaryAxesOptions.newPerOld} = [myVaryAxesOptions.baseVPIDs{baseVPCounter},additionalIDString,num2str(newVPCounter)];
+                end                
+            else
+                % * 0.05 rather than * 0.1 is less aggressive for the gaussian
+                % but also finds more solutions if the output is constrained            
+                randomCoefficients(:, ((baseVPCounter-1) * myVaryAxesOptions.newPerOld + 1) : (baseVPCounter*myVaryAxesOptions.newPerOld)) = (randn(nRAxis,myVaryAxesOptions.newPerOld) * 0.05* myVaryAxesOptions.gaussianStd) + repmat(baseVPCoefficients(variedAxisIndices, baseVPCounter), 1, myVaryAxesOptions.newPerOld);
+                for newVPCounter = 1 : myVaryAxesOptions.newPerOld
+                    newVPIDs{1, newVPCounter + (baseVPCounter-1) * myVaryAxesOptions.newPerOld} = [myVaryAxesOptions.baseVPIDs{baseVPCounter},additionalIDString,num2str(newVPCounter)];
+                end
+                indicesNeg = find(randomCoefficients < 0);
+                randomCoefficients(indicesNeg) = 0;
+                indicesBig = find(randomCoefficients > 1);
+                randomCoefficients(indicesBig) = 1;                     
             end
         end 		
     elseif strcmp(myVaryAxesOptions.varyMethod,'lh')
@@ -248,8 +276,9 @@ if continueFlag
             for newVPBCounter = 1 : myVaryAxesOptions.newPerOld
                 newVPIDs{1, 2*myVaryAxesOptions.newPerOld + (newVPACounter - 1) * myVaryAxesOptions.newPerOld + newVPBCounter} = [myVaryAxesOptions.baseVPIDs{1},additionalIDString,'C__B_',num2str(newVPBCounter),'_A_',num2str(newVPACounter)];
             end
-        end                  
+        end
     end
+    
     nNewVPs = length(newVPIDs);
     nWshVPs = length(testVPIDs);
     [nInterventions, ~] = size(myWorksheet.interventions);

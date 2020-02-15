@@ -19,7 +19,16 @@ classdef clusterPickOptions
 %                           for responseTypeElementPoints only the last time
 %                           point will be used (boolean)
 %  maxIter:         Maximum number of iterations
-%  algorithm:       kmedoid algorithm to use
+%  algorithm:       kmedoid algorithm to use.  These are taken from MATLAB
+%                    and valid options include:
+%                       'pam' (default): classical Partition Around Medoids
+%                       'clara': a good alternative if clustering more than
+%                                a couple thousand VPs.  Scales better than
+%                                PAM.
+%                       'small': uses an algorithm similar to k-means to
+%                                find medoids
+%                       'large': similar to 'small' but uses a random
+%                                sample
 %  replicates:      Number of replicates
 
    properties

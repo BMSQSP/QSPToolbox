@@ -87,17 +87,17 @@ if flagContinue
         interventionsRECISTClass = unique(myBRTableRECIST{:,'interventionID'});
         if sum(~ismember(myInterventionIDs, interventionsRECISTClass)) > 0
             if poolObsTimes
-                warning([mfilename,' found not all interventions to have RECIST classification times in myVPopRECIST.brTableRECIST for scoring.  Creating a simFilter for mechanistic dropouts using classification times for interventions where available, and pooling all observation times from other interventions where not.'])
+                disp([mfilename,' found not all interventions to have RECIST classification times in myVPopRECIST.brTableRECIST for scoring.  Creating a simFilter for mechanistic dropouts using classification times for interventions where available, and pooling all observation times from other interventions where not.'])
             else
-                warning([mfilename,' found not all interventions to have RECIST classification times in myVPopRECIST.brTableRECIST for scoring.  Creating a simFilter for mechanistic dropouts using classification times for interventions where available, and assuming no dropouts from other interventions where not.'])
+                disp([mfilename,' found not all interventions to have RECIST classification times in myVPopRECIST.brTableRECIST for scoring.  Creating a simFilter for mechanistic dropouts using classification times for interventions where available, and assuming no dropouts from other interventions where not.'])
             end
         end
         if sum(~ismember(interventionsRECISTClass,myInterventionIDs)) > 0
-            warning([mfilename,' found not all RECIST classification interventions are present.  Proceeding, but be careful about this mismatch as there are interventions in the VPop that are not in the worksheet!'])
+            disp([mfilename,' found not all RECIST classification interventions are present.  Proceeding, but be careful about this mismatch as there are interventions in the VPop that are not in the worksheet!'])
             flagContinue = true;
         end    
     else
-        warning([mfilename,' found no interventions to have RECIST classification times in myVPopRECIST.brTableRECIST for scoring.  Creating a simFilter for mechanistic dropouts assuming no dropouts from interventions.'])
+        disp([mfilename,' found no interventions to have RECIST classification times in myVPopRECIST.brTableRECIST for scoring.  Creating a simFilter for mechanistic dropouts assuming no dropouts from interventions.'])
         poolObsTimes = false;
     end
 end
