@@ -146,7 +146,7 @@ if flagContinue
     flagRunSim = ones(1, nSimulations);
     flagRunVP = ones(1, nVPs);
     [nInterventionResults, nVPResults] = size(myWorksheet.results);
-    if ((nInterventionResults == nInterventions) && (nVPResults == nVPs) && (sum(ismember({'gacohort','psocohort'},optimizeType))<1))
+    if ((nInterventionResults == nInterventions) && (nVPResults == nVPs) && (sum(ismember({'gacohort','psocohort','surrogatecohort'},optimizeType))<1))
         if ~(rerunExisting)
             myResultClasses = cellfun(@class,myWorksheet.results, 'UniformOutput', false);
             % Results should be stored in a structure, we assume 
@@ -236,7 +236,7 @@ if flagContinue
             end
         end
 
-    elseif sum(ismember({'gacohort','psocohort'},optimizeType)) > 0
+    elseif sum(ismember({'gacohort','psocohort','surrogatecohort'},optimizeType)) > 0
         % When we call an optimization, we will need to also
         % get the variable/element indices and bounds along the axes
         [indicesForVaried, boundsForVaried, axisScale] = getOptimizationAxes(myWorksheet, mySimulateOptions);
@@ -262,7 +262,7 @@ if flagContinue
     end
     
     
-    if sum(ismember({'fmincon','ga','pso','gacohort','psocohort'},optimizeType)) > 0
+    if sum(ismember({'fmincon','ga','pso','gacohort','psocohort','surrogatecohort'},optimizeType)) > 0
         % If we just ran an optimization, update the results stored in the
         % worksheet with the new VPs
         newSimulateOptions = mySimulateOptions;

@@ -174,6 +174,22 @@ if continueFlag
                 myUpdatedObject.mnSDTable = myMnSDTable;
                 disp(['mnSDTable table automatically updated to include predIndices column in ',mfilename,'.'])
             end
+			if sum(ismember(myMnSDTable.Properties.VariableNames,'logN')) < 1
+				logN = false(nRows,1);
+                if isa(myUpdatedObject,'VPop') || isa(myUpdatedObject,'mapelOptions')
+                    tableVariableNames = commonNames.VPOPTABLEVARNAMESFIXED;
+                    nDataHeaderCols = length(commonNames.VPOPTABLEVARNAMESFIXED);
+                else
+                    tableVariableNames = commonNames.VPOPRECISTTABLEVARNAMESFIXED;
+                    nDataHeaderCols = length(commonNames.VPOPRECISTTABLEVARNAMESFIXED);
+                end
+                tableVariableNames = [tableVariableNames,{'logN','weightMean', 'weightSD', 'expN', 'expMean', 'expSD', 'predN', 'predIndices', 'predMean', 'predSD'}];
+                myMnSDTable = [myMnSDTable, array2table(logN)];
+                myMnSDTable = myMnSDTable(:,tableVariableNames);
+                myUpdatedObject.mnSDTable = myMnSDTable;
+                disp(['mnSDTable table automatically updated to include lognormal column in ',mfilename,'.'])
+			end
+			
         end
     end
 	if isa(myUpdatedObject, 'VPopRECIST') || isa(myUpdatedObject, 'VPop') || isa(myUpdatedObject, 'mapelOptionsRECIST') || isa(myUpdatedObject, 'mapelOptions')   

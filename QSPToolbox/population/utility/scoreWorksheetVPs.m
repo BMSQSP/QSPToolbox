@@ -168,7 +168,11 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
 				if ~isempty(mnSDRow)
 					if ((myMnSdData{mnSDRow,'weightMean'}>0) & (myMnSdData{mnSDRow,'weightSD'}>0))
 					
+						% Take the log if appropriate
 						[~,simValsSortIndices] = sort(curSimVals,'ascend');
+						if myMnSdData{mnSDRow,'logN'}
+							originalValsSort = log(originalValsSort)
+						end
 						
 						% We'll just evaluate the hypothetical PDF at the simulated points
 						originalRange = originalValsSort(length(originalValsSort)) - originalValsSort(1);
@@ -179,8 +183,19 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
 						% Calculate VP scores
 						% by comparing the cohort PDF to data						
 						[PDFsim,~] = ksdensity(originalValsSort,SCall,'bandwidth',curBandWidth);%,'Support',[min(SC)-eps max(SC)+eps]);
-						% We just take SCall as the experimental data points, then
-						PDFexp = normpdf(SCall,myMnSdData{mnSDRow,'expMean'},myMnSdData{mnSDRow,'expSD'});
+						% We just take SCall as the experimental data points
+						
+						expMnBak = myMnSdData{mnSDRow,'expMean'};
+						expSDBak = myMnSdData{mnSDRow,'expSD'};
+						if myMnSdData{mnSDRow,'logN'}
+							expMn = log(expMnBak./sqrt(1+(expSDBak.^2)./(expMnBak.^2)));
+							expSD = sqrt(log(1+(expSDBak.^2)./(expMnBak.^2)));
+						else
+							expMn = expMnBak;
+							expSD = expSDBak;
+						end
+
+						PDFexp = normpdf(SCall,expMn,expSD);
 			
 						% The PDF integral may not quite be ~1 since the
 						% pdf density is not restricted to

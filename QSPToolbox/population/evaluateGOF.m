@@ -62,16 +62,31 @@ if continueFlag
 
     if ~isempty(myMnSDTable)
         % Evaluate mn sd first
-        meanResids = myMnSDTable{:,'expMean'} - myMnSDTable{:,'predMean'};
+        % meanResids = myMnSDTable{:,'expMean'} - myMnSDTable{:,'predMean'};
         expN = myMnSDTable{:,'expN'};
         predN = myMnSDTable{:,'predN'};
+		expMn = myMnSDTable{:,'expMean'};
         expSD = myMnSDTable{:,'expSD'};
         predSD = myMnSDTable{:,'predSD'};
+		predMn = myMnSDTable{:,'predMean'};
+		logN = myMnSDTable{:,'logN'};
+		
+		% Convert lognormal summary data
+		if sum(logN) > 0
+			expSDBak = expSD;
+			expMnBak = expMn;
+			predSDBak = predSD;
+			predMnBak = predMn;
+			predMn(logN) = log(predMnBak(logN)./sqrt(1+(predSDBak(logN).^2)./(predMnBak(logN).^2)));
+			expMn(logN) = log(expMnBak(logN)./sqrt(1+(expSDBak(logN).^2)./(expMnBak(logN).^2)));
+			predSD(logN) = sqrt(log(1+(predSDBak(logN).^2)./(predMnBak(logN).^2)));
+			expSD(logN) = sqrt(log(1+(expSDBak(logN).^2)./(expMnBak(logN).^2)));
+		end
 
         % First we apply the t-test
         denominator = ( ((predN-1).*predSD.^2 + (expN-1).*expSD.^2)./(predN+expN-2) ).^.5;
         denominator = denominator.*((predN + expN)./(predN.*expN)).^.5;
-        deltaMean = myMnSDTable{:,'predMean'} - myMnSDTable{:,'expMean'};
+        deltaMean = predMn - expMn;
         tStat = deltaMean./denominator;
         % We want the two-sided test
         meanPvals = tcdf(-1*abs(tStat),predN+expN-2);

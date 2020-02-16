@@ -15,7 +15,7 @@ classdef simulateOptions
 %                       Valid strings are:
 %                        'none'
 %                        individual VPs: 'fmincon','ga','pso'
-%                        VPs as groups: 'gacohort','psocohort'
+%                        VPs as groups: 'gacohort','psocohort', 'surrogatecohort'
 % optimizeTimeLimit:    only used if optimization is specified.  This will
 %                       limit the allowed time if optimization is
 %                       specified.
@@ -75,7 +75,7 @@ classdef simulateOptions
       end      
       
       function obj = set.optimizeType(obj,myOptimizeType)
-          allowedSettings = {'none','fmincon','ga','pso','gacohort','psocohort'};
+          allowedSettings = {'none','fmincon','ga','pso','gacohort','psocohort','surrogatecohort'};
           if sum(ismember(allowedSettings,lower(myOptimizeType))) > 0
                obj.optimizeType = lower(myOptimizeType);
           else
@@ -303,7 +303,7 @@ classdef simulateOptions
           end
       
           % gacohort/psocohort have an additional requirement to meet.
-          if sum(ismember({'gacohort','psocohort'},obj.optimizeType)) > 0
+          if sum(ismember({'gacohort','psocohort','surrogatecohort'},obj.optimizeType)) > 0
               allAxisIDs = getAxisDefIDs(myWorksheet);
               allVPIDs = getVPIDs(myWorksheet);
               nVPs = length(allVPIDs);
@@ -313,7 +313,7 @@ classdef simulateOptions
                       myVPCoeffs = getVPCoeffs(myWorksheet);
                       myVPCoeffs = myVPCoeffs(alteredAxisIndices,:);
                       if sum(ismember(transpose(myVPCoeffs),transpose(myVPCoeffs(:,1)),'rows')) < nVPs
-                          warning(['If optimizeType is "gacohort" or "psocohort," all non-optimized VP coefficients in worksheet must be identical.'])
+                          warning(['If optimizeType is "gacohort," "psocohort," or "surrogatecohort," all non-optimized VP coefficients in worksheet must be identical.'])
                           passCheck = false;
                       end
                       allVPIDs = getVPIDs(myWorksheet);
@@ -327,7 +327,7 @@ classdef simulateOptions
                               nFail = nFail + 1;
                           end
                           if nFail > 0
-                            warning(['If optimizeType is "gacohort" or "psocohort," all VP variants in worksheet must be identical.'])
+                            warning(['If optimizeType is "gacohort," "psocohort," or "surrogatecohort," all VP variants in worksheet must be identical.'])
                             passCheck = false;
                           end
                       end

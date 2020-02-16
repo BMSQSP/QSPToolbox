@@ -64,7 +64,28 @@ if (flagContinue)
     myMnValVPop = myVPop.mnSDTable{:,'predMean'};
     myUBValVPop = myVPop.mnSDTable{:,'predSD'};
     myLBValVPop = myVPop.mnSDTable{:,'predSD'};
-    
+	
+	logNVPop = myVPop.mnSDTable{:,'logN'};
+	
+	
+	expMn = myVPop.mnSDTable{:,'expMean'};
+    expSD = myVPop.mnSDTable{:,'expSD'};
+    predSD = myVPop.mnSDTable{:,'predSD'};
+	predMn = myVPop.mnSDTable{:,'predMean'};
+	logN = myVPop.mnSDTable{:,'logN'};
+		
+	% Convert lognormal summary data
+	if sum(logN) > 0
+		expSDBak = expSD;
+		expMnBak = expMn;
+		predSDBak = predSD;
+		predMnBak = predMn;
+		predMn(logN) = log(predMnBak(logN)./sqrt(1+(predSDBak(logN).^2)./(predMnBak(logN).^2)));
+		expMn(logN) = log(expMnBak(logN)./sqrt(1+(expSDBak(logN).^2)./(expMnBak(logN).^2)));
+		predSD(logN) = sqrt(log(1+(predSDBak(logN).^2)./(predMnBak(logN).^2)));
+		expSD(logN) = sqrt(log(1+(expSDBak(logN).^2)./(expMnBak(logN).^2)));
+	end	
+	
     for rowCounter = 1 : myNPlots
         plotNames{rowCounter} = {myVPop.mnSDTable{rowCounter,'interventionID'}{1},myVPop.mnSDTable{rowCounter,'elementID'}{1},num2str(myVPop.mnSDTable{rowCounter,'time'})};
     end
@@ -76,12 +97,28 @@ if (flagContinue)
     nPlotsHor = ceil(myNPlots / nPlotsVer);
     plotHandle = figure;
     for plotCounter = 1 : myNPlots
+		if logN(plotCounter)
+			curExpUV = exp(expMn(plotCounter)+expSD(plotCounter));
+			curPredUV = exp(predMn(plotCounter)+predSD(plotCounter));
+			curExpLV = exp(expMn(plotCounter)-expSD(plotCounter));
+			curPredLV = exp(predMn(plotCounter)-predSD(plotCounter));	
+			curExpMn = exp(expMn(plotCounter));
+			curPredMn = exp(predMn(plotCounter));
+		else
+			curExpUV = (expMn(plotCounter)+expSD(plotCounter));
+			curPredUV = (predMn(plotCounter)+predSD(plotCounter));
+			curExpLV = (expMn(plotCounter)-expSD(plotCounter));
+			curPredLV = (predMn(plotCounter)-predSD(plotCounter));	
+			curExpMn = (expMn(plotCounter));
+			curPredMn = (predMn(plotCounter));			
+		end
+	
         subplot(nPlotsVer, nPlotsHor, plotCounter);
-        fill([-2,2,2,-2],[myMnValExp(plotCounter)+myUBValExp(plotCounter),myMnValExp(plotCounter)+myUBValExp(plotCounter),myMnValExp(plotCounter)-myLBValExp(plotCounter),myMnValExp(plotCounter)-myLBValExp(plotCounter)], [0.75 0.75 0.75])
+        fill([-2,2,2,-2],[curExpUV,curExpUV,curExpLV,curExpLV], [0.75 0.75 0.75])
         hold on
-        errorbar(-1,myMnValExp(plotCounter),myLBValExp(plotCounter),myUBValExp(plotCounter),'ko-','MarkerFaceColor','k','LineWidth',3);
+        errorbar(-1,curExpMn,curExpMn-curExpLV,curExpUV-curExpMn,'ko-','MarkerFaceColor','k','LineWidth',3);
         hold on
-        errorbar(1,myMnValVPop(plotCounter),myLBValVPop(plotCounter),myUBValVPop(plotCounter),'ro-','MarkerFaceColor','r','LineWidth',3);
+        errorbar(1,curPredMn,curPredMn-curPredLV,curPredUV-curPredMn,'ro-','MarkerFaceColor','r','LineWidth',3);
         hold on
         xlim([-1.25 1.25]);
         

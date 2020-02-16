@@ -51,7 +51,8 @@ clear baseValues
 
 % As a precaution, restart any existing parallel
 % pools
-if mySimulateOptions.poolRestart;
+myPool = gcp('nocreate');
+if mySimulateOptions.poolRestart
 	if ~isempty(gcp('nocreate'))
 		delete(gcp);
 	end
@@ -63,6 +64,7 @@ if isempty(gcp('nocreate'))
 	myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
 end
 
+poolSize = myPool.NumWorkers;
 % in 2017a this message can cause issues, especially when
 % trying some of the global optimization methods
 % You may want this on for some applications
@@ -114,11 +116,10 @@ if sum(ismember({'gacohort'},optimizeType)) > 0
     if optimizeMaxIter > -1
         optimOptions.Generations = optimizeMaxIter;
     end
-else
+elseif sum(ismember({'psocohort'},optimizeType)) > 0
     optimOptions = optimoptions('particleswarm');
     optimOptions.Display = 'iter';
-    % Time limit in s.  We will probably want to move this
-    % to a user-defined option.
+    % Time limit in s.  
     optimOptions.MaxTime = mySimulateOptions.optimizeTimeLimit;
     optimOptions.SwarmSize = mySimulateOptions.optimizePopSize;
     optimOptions.TolFun = 1E-3;
@@ -127,6 +128,24 @@ else
     if optimizeMaxIter > -1
         optimOptions.MaxIterations = optimizeMaxIter;
     end
+else
+    optimOptions = optimoptions('surrogateopt');
+    optimOptions.Display = 'off';
+    % We can limit based on time but
+    % we'll also impose calculated objective evaluation
+    % limitations
+    optimOptions.MaxTime = mySimulateOptions.optimizeTimeLimit;
+    optimOptions.UseParallel = false;
+    optimOptions.MinSurrogatePoints = max(nOptimizeAxes+1,mySimulateOptions.optimizePopSize);
+    optimOptions.ObjectiveLimit = 0;
+    if optimizeMaxIter > -1
+        optimOptions.MaxFunctionEvaluations = max(mySimulateOptions.optimizePopSize,optimizeMaxIter);
+    else
+        optimOptions.MaxFunctionEvaluations = max(nOptimizeAxes * 1000,mySimulateOptions.optimizePopSize);
+    end
+    optimOptions.MinSampleDistance = 1E-3;
+    optimOptions.PlotFcn=[];
+    optimOptions.InitialPoints = mySeedCohort;
 end
 % We will specify the seed population, so we can
 % can just use the first worksheet VP as a template for cohort
@@ -167,11 +186,76 @@ if sum(ismember({'gacohort'},optimizeType)) > 0
     warning('off','globaloptim:constrvalidate:unconstrainedMutationFcn');
     [optResult,fVal,exitFlag,output,finalPopulation, scores] = ga(anonymousFunction,nOptimizeAxes,[],[],[],[],zeros(nOptimizeAxes,1),ones(nOptimizeAxes,1),[],optimOptions);
     warning('on','globaloptim:constrvalidate:unconstrainedMutationFcn');
-    % 'psocohort' is the other case.
-else
+elseif sum(ismember({'psocohort'},optimizeType)) > 0
     % The custom tweaked version is needed because MathWork's
     % version doesn't provide the swarm.
     [optResult,fVal,exitFlag,finalPopulation] = particleSwarmCohortWrapper(anonymousFunction,nOptimizeAxes,zeros(nOptimizeAxes,1),ones(nOptimizeAxes,1),optimOptions);
+else
+    % surrogatecohort
+    if ispc
+        [userview, systemview] = memory;
+        availmem = systemview.PhysicalMemory.Available/(2^30);
+    else
+        [r,w] = unix('free | grep Mem');
+        stats = str2double(regexp(w, '[0-9]*', 'match'));
+        memsize = stats(1)/1e6;
+        availmem = (stats(3)+stats(end))/1e6;
+    end
+    nParallel = min(poolSize,floor(availmem/2));  
+    vpCoeffs = getVPCoeffs(myWorksheet);
+    
+    nPerWorker = floor(mySimulateOptions.optimizePopSize/nParallel)+1;
+    
+    solutionsToGet = cell(1,nParallel);
+    valuesToCheck = cell(1,nParallel);
+    
+    
+    parfor evalCounter = 1 : nParallel
+        curOptions = optimOptions;
+        nCurVPs = ceil(nVPs/nParallel);
+        curVPIndices = randsample(nVPs,nCurVPs,false);
+        % Generate different initial guesses for each worker
+        if mySimulateOptions.optimizeSeedExisting
+            curSeedCohort = vpCoeffs(:,curVPIndices);
+            curSeedCohort = transpose(curSeedCohort(optimizeAxisIndices,:));
+            if nCurVPs < mySimulateOptions.optimizePopSize
+                curSeedCohort = [curSeedCohort;lhsdesign(mySimulateOptions.optimizePopSize-nCurVPs,nOptimizeAxes)];
+            elseif nCurVPs > mySimulateOptions.optimizePopSize
+                curSeedCohort = datasample(curSeedCohort,mySimulateOptions.optimizePopSize,1);
+            end
+        else
+            curSeedCohort = lhsdesign(mySimulateOptions.optimizePopSize,nOptimizeAxes);
+        end        
+        
+        curOptions.InitialPoints = curSeedCohort;
+        
+        warning off globaloptim:generatePointSpread:DimTooHighForQuasiRandom;
+        [optVals,fVals,exitFlag,output,trials] = surrogateopt(anonymousFunction,zeros(nOptimizeAxes,1),ones(nOptimizeAxes,1),curOptions);
+        warning on globaloptim:generatePointSpread:DimTooHighForQuasiRandom;        
+        
+        [~,sortIndices] = sort(trials.Fval,'ascend');
+        solutionsToGet{evalCounter} = trials.X(sortIndices(1:nPerWorker),:); 
+        valuesToCheck{evalCounter} = trials.Fval(sortIndices(1:nPerWorker),:);
+        
+    end
+    
+    finalPopulation = nan(mySimulateOptions.optimizePopSize,nOptimizeAxes);
+    finalValues = nan(mySimulateOptions.optimizePopSize,1);
+    myIndex = 0;
+    for outerLoopCounter = 1: nPerWorker
+        for innerLoopCounter = 1: nParallel
+            myIndex = myIndex + 1;
+            if myIndex <= mySimulateOptions.optimizePopSize
+                curMatrix = solutionsToGet{innerLoopCounter};
+                finalPopulation(myIndex,:) = curMatrix(outerLoopCounter,:);
+                curValues = valuesToCheck{innerLoopCounter};
+                finalValues(myIndex) = curValues(outerLoopCounter);                
+            end
+        end
+    end
+    [finalValues,sortIndices] = sort(finalValues,'ascend');
+    finalPopulation = finalPopulation(sortIndices,:);
+    disp(['Optimization objective values for surrogatecohort: ',num2str(finalValues'),'.'])
 end
 finalPopulation = transpose(finalPopulation);
 [~,finalPopSize] = size(finalPopulation);

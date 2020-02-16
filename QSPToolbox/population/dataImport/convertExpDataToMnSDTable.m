@@ -48,14 +48,14 @@ if continueFlag
     end
     for rowCounter = 1 : nRows
         if rowCounter == 1
-            tableVariableNames = [tableVariableNames,{'weightMean', 'weightSD', 'expN', 'expMean', 'expSD', 'predN', 'predIndices', 'predMean', 'predSD'}];
+            tableVariableNames = [tableVariableNames,{'logN','weightMean', 'weightSD', 'expN', 'expMean', 'expSD', 'predN', 'predIndices', 'predMean', 'predSD'}];
             myMnSDTable = cell2table(cell(0,length(tableVariableNames)));
             myMnSDTable.Properties.VariableNames = tableVariableNames;
         end
         curData = myVPop.expData{rowCounter,nDataHeaderCols+1:end};
         curData = curData(~isnan(curData));
         curRow = table2cell(myVPop.expData(rowCounter,1:nDataHeaderCols));
-        curRow = [curRow,{1, 1, length(curData), mean(curData), std(curData), nan, {nan}, nan, nan}];
+        curRow = [curRow,{false, 1, 1, length(curData), mean(curData), std(curData), nan, {nan}, nan, nan}];
         curRow = cell2table(curRow);
         curRow.Properties.VariableNames = myMnSDTable.Properties.VariableNames; 
         myMnSDTable = [myMnSDTable; curRow];   
