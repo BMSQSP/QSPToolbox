@@ -53,9 +53,13 @@ if strcmp(myVPop.pwStrategy, 'bin')
         [nTest, lProbs] = size(transProbVect);  
         if (nTest < myVPop.optimizePopSize)
             % Supplement with more initial points from a Sobol sample
-            mySobolSet = sobolset(lProbs);
-            mySobolSet = scramble(mySobolSet,'MatousekAffineOwen');
-            transProbVect = [transProbVect;net(mySobolSet,myVPop.optimizePopSize - nTest)*pi()-pi()/2];
+            if lProbs <= 1110
+                mySobolSet = sobolset(lProbs);
+                mySobolSet = scramble(mySobolSet,'MatousekAffineOwen');
+                transProbVect = [transProbVect;net(mySobolSet,myVPop.optimizePopSize - nTest)*pi()-pi()/2];
+            else
+                transProbVect = [transProbVect; ((lhsdesign(myVPop.optimizePopSize - nTest,lProbs)))*pi()-pi()/2];
+            end            
             [nTest, ~] = size(transProbVect);
         end        
     end
@@ -77,9 +81,13 @@ else
     end
     if (nTest < myVPop.optimizePopSize) && ~(ismember(optimizeType,{'simplex'}))
         % Supplement with more initial points from a Sobol sample
-        mySobolSet = sobolset(lProbs);
-        mySobolSet = scramble(mySobolSet,'MatousekAffineOwen');
-        myPWTrans = [myPWTrans;net(mySobolSet,myVPop.optimizePopSize - nTest)*pi()-pi()/2];
+        if lProbs <= 1110
+            mySobolSet = sobolset(lProbs);
+            mySobolSet = scramble(mySobolSet,'MatousekAffineOwen');
+            myPWTrans = [myPWTrans;net(mySobolSet,myVPop.optimizePopSize - nTest)*pi()-pi()/2];
+        else
+            myPWTrans = [myPWTrans; ((lhsdesign(myVPop.optimizePopSize - nTest,lProbs)))*pi()-pi()/2];
+        end
         [nTest, ~] = size(myPWTrans);
     end
 end

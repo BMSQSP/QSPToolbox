@@ -94,10 +94,24 @@ if continueFlag
 	% Also minimize pool restarts
 	myMapelOptions.poolRestart=false;
 	myMapelOptions.poolClose=false;
+    
+	% We will manually refresh the pool once at the start.
+	if ~isempty(gcp('nocreate'))
+		delete(gcp);
+	end
+	if isempty(gcp('nocreate'))
+		% We will use default pool settings
+		mySimulateOptions = simulateOptions;
+		mySimulateOptions = checkNWorkers(mySimulateOptions);		
+		myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
+	end	    
 
     % Make sure results are present.  Here, we don't re-simulate VPs if 
     % results are present.
-    myWorksheet = simulateWorksheet(myWorksheet);
+    mySimulateOptions.rerunExisting=false;
+	mySimulateOptions.poolRestart=false;
+	mySimulateOptions.poolClose=false; 
+    myWorksheet = simulateWorksheet(myWorksheet,mySimulateOptions);
 
     % Create a screen table
     % so we can enforce new VPs will need pass within bounds
@@ -121,16 +135,7 @@ if continueFlag
 		myMapelOptions.intSeed=-1;
 	end	
 	
-	% We will manually refresh the pool once at the start.
-	if ~isempty(gcp('nocreate'))
-		delete(gcp);
-	end
-	if isempty(gcp('nocreate'))
-		% We will use default pool settings
-		mySimulateOptions = simulateOptions;
-		mySimulateOptions = checkNWorkers(mySimulateOptions);		
-		myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
-	end		
+	
 
     while curEffN < (targetEffN + effNDelta)
 		% Set the initial best p value to a negative
