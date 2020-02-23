@@ -33,7 +33,9 @@ transData = myNeighborsAndSelf(myVPIndex,:)*eigenV;
 
 % Sample in PCA space taking the eigenvalues and
 % relative scaling into consideration
-transData=transData+mvnrnd(zeros(1,nDim),(relStd^2)*(varV.*eye(nDim)),nChildren);
+% reScale = 1/sqrt((2*pi())^nDim*sum(varV));
+reScale = 1/sqrt(sum(varV));
+transData=transData+reScale*mvnrnd(zeros(1,nDim),(relStd^2)*(varV.*eye(nDim)),nChildren);
 
 % Transform back
 myVPs = transData * (eigenV') + myMean;

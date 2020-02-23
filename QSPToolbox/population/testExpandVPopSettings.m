@@ -86,8 +86,8 @@ if continueFlag
 	
 	% Now start a loop over the test conditions
 	nPerVPTest = 50;
-	resampleStd = [1.4; 1.2; 1; .5; 0.25; 0.1; 0.3; 0.2; .1; .05; 0.01];
-	varyMethod = {'localpca';'localpca';'localpca';'localpca';'localpca';'localpca';'gaussian';'gaussian';'gaussian';'gaussian';'gaussian'};
+	resampleStd = [5; 4; 2; 1; 0.5; 0.25; 0.1; 0.3; 0.2; .1; .05; 0.01];
+	varyMethod = {'localpca';'localpca';'localpca';'localpca';'localpca';'localpca';'localpca';'gaussian';'gaussian';'gaussian';'gaussian';'gaussian'};
 	nTests = length(resampleStd);    
 	passRate = nan(nTests, 1);
 	vpDistance = nan(nTests, 1);

@@ -58,11 +58,10 @@ classdef expandVPopEffNOptions
 %                       parent VPs, but in the case when there aren't enough maxNewPerIter at least
 %                       this many will be kept.
 %                       Default = 2;
-%  nUnweightedParents: Number of unweighted VPs to try as a parent for expansion each iteration.
-%                       The existing worksheet VPs are scored similar to the children
-%                       and the ones that are not weighted but look like they may be
-%                       useful are included.
-%                       Default = 2;
+%  expandEdgeVPs:      Whether to compare the simulation ranges to the
+%                       ranges in the data and try to use any "edge" VPs
+%                       as seeds every iteration if the range is not   
+%                       covered well.  Default = false;
 %  plausibleResponseTypeIDs A cell array of responseTypeIDs that will be used
 %                       as a post-simulation check to make sure VPs are
 %                       plasuble.  If left blank, all worksheet
@@ -102,7 +101,7 @@ classdef expandVPopEffNOptions
 		varyMethod
 		resampleStd
 		maxNewPerOld
-		nUnweightedParents
+		expandEdgeVPs
         plausibleResponseTypeIDs
         screenFunctionName
 		selectByParent
@@ -385,26 +384,14 @@ classdef expandVPopEffNOptions
           end
       end  	  
 
-      function obj = set.nUnweightedParents(obj,myNUnweightedParents)
-          failFlag = false;
-          if isnumeric(myNUnweightedParents) 
-              if isequal(size(myNUnweightedParents),[1 1])
-                  if (myNUnweightedParents >= 0)
-                      obj.nUnweightedParents = round(myNUnweightedParents);
-                  else
-                      failFlag = true;
-                  end
-              else
-                  failFlag = true;
-              end
+	  function obj = set.expandEdgeVPs(obj,myInput)
+          if islogical(myInput)
+               obj.expandEdgeVPs = myInput;
           else
-              failFlag = true;
-          end
-          if failFlag
-              error(['Invalid nUnweightedParents specified for ',mfilename,'. A number >= 0 should be specified.'])
+               error(['Property expandEdgeVPs in ',milename,' must be true or false.'])
           end
       end
-      
+
 	  function obj = set.plausibleResponseTypeIDs(obj,myValue)
           if iscell(myValue)
                obj.plausibleResponseTypeIDs = myValue;
@@ -470,8 +457,8 @@ classdef expandVPopEffNOptions
                   value = obj.resampleStd;
               case 'maxNewPerOld'
                   value = obj.maxNewPerOld;	
-              case 'nUnweightedParents'
-                  value = obj.nUnweightedParents;
+              case 'expandEdgeVPs'
+                  value = obj.expandEdgeVPs;
               case 'plausibleResponseTypeIDs'
                   value = obj.plausibleResponseTypeIDs;                  
               case 'screenFunctionName'
@@ -505,7 +492,7 @@ classdef expandVPopEffNOptions
 		  obj.varyMethod = 'gaussian';
 		  obj.resampleStd = 0.05;
 		  obj.maxNewPerOld = 2;
-		  obj.nUnweightedParents = 2;
+		  obj.expandEdgeVPs = false;
           obj.plausibleResponseTypeIDs = {};
           obj.screenFunctionName = '';
 		  obj.selectByParent = true;

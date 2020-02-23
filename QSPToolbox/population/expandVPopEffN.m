@@ -310,7 +310,7 @@ if continueFlag
             if (mod(myTestCounter,nTries) == 0) && (nVPopsFound > 0) && ~((newVPop.gof > minPVal) && (1/sum(newVPop.pws.^2) >= curEffN))
                 if expandCohortSize > 0
                     wsIterCounter = wsIterCounter + 1;
-                    [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.resampleStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.nUnweightedParents, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
+                    [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.resampleStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.expandEdgeVPs, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
                     saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]); 
                     % We need to update the mapelOptions subpopTables with
                     % the new VPs.
@@ -331,7 +331,7 @@ if continueFlag
             if expandCohortSize > 0
                 % Get ready to expand VPs
                 wsIterCounter = wsIterCounter+1;
-                [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet, oldVPop, myMapelOptions, suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.resampleStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.nUnweightedParents, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
+                [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet, oldVPop, myMapelOptions, suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.resampleStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.expandEdgeVPs, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
                 % We need to update the mapelOptions subpopTables with
                 % the new VPs.
                 % myMapelOptions.subpopTable = updateSubpopTableVPs(myMapelOptions.subpopTable, myWorksheet);
