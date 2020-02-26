@@ -105,53 +105,8 @@ if continueFlag
         end
  
         parentVPs(isempty(parentVPs)) = [];
-        nParentCandidates = length(parentVPs);
-        parentVPsPass = cell(1,length(parentVPs));
-        parentsPassCounter = 1;
-        for checkCounter =1 :  nParentCandidates
-            curCheckParents = parentVPs{checkCounter};
-            % We need to compare to other parents in the list to 
-            % 1. pick the best parent that might cover multiple edges and
-            % 2. minimize double counting for edges
-            [~, curCheckSize] = size(curCheckParents);
-            
-            if checkCounter < nParentCandidates
-                curCheckscore = zeros(nParentCandidates-(checkCounter),curCheckSize);
-                % First check the current set of parents against the ones
-                % further down the list in case one of the parents
-                % in the current set appears there.
-                for otherParentCounter = (checkCounter + 1) : nParentCandidates
-                    testParents = parentVPs{otherParentCounter};
-                    curCheckscore(otherParentCounter - checkCounter,:) = ismember(curCheckParents,testParents);
-                end
-                otherParentIndices = (checkCounter + 1) : nParentCandidates;
-                % After we have the comparison for the current parents,
-                % we pick the one with highest score as compared to
-                % other rows
-                sumParentScores = sum(curCheckscore,1);
-                bestIndex = find(sumParentScores == max(sumParentScores));
-                if length(bestIndex) > 1
-                    % In case of a tie
-                    bestIndex = bestIndex(1);
-                end
-                % Now we note the other VP sets that contained the best
-                % parent
-                curCheckscore = curCheckscore(:,bestIndex);
-                % These are the rows where we found a match and can 
-                % substitute in the current best parent
-                substituteOtherParentIndex = otherParentIndices(find(curCheckscore));
-                if length(substituteOtherParentIndex) > 0
-                    parentVPs(substituteOtherParentIndex) = {{curCheckParents{bestIndex}}};
-                end
-                parentVPsPass{checkCounter} = curCheckParents{bestIndex};
-                
-            else
-                % For the last entry, we do no comparison
-                parentVPsPass{checkCounter} = curCheckParents{1};
-            end
-            
-        end
-        edgeVPIDs = unique(parentVPsPass,'stable');
+        edgeVPIDs = getMinimalEdgeSet(parentVPs);
+
     else
         edgeVPIDs = {};
     end
@@ -180,7 +135,7 @@ if continueFlag
     edgeVPIndices = edgeVPIndices(sortIndicesPick);
     % Now combine considerations for heavily weighted VPs and
     % parents that look like they are useful.
-    disp(['Considering ',num2str(length(highVPIDs)),' VPs as expansion seeds from prevalence weight considerations in ',mfilename,'.'])
+    disp(['Adding ',num2str(length(highVPIDs)),' VPs as expansion seeds from prevalence weight considerations in ',mfilename,'.'])
     disp(['Adding ',num2str(length(edgeVPIDs)),' VPs as expansion seeds from phenotype range considerations in ',mfilename,'.'])
     highVPIDsMono = highVPIDs;
     highVPindicesMono = highVPIndices;
@@ -324,38 +279,96 @@ if continueFlag
     % else
         newVPScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices);
     % end
-
-
+    if unweightedParents
+        % We can score all VPs but will focus on the edge VPs
+        [nRows, ~] = size(myVPRangeTable);
+        nVPs = length(curVPIDs);
+        edgeVPScores = zeros(nRows,nVPs);
+        allChildrenBaseIndices = zeros(1,length(curVPIDs));
+        % Get the indices for the edge VP children
+        for edgeVPCounter = 1 : length(edgeVPIDs)
+            % We will apply different criteria for the VPs being
+            % selected from the highly weighted ones and the ones being
+            % selected as edgeVPs.
+            parentID=edgeVPIDs(edgeVPCounter);
+            childrenBase = strcat(parentID, ['_',suffix,num2str(wsIterCounter)]);
+            curChildrenBaseIndices = cellfun(@isempty,strfind(curVPIDs,childrenBase));
+            curChildrenBaseIndices=find(~curChildrenBaseIndices);
+            curChildrenBaseIndices=intersect(curChildrenBaseIndices,newIndices); 
+            allChildrenBaseIndices(curChildrenBaseIndices) = 1;
+        end
+        % We will step through each endpoint
+        % Then get the simdata for the new VPs for the endpoint
+        % then set the VPs that are non-edge children to zero
+        % Then find the index of the minimum and set the corresponding
+        % in the scores to 1.
+        for rowCounter = 1 : nRows
+            myElementID = myVPRangeTable{rowCounter, 'elementID'};
+            myElementType = myVPRangeTable{rowCounter, 'elementType'};
+            myInterventionID = myVPRangeTable{rowCounter, 'interventionID'};
+            myTime = myVPRangeTable{rowCounter, 'time'};
+            myElementIDCol = find(ismember(testVPop.simData.rowInfoNames,'elementID'));
+            myElementTypeCol = find(ismember(testVPop.simData.rowInfoNames,'elementType'));
+            myInterventionIDCol = find(ismember(testVPop.simData.rowInfoNames,'interventionID'));
+            myTimeCol = find(ismember(testVPop.simData.rowInfoNames,'time'));
+            simDataRow = find(ismember(testVPop.simData.rowInfo(:,myElementIDCol),myElementID) & ismember(testVPop.simData.rowInfo(:,myElementTypeCol),myElementType) & ismember(testVPop.simData.rowInfo(:,myInterventionIDCol),myInterventionID) & (cell2mat(testVPop.simData.rowInfo(:,myTimeCol)) == cell2mat(myTime)));
+            curData = testVPop.simData.Data(simDataRow,:);
+            if myVPRangeTable{rowCounter, 'minMissing'} > myCutoff
+                curVals = sort(curData(find(allChildrenBaseIndices)),'ascend');
+                curVals = unique(curVals,'stable');
+                edgeVPScores(rowCounter,:) = nRows * (curData == curVals(1)) + 1/nRows * (curData == curVals(2));
+            end
+            if myVPRangeTable{rowCounter, 'maxMissing'} > myCutoff
+                curVals = sort(curData(find(allChildrenBaseIndices)),'descend');
+                curVals = unique(curVals,'stable');
+                edgeVPScores(rowCounter,:) = nRows * (curData == curVals(1)) + 1/nRows * (curData == curVals(2));
+            end                
+        end
+        % We'll just use 1 row for the edge scores,
+        % we won't separate the edges.
+        edgeVPScores = sum(edgeVPScores(:,newIndices),1);
+        
+    end
+        
     newPassNames = cell(1,0);
 	if selectByParent
 		% Select valid VPs from each higher weighted seed VP
 		for highCounter = 1 : length(highVPIDs)
-			parentID=highVPIDs(highCounter);
-			childrenBase = strcat(parentID, ['_',suffix,num2str(wsIterCounter)]);
-			allChildrenBaseIndices = cellfun(@isempty,strfind(curVPIDs,childrenBase));
-			allChildrenBaseIndices=find(~allChildrenBaseIndices);
-			allChildrenBaseIndices=intersect(allChildrenBaseIndices,newIndices);
-			childIDs = curVPIDs(allChildrenBaseIndices);
-			childIDs = newVPIDs(find(ismember(newVPIDs,childIDs)));
-			childScores = newVPScores(:,find(ismember(newVPIDs,childIDs)));
-			% We will prioritize VPs that score well
-			[nScoresPerVP, nCurChildren] = size(childScores);
-			sortIndices = nan(nScoresPerVP, nCurChildren);
-			for rowCounter = 1 : nScoresPerVP
-				nonZeroIndices = find(childScores(rowCounter,:)>0);
-				[curScores, curIndices] = sort(childScores(rowCounter,nonZeroIndices),'descend');
-				childScores(rowCounter,:) = nan(1,nCurChildren);
-				childScores(rowCounter,1:length(nonZeroIndices)) = curScores;
-				sortIndices(rowCounter,1:length(nonZeroIndices)) = nonZeroIndices(curIndices);
-			end
-			sortIndices=reshape(sortIndices,1,[]);
-			sortIndices = sortIndices(find(~isnan(sortIndices)));
-			sortIndices = unique(sortIndices,'stable');        
-			childIDs = childIDs(sortIndices);
-			npass = length(childIDs);
-			if (npass > 0)
-				newPassNames = [newPassNames,childIDs(1:min(npass,maxNewPerOld))];
-			end
+            % We will apply different criteria for the VPs being
+            % selected from the highly weighted ones and the ones being
+            % selected as edgeVPs.
+            parentID=highVPIDs(highCounter);
+            childrenBase = strcat(parentID, ['_',suffix,num2str(wsIterCounter)]);
+            allChildrenBaseIndices = cellfun(@isempty,strfind(curVPIDs,childrenBase));
+            allChildrenBaseIndices=find(~allChildrenBaseIndices);
+            allChildrenBaseIndices=intersect(allChildrenBaseIndices,newIndices);
+            childIDs = curVPIDs(allChildrenBaseIndices);
+            childIDs = newVPIDs(find(ismember(newVPIDs,childIDs)));
+            if sum(ismember(highVPIDsMono,parentID)) > 0
+                childScores = newVPScores(:,find(ismember(newVPIDs,childIDs)));
+            else
+                % For VPs selected based on edges, apply a different
+                % selection strategy
+                childScores = edgeVPScores(:,find(ismember(newVPIDs,childIDs)));
+            end
+            % We will prioritize VPs that score well
+            [nScoresPerVP, nCurChildren] = size(childScores);
+            sortIndices = nan(nScoresPerVP, nCurChildren);
+            for rowCounter = 1 : nScoresPerVP
+                nonZeroIndices = find(childScores(rowCounter,:)>0);
+                [curScores, curIndices] = sort(childScores(rowCounter,nonZeroIndices),'descend');
+                childScores(rowCounter,:) = nan(1,nCurChildren);
+                childScores(rowCounter,1:length(nonZeroIndices)) = curScores;
+                sortIndices(rowCounter,1:length(nonZeroIndices)) = nonZeroIndices(curIndices);
+            end
+            sortIndices=reshape(sortIndices,1,[]);
+            sortIndices = sortIndices(find(~isnan(sortIndices)));
+            sortIndices = unique(sortIndices,'stable');
+            childIDs = childIDs(sortIndices);
+            npass = length(childIDs);
+            if (npass > 0)
+                newPassNames = [newPassNames,childIDs(1:min(npass,maxNewPerOld))];
+            end
 		end
 		if maxNewPerIterChecked < 1
 			newPassNames = cell(1,0);
@@ -375,6 +388,7 @@ if continueFlag
 	else
 		% Otherwise, we pool the children from
 		% all of our test VPs and just take the best
+        % Note this does not yet support the separate edge scores.
 		[nScoresPerVP, nCurChildren] = size(newVPScores);
 		childScores = newVPScores;
 		sortIndices = nan(nScoresPerVP, nCurChildren);

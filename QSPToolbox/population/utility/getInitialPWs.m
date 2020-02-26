@@ -42,7 +42,7 @@ if nAdd >= 1
    myOptimOptions.nBootstrapIterations = nBootstrapIterations;
    myOptimOptions.fractionVPsPerBaggingIteration=.5;
    myOptimOptions.method = "bagging";
-   simN = 3;
+   simN = 4;
    myOptimOptions.expWeightFuncHandle = @(expN, expSTD, dataGroupDescription) calculateExpWeight(expN, expSTD, dataGroupDescription, simN);
    linearCalibrationObject = LinearCalibration(testVPop,'optimOptions',myOptimOptions);
    try

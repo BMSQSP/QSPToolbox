@@ -312,59 +312,58 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
         end
     end
 	
-		[n2DComparisons, ~] = size(testVPop.distTable2D);
-		if (n2DComparisons > 0)
-			addScore = zeros(n2DComparisons,length(newIndices));           
-            for rowCounter = 1 : n2DComparisons
-                expSample = testVPop.distTable2D{rowCounter,'expSample'}{1};
-                simSample = testVPop.distTable2D{rowCounter,'predSample'}{1};
-
-				simPWs = testVPop.distTable2D{rowCounter,'predProbs'}{1};
-				% We need to get the predIndices, i.e. the indices that are kept from
-				% the original simulation results after applying mechanistic dropouts.
-                % These indices also already account for the subpops.
-                % subpopNo = testVPop.distTable2D{rowCounter,'subpopNo'};
-                % vpIndicesSubpop = testVPop.subpopTable{subpopNo,'vpIndices'}{1};
-				predIndices = testVPop.distTable2D{rowCounter,'predIndices'}{1};
-				[PDFexp, PDFsim, combinedPoints] = align2DPDFs(expSample, simSample, simPWs);
-				% We evaluate values from new VPs that haven't dropped out.  i.e.
-				% that lie in the intersection of newIndices and predIndices
-				newPredIndices = intersect(newIndices,predIndices,'sorted');
+    [n2DComparisons, ~] = size(testVPop.distTable2D);
+    if (n2DComparisons > 0)
+        addScore = zeros(n2DComparisons,length(newIndices));
+        for rowCounter = 1 : n2DComparisons
+            expSample = testVPop.distTable2D{rowCounter,'expSample'}{1};
+            simSample = testVPop.distTable2D{rowCounter,'predSample'}{1};
+            
+            simPWs = testVPop.distTable2D{rowCounter,'predProbs'}{1};
+            % We need to get the predIndices, i.e. the indices that are kept from
+            % the original simulation results after applying mechanistic dropouts.
+            % These indices also already account for the subpops.
+            % subpopNo = testVPop.distTable2D{rowCounter,'subpopNo'};
+            % vpIndicesSubpop = testVPop.subpopTable{subpopNo,'vpIndices'}{1};
+            predIndices = testVPop.distTable2D{rowCounter,'predIndices'}{1};
+            [PDFexp, PDFsim, combinedPoints] = align2DPDFs(expSample, simSample, simPWs);
+            % We evaluate values from new VPs that haven't dropped out.  i.e.
+            % that lie in the intersection of newIndices and predIndices
+            newPredIndices = intersect(newIndices,predIndices,'sorted');
+            
+            % Get the indices for the dropout filtered sample to get the test values
+            newPredIndicesFinal = (find(ismember(predIndices,newPredIndices)));
+            % simSample is following filtering for dropouts
+            testValues = simSample(:,newPredIndicesFinal);
+            [~, nTestValues] = size(testValues);
+            
+            pdfDiff = (PDFexp-PDFsim).*(PDFexp>PDFsim);
+            % We want the indices
+            if nTestValues > 0
+                % We want the first index for each member of combinedPoints
+                % that is also in testValues that is also in combinedPoints
+                [~, scInd] = ismember(testValues', combinedPoints', 'rows');
+                scInd = scInd';
+                % all members of testValues should be in combinedPoints
+                newValInd = (1:1:nTestValues);
+                % Need a map from new VPs that have not dropped out back into new VP position
+                newIndicesNotDropout = find(ismember(newIndices,newPredIndices));
                 
-				% Get the indices for the dropout filtered sample to get the test values
-				newPredIndicesFinal = (find(ismember(predIndices,newPredIndices)));
-				% simSample is following filtering for dropouts
-				testValues = simSample(:,newPredIndicesFinal);
-                [~, nTestValues] = size(testValues);
-				
-				pdfDiff = (PDFexp-PDFsim).*(PDFexp>PDFsim);
-				% We want the indices 
-                if nTestValues > 0
-                    % We want the first index for each member of combinedPoints
-                    % that is also in testValues that is also in combinedPoints
-                    [~, scInd] = ismember(testValues', combinedPoints', 'rows');
-                    scInd = scInd';
-                    % all members of testValues should be in combinedPoints
-                    newValInd = (1:1:nTestValues);
-                    % Need a map from new VPs that have not dropped out back into new VP position
-                    newIndicesNotDropout = find(ismember(newIndices,newPredIndices));
-
-                    % We need to map back to the new VPs and correct
-                    % for positions for ones that drop out
-                    addScore(rowCounter,newIndicesNotDropout(newValInd)) = pdfDiff(scInd);
-                end
-            end      
-			newVPScores2D = sum(addScore.^2,1);
-		else
-			flagCheck2D = false;
-		end
+                % We need to map back to the new VPs and correct
+                % for positions for ones that drop out
+                addScore(rowCounter,newIndicesNotDropout(newValInd)) = pdfDiff(scInd);
+            end
+        end
+        newVPScores2D = sum(addScore.^2,1);
+    end
     
 	
     if isa(testVPop,'VPopRECIST')
-		if ~flagCheck2D
-			vpScores = [newVPScoresWBI;newVPScoresR;newScoresWBIMax;vpScores];
+		if n2DComparisons > 0
+			vpScores = [newVPScoresWBI;newVPScoresR;newVPScores2D;newScoresWBIMax;vpScores];			
 		else
-			vpScores = [newVPScoresWBI;newVPScoresR;newVPScores2D;newScoresWBIMax;vpScores];
+
+            vpScores = [newVPScoresWBI;newVPScoresR;newScoresWBIMax;vpScores];
 		end
     else
         vpScores = [newVPScoresWBI;newScoresWBIMax;vpScores];

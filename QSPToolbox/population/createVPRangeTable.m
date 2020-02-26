@@ -61,8 +61,8 @@ if flagContinue
         myCheckElement = [myCheckElement; table2cell(myVPop.binTable(:,{'elementID','elementType','interventionID','time','weight'}))];
     end    
     if ~isempty(myVPop.distTable2D)
-        myCheckElement = [myCheckElement, table2cell(myVPop.distTable2D(:,{'elementID1','elementType1','interventionID1','time1','weight'}))];
-        myCheckElement = [myCheckElement, table2cell(myVPop.distTable2D(:,{'elementID2','elementType2','interventionID2','time2','weight'}))];
+        myCheckElement = [myCheckElement; table2cell(myVPop.distTable2D(:,{'elementID1','elementType1','interventionID1','time1','weight'}))];
+        myCheckElement = [myCheckElement; table2cell(myVPop.distTable2D(:,{'elementID2','elementType2','interventionID2','time2','weight'}))];
     end  
     if ~isempty(myVPop.corTable)
         myCheckElement = [myCheckElement; table2cell(myVPop.corTable(:,{'elementID1','elementType1','interventionID1','time1','weight'}))];
@@ -86,15 +86,6 @@ if flagContinue
      expDataTableRows = size(myExpDataTable,1); % number of experimental data
      mySimData = myVPop.simData.Data;
      myVPIDs = myVPop.simData.vpIDs;
-     
-     % define pointers into columns of ExpDataTable
-    expTimeCol = find(ismember(myExpDataTable.Properties.VariableNames,'time'));
-    interventionIDCol = find(ismember(myExpDataTable.Properties.VariableNames,'interventionID'));
-    elementTypeCol = find(ismember(myExpDataTable.Properties.VariableNames,'elementID'));
-    elementIDCol = find(ismember(myExpDataTable.Properties.VariableNames,'elementID'));
-    elementIDCol = find(ismember(myExpDataTable.Properties.VariableNames,'elementID'));
-    expDataIDCol = find(ismember(myExpDataTable.Properties.VariableNames,'expDataID'));
-    expVarIDCol = find(ismember(myExpDataTable.Properties.VariableNames,'expVarID'));
     
     % define pointers into columns of rowInfoTable
     simTimeCol = find(ismember(myVPop.simData.rowInfoNames,'time'));
