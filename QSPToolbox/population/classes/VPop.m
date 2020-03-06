@@ -993,16 +993,15 @@ methods
               [nRows, ~] = size(myTable);          
               curSimValues = nan(nRows,  size(mySimData,2));
               curSimValues(rowsTarget,:) = (mySimData(rowsSource, :));
-              [curSimValues, I] = sort(curSimValues, 2, 'ascend');
               for rowCounter = 1 : nRows
-				  subpopIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};			
-                  % Should account for subpops
-                  keepIndices = find(~isnan(curSimValues(rowCounter,:)));
-				  keepIndicesRef = find(ismember(keepIndices, subpopIndices));	                  
-                  keepIndices = keepIndices(keepIndicesRef);
-                  curVals = curSimValues(rowCounter,keepIndices);                 
-                  % myTable.('predSample'){rowCounter} = curVals;
-				  myTable.('predIndices'){rowCounter} = I(rowCounter,keepIndices);
+                  subpopIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};		
+                  rowSimValues = curSimValues(rowCounter,:);
+                  keepIndices = intersect(find(~isnan(rowSimValues)),subpopIndices,'stable');
+                  [curVals, sortIndices] = sort(rowSimValues, 'ascend');
+                  keepIndices = intersect(sortIndices,keepIndices,'stable');
+                  %curVals = curSimValues(rowCounter,keepIndices);                 
+                  myTable.('predSample'){rowCounter} = rowSimValues(keepIndices);
+				  myTable.('predIndices'){rowCounter} = keepIndices;
               end
               obj.mnSDTable = myTable;												
           end  
@@ -1019,142 +1018,144 @@ methods
               [nRows, ~] = size(myTable);          
               curSimValues = nan(nRows,  size(mySimData,2));
               curSimValues(rowsTarget,:) = (mySimData(rowsSource, :));
-              [curSimValues, I] = sort(curSimValues, 2, 'ascend');
               for rowCounter = 1 : nRows
-				  subpopIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};			
-                  % Should account for subpops
-                  keepIndices = find(~isnan(curSimValues(rowCounter,:)));
-				  keepIndicesRef = find(ismember(keepIndices, subpopIndices));	                  
-                  keepIndices = keepIndices(keepIndicesRef);
-                  curVals = curSimValues(rowCounter,keepIndices);                 
-                  % myTable.('predSample'){rowCounter} = curVals;
-				  myTable.('predIndices'){rowCounter} = I(rowCounter,keepIndices);
+                  subpopIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};		
+                  rowSimValues = curSimValues(rowCounter,:);
+                  keepIndices = intersect(find(~isnan(rowSimValues)),subpopIndices,'stable');
+                  [curVals, sortIndices] = sort(rowSimValues, 'ascend');
+                  keepIndices = intersect(sortIndices,keepIndices,'stable');
+                  %curVals = curSimValues(rowCounter,keepIndices);                 
+                  myTable.('predSample'){rowCounter} = rowSimValues(keepIndices);
+				  myTable.('predIndices'){rowCounter} = keepIndices;
               end
               obj.binTable = myTable;												
           end  
 
-          myDistTable = obj.distTable;
-          distRowsTarget = obj.simData.distRows;
-          distRowsSource = find(distRowsTarget>0); 	
-          if ~isempty(distRowsSource)
-			   mySubpopNo = myDistTable.('subpopNo');          
+          myTable = obj.distTable;
+          rowsTarget = obj.simData.distRows;
+          rowsSource = find(rowsTarget>0); 	
+          if ~isempty(rowsSource)
+			   mySubpopNo = myTable.('subpopNo');          
                vpIndicesSubpop = mySubpopTable.('vpIndices');
-               distRowsTarget = distRowsTarget(distRowsSource);
+               rowsTarget = rowsTarget(rowsSource);
           
               % 2 step assignment to speed execution
               % first to matrix, then convert back to table.
-              [nDistRows, nDistCols] = size(myDistTable);          
+              [nRows, nDistCols] = size(myTable);          
 				
-              curSimValues = nan(nDistRows,  size(mySimData,2));
-              curSimValues(distRowsTarget,:) = (mySimData(distRowsSource, :));
-              
-              [curSimValues, I] = sort(curSimValues, 2, 'ascend');
-              for rowCounter = 1 : nDistRows
+              curSimValues = nan(nRows,  size(mySimData,2));
+              curSimValues(rowsTarget,:) = (mySimData(rowsSource, :));
+              curSimValues = nan(nRows,  size(mySimData,2));
+              curSimValues(rowsTarget,:) = (mySimData(rowsSource, :));              
+              for rowCounter = 1 : nRows
                   
 				  subpopIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};			
                   % Should account for subpops
                   keepIndices = find(~isnan(curSimValues(rowCounter,:)));
-				  keepIndicesRef = find(ismember(keepIndices, subpopIndices));	                  
-                  keepIndices = keepIndices(keepIndicesRef);
-                  
-                  curVals = curSimValues(rowCounter,keepIndices);                 
-                  myDistTable.('predSample'){rowCounter} = curVals;
-				  myDistTable.('predIndices'){rowCounter} = I(rowCounter,keepIndices);
+				  
+                  subpopIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};		
+                  rowSimValues = curSimValues(rowCounter,:);
+                  keepIndices = intersect(find(~isnan(rowSimValues)),subpopIndices,'stable');
+                  [curVals, sortIndices] = sort(rowSimValues, 'ascend');
+                  keepIndices = intersect(sortIndices,keepIndices,'stable');
+                  curVals = rowSimValues(keepIndices);                 
+                  myTable.('predSample'){rowCounter} = curVals;
+				  myTable.('predIndices'){rowCounter} = keepIndices;				  
+				  
                   % Also get the indices to align the exp and sim samples
-                  sample1 = myDistTable.('expSample'){rowCounter};
+                  sample1 = myTable.('expSample'){rowCounter};
                   [sample1Ind, sample2Ind, SC] = alignSamples(sample1, curVals);
-                  myDistTable.('expCombinedIndices'){rowCounter} = sample1Ind;
-                  myDistTable.('simCombinedIndices'){rowCounter} = sample2Ind;
-                  myDistTable.('combinedPoints'){rowCounter} = SC;
-              end
-              obj.distTable = myDistTable;												
-          end   
+                  myTable.('expCombinedIndices'){rowCounter} = sample1Ind;
+                  myTable.('simCombinedIndices'){rowCounter} = sample2Ind;
+                  myTable.('combinedPoints'){rowCounter} = SC;				  
 
-          myDistTable = obj.distTable2D;
-          distRowsTarget1 = obj.simData.distRows2D(:,1);
-		  distRowsTarget2 = obj.simData.distRows2D(:,2);
-          distRowsSource1 = find(~cellfun(@isempty,distRowsTarget1));
-          distRowsSource2 = find(~cellfun(@isempty,distRowsTarget2));
-          if ~isempty(distRowsSource1)
-              mySubpopNo = myDistTable.('subpopNo');
+              end
+              obj.distTable = myTable;												
+          end  
+
+          myTable = obj.distTable2D;
+          rowsTarget1 = obj.simData.distRows2D(:,1);
+		  rowsTarget2 = obj.simData.distRows2D(:,2);
+          rowsSource1 = find(~cellfun(@isempty,rowsTarget1));
+          rowsSource2 = find(~cellfun(@isempty,rowsTarget2));
+          if ~isempty(rowsSource1)
+              mySubpopNo = myTable.('subpopNo');
               vpIndicesSubpop = mySubpopTable.('vpIndices');
-              distRowsTarget1 = distRowsTarget1(distRowsSource1);
-			  distRowsTarget2 = distRowsTarget2(distRowsSource2);
+              rowsTarget1 = rowsTarget1(rowsSource1);
+			  rowsTarget2 = rowsTarget2(rowsSource2);
               % 2 step assignment to speed execution
               % first to matrix, then convert back to table.
-              [nDistRows, nDistCols] = size(myDistTable);
+              [nDistRows, nDistCols] = size(myTable);
               curSimValues1 = nan(nDistRows,  size(mySimData,2));
               curSimValues2 = nan(nDistRows,  size(mySimData,2));
               % We need a loop for the assignment
-              for target1counter = 1 :length(distRowsTarget1)
-                  targetRows = distRowsTarget1{target1counter};
+              for target1counter = 1 :length(rowsTarget1)
+                  targetRows = rowsTarget1{target1counter};
                   for target1repCounter = 1 :length(targetRows)
-                    curSimValues1(targetRows(target1repCounter),:) = (mySimData(distRowsSource1(target1counter), :));
+                    curSimValues1(targetRows(target1repCounter),:) = (mySimData(rowsSource1(target1counter), :));
                   end
               end
-              for target2counter = 1 :length(distRowsTarget2)
-                  targetRows = distRowsTarget2{target2counter};
+              for target2counter = 1 :length(rowsTarget2)
+                  targetRows = rowsTarget2{target2counter};
                   for target2repCounter = 1 :length(targetRows)
-                    curSimValues2(targetRows(target2repCounter),:) = (mySimData(distRowsSource2(target2counter), :));
+                    curSimValues2(targetRows(target2repCounter),:) = (mySimData(rowsSource2(target2counter), :));
                   end                  
               end              		  
-			  % Unlike the 1D case we won't pre-sort
+			  % Unlike the 1D case we won't sort
               for rowCounter = 1 : nDistRows
                   keepIndices = find(~isnan(curSimValues1(rowCounter,:)) & ~isnan(curSimValues2(rowCounter,:)));
 				  subpopIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};			
                   % Should account for subpops
-				  keepIndicesRef = find(ismember(keepIndices, subpopIndices));	                  
-                  keepIndices = keepIndices(keepIndicesRef);                  
+                  keepIndices = intersect(keepIndices,subpopIndices);                  
                   
                   curVals = [curSimValues1(rowCounter,keepIndices); curSimValues2(rowCounter,keepIndices)];          
-                  myDistTable.('predSample'){rowCounter} = curVals;
-				  myDistTable.('predIndices'){rowCounter} = keepIndices;
+                  myTable.('predSample'){rowCounter} = curVals;
+				  myTable.('predIndices'){rowCounter} = keepIndices;
               end
-              obj.distTable2D = myDistTable;												
-          end               
+              obj.distTable2D = myTable;												
+          end                  
 
-          myCorTable = obj.corTable;
-          corRowsTarget1 = obj.simData.corRows(:,1);
-		  corRowsTarget2 = obj.simData.corRows(:,2);
-          corRowsSource1 = find(~cellfun(@isempty,corRowsTarget1));
-          corRowsSource2 = find(~cellfun(@isempty,corRowsTarget2));	
-          if ~isempty(corRowsSource1)
-              mySubpopNo = myCorTable.('subpopNo');
+          myTable = obj.corTable;
+          rowsTarget1 = obj.simData.corRows(:,1);
+		  rowsTarget2 = obj.simData.corRows(:,2);
+          rowsSource1 = find(~cellfun(@isempty,rowsTarget1));
+          rowsSource2 = find(~cellfun(@isempty,rowsTarget2));	
+          if ~isempty(rowsSource1)
+              mySubpopNo = myTable.('subpopNo');
               vpIndicesSubpop = mySubpopTable.('vpIndices'); 
-              corRowsTarget1 = corRowsTarget1(corRowsSource1);
-			  corRowsTarget2 = corRowsTarget2(corRowsSource2);
+              rowsTarget1 = rowsTarget1(rowsSource1);
+			  rowsTarget2 = rowsTarget2(rowsSource2);
               % 2 step assignment to speed execution
               % first to matrix, then convert back to table.
-              [nCorRows, nCorCols] = size(myCorTable);
+              [nCorRows, nCorCols] = size(myTable);
               curSimValues1 = nan(nCorRows,  size(mySimData,2));
               curSimValues2 = nan(nCorRows,  size(mySimData,2));
               % We need a loop for the assignment
-              for target1counter = 1 :length(corRowsTarget1)
-                  targetRows = corRowsTarget1{target1counter};
+              for target1counter = 1 :length(rowsTarget1)
+                  targetRows = rowsTarget1{target1counter};
                   for target1repCounter = 1 :length(targetRows)
-                    curSimValues1(targetRows(target1repCounter),:) = (mySimData(corRowsSource1(target1counter), :));
+                    curSimValues1(targetRows(target1repCounter),:) = (mySimData(rowsSource1(target1counter), :));
                   end
               end
-              for target2counter = 1 :length(corRowsTarget2)
-                  targetRows = corRowsTarget2{target2counter};
+              for target2counter = 1 :length(rowsTarget2)
+                  targetRows = rowsTarget2{target2counter};
                   for target2repCounter = 1 :length(targetRows)
-                    curSimValues2(targetRows(target2repCounter),:) = (mySimData(corRowsSource2(target2counter), :));
+                    curSimValues2(targetRows(target2repCounter),:) = (mySimData(rowsSource2(target2counter), :));
                   end                  
-              end              		  
-			  % Unlike the 1D case we won't pre-sort
-              %[curSimValues1, I] = sort(curSimValues1, 2, 'ascend');
-			  %curSimValues2 = curSimValues2(:,I);
+              end              	
+			  % Unlike the 1D case we won't sort			  
               for rowCounter = 1 : nCorRows
                   keepIndices = find(~isnan(curSimValues1(rowCounter,:)) & ~isnan(curSimValues2(rowCounter,:)));
 				  subpopIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};			
                   % Should account for subpops
-				  keepIndicesRef = find(ismember(keepIndices, subpopIndices));	                  
-                  keepIndices = keepIndices(keepIndicesRef);                       
+                  keepIndices = intersect(keepIndices,subpopIndices);                  
+                  
                   curVals = [curSimValues1(rowCounter,keepIndices); curSimValues2(rowCounter,keepIndices)];          
-                  myCorTable.('predSample'){rowCounter} = curVals;
-				  myCorTable.('predIndices'){rowCounter} = keepIndices;
+                  myTable.('predSample'){rowCounter} = curVals;
+				  myTable.('predIndices'){rowCounter} = keepIndices;
+
               end
-              obj.corTable = myCorTable;												
+              obj.corTable = myTable;												
           end             
 
       end

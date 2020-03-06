@@ -8,7 +8,7 @@ function myWorksheet = simulateWorksheetIterateTolerance(myWorksheet, mySimulate
 %         will not necessarily all be completed with the
 %         same settings.
 % NOTE 2: By default we will
-% 		  resimulate the initial VPs unless a mySimulateOptions is 
+% 		  not resimulate the initial VPs unless a mySimulateOptions is 
 % 		  provided specifying otherwise.
 %
 % ARGUMENTS
@@ -24,13 +24,13 @@ function myWorksheet = simulateWorksheetIterateTolerance(myWorksheet, mySimulate
 flagContinue = true;
 
 % First check input arguments
-resimulateInitial = true;
+resimulateInitial = false;
 if nargin > 2
     warning(['Too many input arguments to',mfilename,'. Require: myWorksheet; Optional: simulateOptions.'])
     flagContinue = false;
 elseif nargin > 1
     flagContinue = true;  
-	resimulateInitial = mySimulateOptions.filterFailedRunVPs;
+	resimulateInitial = mySimulateOptions.rerunExisting;
 elseif nargin > 0
     mySimulateOptions = simulateOptions;   
     flagContinue = true; 
@@ -95,19 +95,38 @@ end
 if flagContinue
 	if resimulateInitial
 		myWorksheet.results = {};
-	end
+    end
+    
+    % As a precaution, restart any existing parallel
+    % pools
+    if mySimulateOptions.poolRestart
+        if ~isempty(gcp('nocreate'))
+            delete(gcp);
+        end
+    end
+    if isempty(gcp('nocreate'))
+        % First check the default number of workers, if needed
+        mySimulateOptions = checkNWorkers(mySimulateOptions);
+        myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
+    end
+    
+    % We won't restart in each call to simulateWorksheet
+    originalPoolClose = mySimulateOptions.poolClose;
+    mySimulateOptions.poolRestart = false;
+    mySimulateOptions.poolClose = false;
+    
 	mySimulateOptions.rerunExisting = false;
 	myWorksheet = simulateWorksheet(myWorksheet, mySimulateOptions);
 	myResultClasses = cellfun(@class,myWorksheet.results, 'UniformOutput', false);
 	nSimFail = sum(sum(~(strcmp(myResultClasses,'struct'))));
 	originalAbsTol = myWorksheet.simProps.absoluteTolerance;
 	originalRelTol = myWorksheet.simProps.relativeTolerance;
-	nRetries = 1;
+	nRetries = 0;
 	resimulateFlag = true;
-	% This is clearly empirical, but try 3 resubmissions
+	% This is clearly empirical, but try 5 submissions
 	% with decreasing absolute tolerance
-	while ((nSimFail > 0) && (resimulateFlag) && (nRetries<=3))
-		myWorksheet.simProps.absoluteTolerance = originalAbsTol/(10*nRetries);
+	while ((nSimFail > 0) && (resimulateFlag) && (nRetries<=4))
+		myWorksheet.simProps.absoluteTolerance = originalAbsTol/(10^nRetries);
 		myWorksheet.simProps.relativeTolerance = originalRelTol;
 		myWorksheet = simulateWorksheet(myWorksheet, mySimulateOptions);
 		myResultClasses = cellfun(@class,myWorksheet.results, 'UniformOutput', false);
@@ -115,12 +134,12 @@ if flagContinue
 		% if a structure is provided then it is a valid result
 		nSimFail = sum(sum(~(strcmp(myResultClasses,'struct'))));	
 		nRetries = nRetries + 1;
-		if originalAbsTol/(10*nRetries) < 1E-100
+		if originalAbsTol/(10^nRetries) < 1E-100
 			resimulateFlag = false
 		end
 	end
 	myWorksheet.simProps.absoluteTolerance = originalAbsTol;
-	myWorksheet.simProps.relativeTolerance = originalRelTol;
+	myWorksheet.simProps.relativeTolerance = originalRelTol;    
 	originalMaxStep = myWorksheet.simProps.maxStep;	
 	if isnumeric(originalMaxStep)
 		testStepBasis = originalMaxStep;
@@ -128,20 +147,28 @@ if flagContinue
 		testStepBasis = min(diff(myWorksheet.simProps.sampleTimes));
 	end
 	% If that fails, try adjusting the relative step size
-	nRetries = 1;
+	nRetries = 0;
 	resimulateFlag = true;
-	while ((nSimFail > 0) && (resimulateFlag) && (nRetries<=3))
-		myWorksheet.simProps.maxStep = testStepBasis/(10*nRetries);
+	while ((nSimFail > 0) && (resimulateFlag) && (nRetries<=2))
+		myWorksheet.simProps.maxStep = testStepBasis/(10^nRetries);
 		myWorksheet = simulateWorksheet(myWorksheet, mySimulateOptions);
 		myResultClasses = cellfun(@class,myWorksheet.results, 'UniformOutput', false);
 		% Results should be stored in a structure, we assume 
 		% if a structure is provided then it is a valid result
 		nSimFail = sum(sum(~(strcmp(myResultClasses,'struct'))));	
 		nRetries = nRetries + 1;
-		if testStepBasis/(10*nRetries) < 1E-9
+		if testStepBasis/(10^nRetries) < 1E-9
 			resimulateFlag = false;
 		end
-	end	
+    end	
+    
+    % Clean up the pool, if needed
+    if originalPoolClose
+        if ~isempty(gcp('nocreate'))
+            delete(gcp);
+        end
+    end    
+    
 	myWorksheet.simProps.maxStep = originalMaxStep;
 	if nSimFail > 0
 		warning(['Not all simulations completed in ',mfilename,'.  There are still ',num2str(nSimFail),' unsuccessful simulations.  Returning worksheet with current results and all VPs.'])

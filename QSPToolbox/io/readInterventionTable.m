@@ -2,6 +2,8 @@ function myWorksheet = readInterventionTable(myWorksheet, fileName)
 % Read an intervention definition from a file.  Note that if there are
 % issues with any of the interventions in the file, the default behavior is
 % to ignore the addition of all of the interventions in the file.
+% If the worksheet already has interventions, the ones from file are
+% appended.
 %
 % ARGUMENTS
 % worksheet: a worksheet, required
@@ -134,6 +136,7 @@ if continueFlag
     variantNames = myWorksheet.variantProps.typeValueSets;
     doseNames = getDoseNames(myWorksheet);
     previousInterventionIDs = getInterventionIDs(myWorksheet); 
+    [nInterventionResults, nVPResults] = size(myWorksheet.results);
 
     for interventionCounter = 1 : length(interventionNames)
         currentPass = true;
@@ -217,6 +220,11 @@ if continueFlag
             arrangedIntervention = passInterventions{newInterventionCounter};
             myWorksheet = createIntervention(myWorksheet, interventionID, arrangedIntervention);
         end    
+        if nInterventionResults > 0
+            % We pad with empty results if there are results for prior
+            % interventions in the worksheet
+            myWorksheet.results = [myWorksheet.results;cell(nPassInterventions,nVPResults)];
+        end
     else
         failedInterventions = [failedInterventions',[repmat({','},numel(failedInterventions)-1,1);{[]}]]';
         failedInterventions = [failedInterventions{:}];

@@ -118,7 +118,7 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
 			originalRange = originalValsSort(length(originalValsSort)) - originalValsSort(1);
             [~, ~, SCall] = alignSamples(sort(curExpVals,'ascend'), sort(curSimVals,'ascend'));
 
-			curBandWidth = (max(SCall) - min(SCall))/10;
+			curBandWidth = (max(SCall) - min(SCall))/20;
 			% Calculate VP scores
 			% by comparing the cohort PDF to data
 			[PDFsim,~] = ksdensity(originalValsSort,SCall,'bandwidth',curBandWidth);%,'Support',[min(SC)-eps max(SC)+eps]);
@@ -178,7 +178,7 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
 						originalRange = originalValsSort(length(originalValsSort)) - originalValsSort(1);
 						SCall = sort(curSimVals,'ascend');
 										
-						curBandWidth = (max(SCall) - min(SCall))/10;
+						curBandWidth = (max(SCall) - min(SCall))/20;
 						
 						% Calculate VP scores
 						% by comparing the cohort PDF to data						

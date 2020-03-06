@@ -295,6 +295,17 @@ classdef clusterPickOptions
       end
 
       function obj = setDefaultFromWorksheet(obj,myWorksheet)
+          % This method sets default axes and clustering elements 
+          % based on the axes and responseTypes in the worksheet
+          % 
+          %
+          % Arguments:
+          %  myWorksheet:        a worksheet that will be used for
+          %                      clustering
+          %
+          % Returns:
+          %  An object with updated cluster settings
+          %          
           allVPIDs = getVPIDs(myWorksheet);
           nWshVPs = length(allVPIDs);
           obj.normalizeType = 'min-max';
@@ -367,6 +378,69 @@ classdef clusterPickOptions
               obj.edgeVPFlag = false;
           end
       end
+      
+      
+      function obj = setClusterElementFromOptions(obj, myObj)
+          % This method sets default clustering elements based on the 
+          % VPop or mapelOptions object.  Rather than using
+          % response types, the targets 
+          % will be used to set the "element" clustering.
+          % You can call "setDefaultFromWorksheet" first
+          % to set the axes to cluseter on, and this will overwrite the
+          % elements from the call to "setDefaultFromWorksheet."
+          %
+          % Arguments:
+          %  myObj:        a mapelOptions or VPop object
+          %
+          % Returns:
+          %  An object with updated cluster settings
+          %
+          
+          obj.normalizeType = 'min-max';
+          myClusterElement = cell(0, 4);
+          % We won't consider weight, we will just use all timepoint,
+          % variables, interventions of potential interest
+          if ~isempty(myObj.mnSDTable)
+              myClusterElement = [myClusterElement; table2cell(myObj.mnSDTable(:,{'elementID','elementType','interventionID','time'}))];
+          end
+          if ~isempty(myObj.distTable)
+              myClusterElement = [myClusterElement; table2cell(myObj.distTable(:,{'elementID','elementType','interventionID','time'}))];
+          end
+          if ~isempty(myObj.binTable)
+              myClusterElement = [myClusterElement; table2cell(myObj.binTable(:,{'elementID','elementType','interventionID','time'}))];
+          end
+          if ~isempty(myObj.distTable2D)
+              myClusterElement = [myClusterElement; table2cell(myObj.distTable2D(:,{'elementID1','elementType1','interventionID1','time1'}))];
+              myClusterElement = [myClusterElement; table2cell(myObj.distTable2D(:,{'elementID2','elementType2','interventionID2','time2'}))];
+          end
+          if ~isempty(myObj.corTable)
+              myClusterElement = [myClusterElement; table2cell(myObj.corTable(:,{'elementID1','elementType1','interventionID1','time1'}))];
+              myClusterElement = [myClusterElement; table2cell(myObj.corTable(:,{'elementID2','elementType2','interventionID2','time2'}))];
+          end
+          [~,idx]=unique(cell2table(myClusterElement),'rows');
+          myClusterElement = myClusterElement(idx,:);
+          obj.clusterElement = myClusterElement;
+      
+          % We'll only set edgeVPFlag if it looks like there
+          % are enough VPs to support.
+          [nSubpops, ~] = size(myObj.subpopTable);
+          if nSubpops > 0
+              nWshVPs = length(myObj.subpopTable{1,'vpIDs'}{1});
+              % We'll default to 4x the number of clusterAxes and Elements
+              [nClusterElements, ~] = size(obj.clusterElement);
+              nClusterAxis = length(obj.clusterAxisIDs);
+              obj.nClusters = min(4 * (nClusterElements + nClusterAxis), nWshVPs);              
+              if nWshVPs >= 2 * (nClusterElements + nClusterAxis)
+                  obj.edgeVPFlag = true;
+              else
+                  obj.edgeVPFlag = false;
+              end
+          else
+              disp(['Subpopulation table not yet defined in mapelOptions or VPop object provided in setClusterElementFromOptions.  Not updating edgeVPFlag or nClusters for ',mfilename,'.'])
+          end
+      end      
+      
+      
       
       % The constructor method must have the same name as the class
       function obj = clusterPickOptions()

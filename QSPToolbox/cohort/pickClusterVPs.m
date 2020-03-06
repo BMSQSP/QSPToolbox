@@ -118,19 +118,18 @@ if continueFlag
     % I should write a better algorithm for getting
     % the edge VPs and call that here, and also in clusterPickOptions
     nVPFromEdges = 0;
-    edgeIndices = nan(0,1);
+    edgeSets = cell(2*(nClusterAxis + nClusterOutput),1);
     if myClusterPickOptions.edgeVPFlag
         for curClusterAxisOutputCounter = 1 : (nClusterAxis + nClusterOutput)
             curMaxVal = max(theMatrixToCluster(curClusterAxisOutputCounter,:));
             curMaxIndex = find(theMatrixToCluster(curClusterAxisOutputCounter,:) >= curMaxVal);
-            curMaxIndex = datasample(curMaxIndex,1);
             curMinVal = min(theMatrixToCluster(curClusterAxisOutputCounter,:));
             curMinIndex = find(theMatrixToCluster(curClusterAxisOutputCounter,:) <= curMinVal);
-            curMinIndex = datasample(curMinIndex,1);            
-            edgeIndices = [edgeIndices; curMaxIndex; curMinIndex];
+            edgeSets{(curClusterAxisOutputCounter-1)*2+1,1} = allVPIDs(curMinIndex);
+            edgeSets{(curClusterAxisOutputCounter-1)*2+2,1} = allVPIDs(curMaxIndex);
         end
-        edgeIndices = unique(edgeIndices);
-        edgeIndices = sort(edgeIndices,'ascend');
+        edgeSets = getMinimalEdgeSet(edgeSets);
+        edgeIndices = find(ismember(allVPIDs,edgeSets));
         myIndices(1:length(edgeIndices)) = edgeIndices;
 		disp(['Found ',num2str(length(edgeIndices)),' edge VPs, total requested number of VPs post clustering is ',num2str(myNClusters),'.  Proceeding.'])
 		if length(edgeIndices) >= myNClusters

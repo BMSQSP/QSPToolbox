@@ -175,7 +175,10 @@ if continueFlag
 	% we have many parents. If we are pooling all the children
 	% together and picking the best, we will ignore this.
     maxNewPerOld = max(maxNewPerOld,ceil(maxNewPerIterChecked/length(highVPIndices)));
-
+    % We allow 3x more child VP tries based on weight than edges
+    simChildScale = (expandCohortSize/length(highVPIDs)*(nEdgeAdded+nHighAdded)/(1.5*nHighAdded+.5*nEdgeAdded));
+    nChildSimulations = (ceil(1.5*nHighAdded*simChildScale)+ceil(.5*nEdgeAdded*simChildScale));
+    
     myVaryAxesOptions = varyAxesOptions;
     myVaryAxesOptions.varyMethod = varyMethod;
     myVaryAxesOptions.gaussianStd = gaussianStd;
@@ -189,10 +192,24 @@ if continueFlag
     if selectByParent
         disp(['Note due to the maxNewPerIter and maxNewPerOld settings, it is possible only children from ',num2str(ceil(maxNewPerIterChecked/maxNewPerOld)),' VP parents will be selected in ',mfilename,'.'])    
     end
-    disp('---')    
+    disp('---')     
     
-    
+    % We will add more children based on weight than edges
+    myVaryAxesOptions.newPerOld = ceil(simChildScale*1.5);
+    myVaryAxesOptions.baseVPIDs = highVPIDs(1);
     jitteredWorksheet = addVariedVPs(myWorksheet, myVaryAxesOptions);
+    for addCounter = 2: length(highVPIDs)
+        if sum(ismember(highVPIDs(addCounter),highVPIDsMono)) > 0
+            myVaryAxesOptions.newPerOld = ceil(simChildScale*1.5);
+            myVaryAxesOptions.baseVPIDs = highVPIDs(addCounter);
+            jitteredWorksheet = addVariedVPs(jitteredWorksheet, myVaryAxesOptions);
+        else
+            myVaryAxesOptions.newPerOld = ceil(simChildScale*0.5);
+            myVaryAxesOptions.baseVPIDs = highVPIDs(addCounter);
+            jitteredWorksheet = addVariedVPs(jitteredWorksheet, myVaryAxesOptions);   
+        end
+    end
+    
     curVPIDs = getVPIDs(jitteredWorksheet);
     newIndices = (find(~ismember(curVPIDs,originalVPIDs)));
     newVPIDs = curVPIDs(newIndices);
@@ -316,12 +333,30 @@ if continueFlag
             if myVPRangeTable{rowCounter, 'minMissing'} > myCutoff
                 curVals = sort(curData(find(allChildrenBaseIndices)),'ascend');
                 curVals = unique(curVals,'stable');
-                edgeVPScores(rowCounter,:) = nRows * (curData == curVals(1)) + 1/nRows * (curData == curVals(2));
+                % Any extreme edge is scored.
+                % Currently, number 2 is not scored though 
+                % this code is set up so we could add it back in.
+                if length(curVals) >= 1 
+                    edgeVPScores(rowCounter,:) = 1 * (curData == curVals(1));
+                    % 2nd place does not get a nonzero score
+                    % + 0 * (curData == curVals(2));
+                    % Enforce that the children also must expand the range
+                    % to be scored
+                    simMin = myVPRangeTable{rowCounter, 'simMin'};
+                    edgeVPScores(rowCounter,:) = edgeVPScores(rowCounter,:) .* (curData < simMin);
+                end
             end
             if myVPRangeTable{rowCounter, 'maxMissing'} > myCutoff
                 curVals = sort(curData(find(allChildrenBaseIndices)),'descend');
                 curVals = unique(curVals,'stable');
-                edgeVPScores(rowCounter,:) = nRows * (curData == curVals(1)) + 1/nRows * (curData == curVals(2));
+                if length(curVals) >= 1 
+                    edgeVPScores(rowCounter,:) = 1 * (curData == curVals(1));
+                    % + 0 * (curData == curVals(2));
+                    % Enforce that the children also must expand the range
+                    % to be scored
+                    simMax = myVPRangeTable{rowCounter, 'simMax'};
+                    edgeVPScores(rowCounter,:) = edgeVPScores(rowCounter,:) .* (curData > simMax);    
+                end
             end                
         end
         % We'll just use 1 row for the edge scores,
@@ -349,7 +384,11 @@ if continueFlag
             else
                 % For VPs selected based on edges, apply a different
                 % selection strategy
+                % We'll only consider edge VPs with scores > 0 
                 childScores = edgeVPScores(:,find(ismember(newVPIDs,childIDs)));
+                keepChildren = find(childScores > 0);
+                childScores = childScores(keepChildren);
+                childIDs = childIDs(keepChildren);
             end
             % We will prioritize VPs that score well
             [nScoresPerVP, nCurChildren] = size(childScores);

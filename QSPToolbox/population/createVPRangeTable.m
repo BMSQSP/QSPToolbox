@@ -102,6 +102,11 @@ if flagContinue
          nFoundElements = 0;
          expMin = nan(nCheckElements,1);
          expMax = nan(nCheckElements,1);
+         % In the future, we might also want to
+         % add checks on the 10/90 percentiles
+         % in the data.
+         % exp10 = nan(nCheckElements,1);
+         % exp90 = nan(nCheckElements,1);         
          simMin = nan(nCheckElements,1);
          simMax = nan(nCheckElements,1);
          expN = nan(nCheckElements,1);
@@ -133,6 +138,7 @@ if flagContinue
                 expN(nFoundElements) = sum(~isnan(myExpDataTable{expRow,firstDataIndex+1:end}));
                 expMin(nFoundElements) = min(myExpDataTable{expRow,firstDataIndex+1:end});
                 expMax(nFoundElements) = max(myExpDataTable{expRow,firstDataIndex+1:end});
+                % [exp10(nFoundElements), exp90(nFoundElements)] = prctile(myExpDataTable{expRow,firstDataIndex+1:end},[10 90]);
                 simMin(nFoundElements) = min((mySimData(simRow,:)));
                 simMax(nFoundElements) = max((mySimData(simRow,:)));
                 vpMinInd{nFoundElements} = find(mySimData(simRow,:) == simMin(nFoundElements));
@@ -146,6 +152,8 @@ if flagContinue
              expN = expN(1:nFoundElements);
              expMin = expMin(1:nFoundElements);
              expMax = expMax(1:nFoundElements);
+             % exp10 = exp10(1:nFoundElements);
+             % exp90 = exp90(1:nFoundElements);             
              simMin = simMin(1:nFoundElements);
              simMax = simMax(1:nFoundElements);
              vpMinInd = vpMinInd(1:nFoundElements);
@@ -156,7 +164,9 @@ if flagContinue
              rangeCover = (min(simMax,expMax) - max(simMin,expMin)) ./ (expMax - expMin);
              maxMissing = max((expMax - simMax),zeros(nFoundElements,1))./(expMax - expMin);
              minMissing = max((simMin - expMin),zeros(nFoundElements,1))./(expMax - expMin);
-             
+             % rangeCover80 = (min(simMax,exp90) - max(simMin,exp10)) ./ (exp90 - exp10);
+             % maxMissing = max((expMax - simMax),zeros(nFoundElements,1))./(expMax - expMin);
+             % minMissing = max((simMin - expMin),zeros(nFoundElements,1))./(expMax - expMin);             
              elementID = rowInfo(:,1);
              elementType = rowInfo(:,2);
              interventionID = rowInfo(:,3);

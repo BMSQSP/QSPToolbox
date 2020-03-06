@@ -85,6 +85,9 @@ if continueFlag
 
     % Starting effN
     curEffN = myMapelOptions.minEffN;
+    
+    % Maximal optimizePopSize.  We'll try to use smaller to save time.
+    maxOptimizePopSize = myMapelOptions.optimizePopSize;
 
     % Set these for fast optimization
     myMapelOptions.exactFlag = false;
@@ -145,6 +148,7 @@ if continueFlag
 		% if calibrations fail.
         bestPVal = -1;
         myMapelOptions.minEffN = curEffN;
+        % myMapelOptions.optimizePopSize = min(2*length(getVPIDs(myWorksheet)), maxOptimizePopSize);
         myTestCounter = 0;		
 		
         while bestPVal < minPVal
