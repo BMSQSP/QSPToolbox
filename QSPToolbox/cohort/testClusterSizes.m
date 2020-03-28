@@ -86,7 +86,11 @@ if continueFlag
     end
 
     originalMatrix = theMatrixToCluster;
-    
+    if sum(ismember(myClusterTestOptions.distance,'seuclidean')) > 0
+        myDistance = 'sqeuclidean';
+    elseif sum(ismember(myClusterTestOptions.distance,'correlation')) > 0
+        myDistance = 'correlation';
+    end
     % any variables with zero variation will be a constant, 0, following
     % normalization and there
     % will be zero distance among these points in the dimension with the
@@ -124,7 +128,7 @@ if continueFlag
     % First we need to assess the number of required clusters
     parfor nCluster = nClusterMin : nClusterMax
         curResult = struct();
-        [idx,theMeans,sumd,D] = kmeans(theMatrixToCluster, nCluster, 'Replicates',5,'MaxIter',100);
+        [idx,theMeans,sumd,D] = kmeans(theMatrixToCluster, nCluster, 'Distance', myDistance, 'Replicates',5,'MaxIter',100);
         % sumd within-cluster sums of point-to-medoid distances in the k-by-1 vector sumd
         % D distances from each point to every medoid in the n-by-k matrix D
         % We want theMeans, within-cluster SS, and total SS

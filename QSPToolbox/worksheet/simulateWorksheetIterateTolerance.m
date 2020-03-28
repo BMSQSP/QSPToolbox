@@ -1,4 +1,4 @@
-function myWorksheet = simulateWorksheetIterateTolerance(myWorksheet, mySimulateOptions)
+function varargout = simulateWorksheetIterateTolerance(myWorksheet, mySimulateOptions)
 % This function will iterate with decreased tolerance or max step and try to
 % force all of the VPs in a worksheet to complete.  This function
 % will iteratively call simulate worksheet.  
@@ -6,10 +6,10 @@ function myWorksheet = simulateWorksheetIterateTolerance(myWorksheet, mySimulate
 %         try to force simulation of all of
 %         the provided VPs/parameter vectors to complete, but they 
 %         will not necessarily all be completed with the
-%         same settings.
+%         same tolerance settings.
 % NOTE 2: By default we will
-% 		  not resimulate the initial VPs unless a mySimulateOptions is 
-% 		  provided specifying otherwise.
+% 		  not resimulate the initial VPs unless a mySimulateOptions object  
+% 		  is provided specifying otherwise.
 %
 % ARGUMENTS
 %  myWorksheet:       A worksheet to simulate.
@@ -17,8 +17,11 @@ function myWorksheet = simulateWorksheetIterateTolerance(myWorksheet, mySimulate
 %                     provided, this function will use default values.
 % 
 % RETURNS
-% myWorksheet:       the original worksheet plus
-%                    the simulation results
+%  varargout:             up to two output arguments
+%   myWorksheet:           the original worksheet updated with the
+%                           the simulation results
+%   mySimulateTolerances:  the simProps settings from the worksheet
+%                           (optional, struct)
 %
 
 flagContinue = true;
@@ -39,6 +42,14 @@ else
     flagContinue = false;    
 end
 
+if nargout < 1
+    warning(['Insufficient output arguments for ',mfilename,'. Provides: myWorksheet; Optional: mySimulateTolerances.'])
+    flagContinue = false; 
+elseif nargout > 2
+    warning(['Too many output arguments for ',mfilename,'. Provides: myWorksheet; Optional: mySimulateTolerances.'])
+    flagContinue = false;    
+end       
+
 if flagContinue
     passCheck = mySimulateOptions.verify(myWorksheet);
     if ~passCheck
@@ -46,10 +57,16 @@ if flagContinue
         flagContinue = false;        
     end
 	if mySimulateOptions.filterFailedRunVPs
-        warning(['The filterFailedRunVPs flag for mySimulateOptions in ',mfilename,' should be set to false.  Resetting.'])
-        mySimulateOptions.filterFailedRunVPs = false;        
-    end	
+        mySimulateOptions.filterFailedRunVPs = false;   
+        flagFilterAtEnd = true;
+    else
+        flagFilterAtEnd = false;
+    end
 end
+
+% Just initialize a cell array to return if requested, will
+% update later
+mySimulateTolerances = cell(1, 1);
 
 if flagContinue
     % We will assume compiled models are still valid.
@@ -77,6 +94,7 @@ if flagContinue
     interventionIDs = getInterventionIDs(myWorksheet);
     nVPs = length(vpIDs);
     nInterventions = length(interventionIDs);
+    nSimAll = nVPs*nInterventions;
     if ((nVPs < 1) || (nInterventions < 1))
         warning(['Insufficient VPs and interventions for ',mfilename,'.'])
         flagContinue = false;
@@ -88,6 +106,7 @@ if flagContinue
         warning(['Unable to identify all indicated saveElementResultIDs as elements in myWorksheet in call to ',mfilename,'.'])
         flagContinue = false;
     end    
+    mySimulateTolerances = cell(nInterventions, nVPs);    
     
 end
     
@@ -109,44 +128,80 @@ if flagContinue
         mySimulateOptions = checkNWorkers(mySimulateOptions);
         myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
     end
-    
-    % We won't restart in each call to simulateWorksheet
-    originalPoolClose = mySimulateOptions.poolClose;
-    mySimulateOptions.poolRestart = false;
-    mySimulateOptions.poolClose = false;
-    
-	mySimulateOptions.rerunExisting = false;
-	myWorksheet = simulateWorksheet(myWorksheet, mySimulateOptions);
+
+    % Get status of existing prior results and initial tolerances
 	myResultClasses = cellfun(@class,myWorksheet.results, 'UniformOutput', false);
-	nSimFail = sum(sum(~(strcmp(myResultClasses,'struct'))));
+    completeFlags = strcmp(myResultClasses,'struct');
+    if isempty(completeFlags)
+        completeFlags = zeros(nInterventions,nVPs);
+    end    
+	nSimFail = sum(sum(~(completeFlags)));
 	originalAbsTol = myWorksheet.simProps.absoluteTolerance;
 	originalRelTol = myWorksheet.simProps.relativeTolerance;
 	nRetries = 0;
 	resimulateFlag = true;
+    
+    % Set up pool options for simulateWorksheet
+    originalPoolClose = mySimulateOptions.poolClose;
+    mySimulateOptions.poolRestart = false;
+    mySimulateOptions.poolClose = false;
+	mySimulateOptions.rerunExisting = false;
+    
+    % We will make sure not to simulate if we already have all of the
+    % results and we haven't been instructed to resimulate
+    myResultClasses = cellfun(@class,myWorksheet.results, 'UniformOutput', false);
+    
+    % Setup tolerances to try
+    nTolStepsMax = 10;
+    % We shouldn't often need this, but the smallest
+    % positive double is realmin, 2.2251e-308
+    endAbsTol = max(originalAbsTol/(10^nTolStepsMax),1E-300);
+    % teltol should generally stay above eps(1) = 2.2204e-16
+    endRelTol = max(originalRelTol/(10^nTolStepsMax),1E-15);
+    % Generate the pairwise combinations for tolerances to try, 
+    % where absTol increments more quickly than relTol
+    % in the first column.
+    myAbsTols = 10.^([log10(originalAbsTol):-1:log10(endAbsTol)]);
+    myRelTols = 10.^([log10(originalRelTol):-1:log10(endRelTol)]);
+    [A,B] = meshgrid(myAbsTols,myRelTols);
+    myTols=cat(2,A',B');
+    myTols=reshape(myTols,[],2);
+    [nRetriesMax, ~] = size(myTols);
+    nRetriesMax=nRetriesMax - 1;
+    
+    
 	% This is clearly empirical, but try 5 submissions
 	% with decreasing absolute tolerance
-	while ((nSimFail > 0) && (resimulateFlag) && (nRetries<=4))
-		myWorksheet.simProps.absoluteTolerance = originalAbsTol/(10^nRetries);
-		myWorksheet.simProps.relativeTolerance = originalRelTol;
+	while ((nSimFail > 0) && (resimulateFlag) && (nRetries<=nRetriesMax))
+		myWorksheet.simProps.absoluteTolerance = myTols(nRetries+1,1);
+		myWorksheet.simProps.relativeTolerance = myTols(nRetries+1,2);
 		myWorksheet = simulateWorksheet(myWorksheet, mySimulateOptions);
 		myResultClasses = cellfun(@class,myWorksheet.results, 'UniformOutput', false);
 		% Results should be stored in a structure, we assume 
 		% if a structure is provided then it is a valid result
-		nSimFail = sum(sum(~(strcmp(myResultClasses,'struct'))));	
+        lastCompleteFlags = completeFlags;
+        completeFlags = strcmp(myResultClasses,'struct');
+		nSimFail = sum(sum(~(completeFlags)));	
 		nRetries = nRetries + 1;
-		if originalAbsTol/(10^nRetries) < 1E-100
-			resimulateFlag = false
-		end
+		if (originalAbsTol/(10^nRetries) < 1E-100)
+			resimulateFlag = false;
+        end
+        newCompleteFlags = completeFlags - lastCompleteFlags;
+        curSimSettings = myWorksheet.simProps;
+        mySimulateTolerances(find(newCompleteFlags)) = {curSimSettings};
 	end
 	myWorksheet.simProps.absoluteTolerance = originalAbsTol;
-	myWorksheet.simProps.relativeTolerance = originalRelTol;    
+	myWorksheet.simProps.relativeTolerance = originalRelTol;
+    
+    % Also try new max step sizes with the original tolerances.
+    % If that was not successful.  We generally don't impose a maxstep.
+    % but it can also sometimes help the integrations.
 	originalMaxStep = myWorksheet.simProps.maxStep;	
 	if isnumeric(originalMaxStep)
 		testStepBasis = originalMaxStep;
 	else
 		testStepBasis = min(diff(myWorksheet.simProps.sampleTimes));
 	end
-	% If that fails, try adjusting the relative step size
 	nRetries = 0;
 	resimulateFlag = true;
 	while ((nSimFail > 0) && (resimulateFlag) && (nRetries<=2))
@@ -155,25 +210,53 @@ if flagContinue
 		myResultClasses = cellfun(@class,myWorksheet.results, 'UniformOutput', false);
 		% Results should be stored in a structure, we assume 
 		% if a structure is provided then it is a valid result
-		nSimFail = sum(sum(~(strcmp(myResultClasses,'struct'))));	
+        lastCompleteFlags = completeFlags;
+        completeFlags = strcmp(myResultClasses,'struct');
+		nSimFail = sum(sum(~(completeFlags)));	
 		nRetries = nRetries + 1;
 		if testStepBasis/(10^nRetries) < 1E-9
 			resimulateFlag = false;
-		end
+        end
+        newCompleteFlags = completeFlags - lastCompleteFlags;
+        curSimSettings = myWorksheet.simProps;
+        mySimulateTolerances(find(newCompleteFlags)) = {curSimSettings};       
     end	
+	myWorksheet.simProps.maxStep = originalMaxStep;
+    
     
     % Clean up the pool, if needed
     if originalPoolClose
         if ~isempty(gcp('nocreate'))
             delete(gcp);
         end
-    end    
+    end        
     
-	myWorksheet.simProps.maxStep = originalMaxStep;
+    % Follow desired behavior for failed simulations.
 	if nSimFail > 0
-		warning(['Not all simulations completed in ',mfilename,'.  There are still ',num2str(nSimFail),' unsuccessful simulations.  Returning worksheet with current results and all VPs.'])
-	end
+        if ~flagFilterAtEnd
+            disp(['Not all simulations completed in ',mfilename,'.  There are still ',num2str(nSimFail),' unsuccessful simulations.  Returning worksheet with available results and all VPs.'])
+        else
+            disp(['Not all simulations completed in ',mfilename,'.  There are still ',num2str(nSimFail),' unsuccessful simulations.  Returning worksheet with available results and successful VPs.'])
+            filterVPids = cell(1,0);
+            allVPIDs = getVPIDs(myWorksheet);
+            myResultClasses = cellfun(@class,myWorksheet.results, 'UniformOutput', false);
+            failFlags = ~(strcmp(myResultClasses,'struct'));
+            failVPLogical = sum(failFlags,1) > 0;
+            filterVPids = allVPIDs(failVPLogical);
+            myWorksheet = removeVPs(myWorksheet, filterVPids);
+            mySimulateTolerances = mySimulateTolerances(:,~failVPLogical);
+        end            
+    end
+    
 else
-    warning(['Could not complete ',mfilename,'. Returning original worksheet.'])
+    warning(['Could not complete ',mfilename,'.'])
 end
+
+if nargout > 0
+    varargout{1} = myWorksheet;
+    if nargout > 1
+        varargout{2} = mySimulateTolerances;
+    end
+end
+    
 end

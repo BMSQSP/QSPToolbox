@@ -41,7 +41,6 @@ if nargin > 4
     hotStartVPop = '';    
 elseif nargin > 3
     continueFlag = true;
-    hotStartVPop = '';
 else 
     warning(['Insufficient input arguments to ',mfilename, '. Arguments should be: myWorksheet, myExpandVPopEffNOptions, and myMapelOptions. Optionally: hotStartVPop.'])
     continueFlag = false;
@@ -71,6 +70,8 @@ if continueFlag
 end
 
 if continueFlag    
+    
+    % INITIALIZATION STARTS
     suffix = myExpandVPopEffNOptions.suffix;
     wsIterCounter = myExpandVPopEffNOptions.wsIterCounter;
     targetEffN = myExpandVPopEffNOptions.targetEffN;
@@ -83,31 +84,28 @@ if continueFlag
     expandCohortSize = myExpandVPopEffNOptions.expandCohortSize;
     restartPVal = myExpandVPopEffNOptions.restartPVal;
 
-    % Starting effN
-    curEffN = myMapelOptions.minEffN;
-    
     % Maximal optimizePopSize.  We'll try to use smaller to save time.
     maxOptimizePopSize = myMapelOptions.optimizePopSize;
 
     % Set these for fast optimization
     myMapelOptions.exactFlag = false;
-	% Enforce using effN, since
-	% we enforce using it for the VPops
+    % Enforce using effN, since
+    % we enforce using it for the VPops
     myMapelOptions.useEffN = true;
-	% Also minimize pool restarts
-	myMapelOptions.poolRestart=false;
-	myMapelOptions.poolClose=false;
+    % Also minimize pool restarts
+    myMapelOptions.poolRestart=false;
+    myMapelOptions.poolClose=false;
     
-	% We will manually refresh the pool once at the start.
-	if ~isempty(gcp('nocreate'))
-		delete(gcp);
-	end
-	if isempty(gcp('nocreate'))
-		% We will use default pool settings
-		mySimulateOptions = simulateOptions;
-		mySimulateOptions = checkNWorkers(mySimulateOptions);		
-		myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
-	end	    
+    % We will manually refresh the pool once at the start.
+    if ~isempty(gcp('nocreate'))
+        delete(gcp);
+    end
+    if isempty(gcp('nocreate'))
+        % We will use default pool settings
+        mySimulateOptions = simulateOptions;
+        mySimulateOptions = checkNWorkers(mySimulateOptions);		
+        myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
+    end	    
 
     % Make sure results are present.  Here, we don't re-simulate VPs if 
     % results are present.
@@ -116,11 +114,22 @@ if continueFlag
 	mySimulateOptions.poolClose=false; 
     myWorksheet = simulateWorksheet(myWorksheet,mySimulateOptions);
 
+	% Set up a reference worksheet size and effN
+	% to help with clustering decisions
+    startNVPs = length(getVPIDs(myWorksheet));
+    startEffN = myMapelOptions.minEffN;	
+    % Basis and nVPs for clustering
+	basisEffN = 0;    
+	nSteps = floor(((startEffN - basisEffN) / effNDelta)); 
+	basisNVPs = floor(startNVPs - nSteps * maxNewPerIter);
+	
+	curEffN = startEffN;
+
     % Create a screen table
     % so we can enforce new VPs will need pass within bounds
     % set by the starting worksheet.
     myScreenTable = createScreenTable(myWorksheet, myExpandVPopEffNOptions.plausibleResponseTypeIDs, true);
-
+    
     if (~ismember(class(hotStartVPop),{'VPop','VPopRECIST'}))
         nVPopsFound = 0;
     else
@@ -131,124 +140,133 @@ if continueFlag
         oldVPop = evaluateGOF(oldVPop);	
     end
 	
-	if myExpandVPopEffNOptions.useMapelIntSeed
-		if myMapelOptions.intSeed > -1
-			rng(myMapelOptions.intSeed, 'twister');
-		end  
-		myMapelOptions.intSeed=-1;
-	end	
-	
+    % INITIALIZATION ENDS
 	
 
+    % START ITERATIONS
+    % OUTER LOOP
     while curEffN < (targetEffN + effNDelta)
-		% Set the initial best p value to a negative
+        % Set the initial best p value to a negative
 		% number to force the algorithm to record
 		% and write out the first VPop calibration
 		% attempt, especially to aid troubleshooting
 		% if calibrations fail.
         bestPVal = -1;
         myMapelOptions.minEffN = curEffN;
-        % myMapelOptions.optimizePopSize = min(2*length(getVPIDs(myWorksheet)), maxOptimizePopSize);
         myTestCounter = 0;		
 		
+        % NOW FOR A GIVEN EFFN ITERATE UNTIL WE FIND A GOOD VPOP
+        % AND EXPAND THE WORKSHEET WHEN WE DO
         while bestPVal < minPVal
             myTestCounter = myTestCounter + 1;
-			% We check whether to reseed with myTestCounter for repeatability of the sequence
-			if ~myExpandVPopEffNOptions.useMapelIntSeed
-				myMapelOptions.intSeed=myTestCounter;
-			end
+            % We check whether to reseed with myTestCounter
+            % for repeatability of the sequence
+            if ~myExpandVPopEffNOptions.useMapelIntSeed
+                myMapelOptions.intSeed=myTestCounter;
+            end
             % We will try to restart with initial probabilities, if
             % available, and refresh worksheet data if this is the the first
             % iteration.  We'll also enforce the MAPEL options in
             % case they are tweaked.  Note we don't just directly restart
             % since there may be new simData in the worksheet.
+            
             if (myTestCounter == 1) && (nVPopsFound > 0)
+                % This is the first iteration with the current effN
+                % and we have already found VPops before
                 newVPop = initializeOptionPropertiesToVPop(myMapelOptions);
-                
                 if isa(myMapelOptions,'mapelOptionsRECIST')                   
                     newVPop.recistSimFilter = createRECISTSimFilter(myWorksheet, newVPop);                    
                 end		
-				newVPop = newVPop.getSimData(myWorksheet);
+                newVPop = newVPop.getSimData(myWorksheet);
                 newVPop.subpopTable = updateSubpopTableVPs(newVPop.subpopTable,myWorksheet);
-				if ismember(newVPop.pwStrategy,'bin')
-					newVPop = newVPop.assignIndices(myWorksheet, myMapelOptions);
-					% We assume the old bin probs are compatible
-					% with the new indices assignments.  That is,
-					% there are an equal number of bins and axes.
-					newVPop.binProbs = oldVPop.binProbs;
-				else
-					% Otherwise we are weighting on VPs directly.
-					% We need to assign pws for added vps, also
-					% the CoeffsTable
-					newVPop=newVPop.assignCoeffs(myWorksheet);
-					[~,nVP_nobin]=size(newVPop.coeffsTable);
-					nVP_diff=nVP_nobin-length(oldVPop.pws);
-					if nVP_diff > 0
-						newIndices = [length(oldVPop.pws)+1 : nVP_nobin];
-						allVPIDs = getVPIDs(myWorksheet);
-						parentIndices = nan(1,nVP_diff);
-						for index = 1 : nVP_diff
-							curVPID = allVPIDs{newIndices(index)};
-							parentID = strsplit(curVPID,['_']);
-							nIndices = length(parentID);
-							parentID = parentID(1:nIndices-2);
-							parentID = strjoin(parentID,'_');
-							parentIndices(index) = find(ismember(allVPIDs,parentID));
-							% This will error out if the parent index is > 1.
-							% That should not happen!
-						end
-						uniqueIndices = unique(parentIndices);
-						newPWs = nan(1,nVP_diff);
+                if ismember(newVPop.pwStrategy,'bin')
+                    newVPop = newVPop.assignIndices(myWorksheet, myMapelOptions);
+                    % We assume the old bin probs are compatible
+                    % with the new indices assignments.  That is,
+                    % there are an equal number of bins and axes.
+                    newVPop.binProbs = oldVPop.binProbs;
+                else
+                    % Otherwise we are weighting on VPs directly.
+                    % We need to assign pws for added vps, also
+                    % the CoeffsTable
+                    newVPop=newVPop.assignCoeffs(myWorksheet);
+                    [~,nVP_nobin]=size(newVPop.coeffsTable);
+                    nVP_diff=nVP_nobin-length(oldVPop.pws);
+                    if nVP_diff > 0
+                        % If we have more VPs to calibrate in this
+                        % VPop than the last, we can provide an
+                        % intelligent guess on spreading the PWs
+                        % to the new VPs.
+                        newIndices = [length(oldVPop.pws)+1 : nVP_nobin];
+                        allVPIDs = getVPIDs(myWorksheet);
+                        parentIndices = nan(1,nVP_diff);
+                        for index = 1 : nVP_diff
+                            curVPID = allVPIDs{newIndices(index)};
+                            parentID = strsplit(curVPID,['_']);
+                            nIndices = length(parentID);
+                            parentID = parentID(1:nIndices-2);
+                            parentID = strjoin(parentID,'_');
+                            testIndex = find(ismember(allVPIDs,parentID));
+                            % If we iterate and add multiple rounds
+                            % of VPs without a successful VPop this
+                            % could be 0
+                            if length(testIndex) == 1
+                                parentIndices(index) = testIndex;
+                            end
+                            % The parent index should not be > 1.
+                        end
+                        uniqueIndices = unique(parentIndices);
+                        newPWs = zeros(1,nVP_diff);
                         oldPWs = oldVPop.pws;
-						for parentCounter = 1 : length(uniqueIndices)
-							parentIndex = uniqueIndices(parentCounter);
-							totalWeight = oldVPop.pws(parentIndex);
-							childrenIndices = find(ismember(parentIndices,parentIndex));
-							nChildren = length(childrenIndices);
-							oldPWs(parentIndex) = totalWeight/(nChildren+1);
-							newPWs(childrenIndices) = totalWeight/(nChildren+1);
-						end
-						newVPop.pws=[oldPWs, newPWs];
-					else
-						pws_addition=sum(ones(1,nVP_diff)*1/nVP_nobin);
-						newVPop.pws=[oldVPop.pws*(1-pws_addition), ones(1,nVP_diff)*1/nVP_nobin];  	
-					end
-					% **method 1: set addtional vps has 0 pws
-	%                 newVPop.pws=[oldVPop.pws,zeros(1,nVP_diff)]; % maybe not so good?
-					% ** end of method 1
-					% ++method 2: divide the highest pws and distribute
-	%                 [pws_max_temp, pws_max_temp_ind]=max(oldVPop.pws);
-	%                 pws_max_avg=pws_max_temp/(nVP_diff+1);
-	%                 oldVPop.pws(pws_max_temp_ind)=pws_max_avg;
-	%                 newVPop.pws=[oldVPop.pws,ones(1,nVP_diff)*pws_max_avg];
-					% ++ end of method 2
-					% method 3: assign 1/nVP_nobin as the weights of new VPs
-					% and rescale all others
-					% method 4: distribute the parent weight to the children
+                        for parentCounter = 1 : length(uniqueIndices)
+                            parentIndex = uniqueIndices(parentCounter);
+                            totalWeight = oldVPop.pws(parentIndex);
+                            childrenIndices = find(ismember(parentIndices,parentIndex));
+                            nChildren = length(childrenIndices);
+                            oldPWs(parentIndex) = totalWeight/(nChildren+1);
+                            newPWs(childrenIndices) = totalWeight/(nChildren+1);
+                        end
+                        newVPop.pws=[oldPWs, newPWs];
+                    else
+                        % If there are the same number of VPs
+                        % just use the old PWs
+                        % nVP_diff should not be < 0
+                        % pws_addition=sum(ones(1,nVP_diff)*1/nVP_nobin);
+                        % newVPop.pws=[oldVPop.pws*(1-pws_addition),
+                        % ones(1,nVP_diff)*1/nVP_nobin]; 
+                        newVPop.pws = oldVPop.pws;
+                    end
                 end
+                
                 % We randomize here with magnitude myExpandVPopEffNOptions.expandRandomStart
-				% If the magnitude is set to infinity, we just fully randomize before "restarting"
-				if isinf(myExpandVPopEffNOptions.expandRandomStart)
-					if ismember(newVPop.pwStrategy,'direct')
-						newVPop = newVPop.startPWs(myWorksheet,true);
-					else
-						newVPop = newVPop.startProbs(true);
-					end	
-					newVPop = restartMapel(newVPop, 0);
-				else
-					newVPop = restartMapel(newVPop, myExpandVPopEffNOptions.expandRandomStart);
-				end
+                % If the magnitude is set to infinity, we just
+                % fully randomize before "restarting"
+                % If set to zero, no randomization will be applied
+                if isinf(myExpandVPopEffNOptions.expandRandomStart)
+                    if ismember(newVPop.pwStrategy,'direct')
+                        newVPop = newVPop.startPWs(myWorksheet,true);
+                    else
+                        newVPop = newVPop.startProbs(true);
+                    end	
+                    newVPop = restartMapel(newVPop, 0);
+                else
+                    newVPop = restartMapel(newVPop, myExpandVPopEffNOptions.expandRandomStart);
+                end
             else
-				% For consistency, on the first iteration
+                % For consistency, on the first iteration
                 % if a VPop isn't provided we will use the
-				% myExpandVPopEffNOptions.expandRandomStart
-				% value to decide randomization status.
-				curMapelOptions = myMapelOptions;
-				if (myTestCounter == 1) 
-					curMapelOptions.randomStart = myExpandVPopEffNOptions.expandRandomStart;
-				end
+                % myExpandVPopEffNOptions.expandRandomStart
+                % value to decide randomization status.
+                curMapelOptions = myMapelOptions;
+                if (myTestCounter == 1) 
+                    curMapelOptions.randomStart = myExpandVPopEffNOptions.expandRandomStart;
+                end
                 newVPop = mapel(myWorksheet, curMapelOptions);
             end
+            
+            % Now check the results for the current fresh start
+            % iteration
+            % Force the exact flag for this check.
             newVPop.useEffN = true;
             newVPop.exactFlag = true;
             newVPop = evaluateGOF(newVPop);
@@ -258,26 +276,31 @@ if continueFlag
                 disp(['Current solution effN ', num2str(curVPopEffN), ' with pvalue ',num2str(newVPop.gof),' in ',mfilename,'.'])
                 disp(['Current iteration ', num2str(myTestCounter),'.'])
             end
+            
+            % If the results didn't look too bad, we will restart
             if ((newVPop.gof < minPVal) && (newVPop.gof >= restartPVal) && (curVPopEffN >= curEffN))
                 disp(['This pvalue not quite at acceptance, restarting MAPEL with this as initial guess.  Using myMapelOptions.randomStart value to set the magnitude of randomization.'])
                 myRandomStart = myMapelOptions.randomStart;
                 restartCounter = 1;
                 if (newVPop.gof > bestPVal)
-					% Save here in case this is the best
+                    % Save here in case this is the best
                     mySaveName = ['vpop_',suffix,'_iter',num2str(wsIterCounter),'_effN',num2str(curEffN),'_curBest'];
                     saveVPop(newVPop, mySaveName);
                     bestPVal = newVPop.gof;   
                 end								
-                while (((restartCounter <= nRetries) && ~(newVPop.gof >= minPVal)) || ((newVPop.gof > (0.95 * minPVal)) && ~(newVPop.gof >= minPVal)))
+                while (((restartCounter <= nRetries) && ~(newVPop.gof ...
+                                                          >= minPVal)) || ((newVPop.gof > (0.96 * minPVal)) && ~(newVPop.gof >= minPVal)))
+                    % We will keep trying a restart until we get an
+                    % OK value or we run out of retries.  If we're
+                    % really close we will let the algorithm
+                    % keep iterating.
                     restartVPop = newVPop;
                     restartVPop.useEffN = myMapelOptions.useEffN;
                     restartVPop.exactFlag = myMapelOptions.exactFlag;
-					
-					if ~myExpandVPopEffNOptions.useMapelIntSeed
-						restartVPop.intSeed = myTestCounter + restartCounter;
-					end
-					
-					% Increase the tolerance stringency for restarting
+                    if ~myExpandVPopEffNOptions.useMapelIntSeed
+                        restartVPop.intSeed = myTestCounter + restartCounter;
+                    end
+                    % Decrease the tolerance stringency for restarting
                     restartVPop.tol = newVPop.tol*0.1;
                     restartVPop = restartMapel(restartVPop, myRandomStart);
                     restartVPop.tol = newVPop.tol;
@@ -304,25 +327,79 @@ if continueFlag
                     end
                 end
             end
-            if ((newVPop.gof > bestPVal) && (curVPopEffN >= curEffN))
+            if ((newVPop.gof > bestPVal) && (curVPopEffN >= ...
+                                             curEffN))
+                % This handles the case where we found a better
+                % VPop than we had but it didn't trigger a restart
                 mySaveName = ['vpop_',suffix,'_iter',num2str(wsIterCounter),'_effN',num2str(curEffN),'_curBest'];
                 saveVPop(newVPop, mySaveName);
                 bestPVal = newVPop.gof;
             end
             % If we have surpassed nTries VPop iterations without success 
-            % we will try adding VPs based on the last, best VPop.
+            % we will try to adjust the VPs
             if (mod(myTestCounter,nTries) == 0) && (nVPopsFound > 0) && ~((newVPop.gof > minPVal) && (1/sum(newVPop.pws.^2) >= curEffN))
-                if expandCohortSize > 0
-                    wsIterCounter = wsIterCounter + 1;
-                    [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.resampleStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.expandEdgeVPs, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
-                    saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]); 
-                    % We need to update the mapelOptions subpopTables with
-                    % the new VPs.
-                    % myMapelOptions.subpopTable = updateSubpopTableVPs(myMapelOptions.subpopTable, myWorksheet);
-                    if verbose
-                        disp(['Unable to find an acceptable VPop with initial worksheet in ',num2str(nTries),' VPop fit restarts, added ', num2str(length(newPassNames)), ' VPs to the worksheet in ',mfilename,' to start worksheet iteration ',num2str(wsIterCounter),'.'])
-                    end       
-                end                
+                % We will try adding VPs based on the last, best
+                % VPop if the effN is not much bigger than the basis
+                if curEffN <= (basisEffN + 2*effNDelta)
+                    if ((expandCohortSize > 0) && (maxNewPerIter > 0))
+                        [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.resampleStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.expandEdgeVPs, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
+                        % We force myTestCounter to 0
+                        % so we can generate a new
+                        % initial VPop spreading
+                        % PWs from parents to children.
+                        myTestCounter = 0;
+                        bestPVal = -1;
+                        wsIterCounter = wsIterCounter + 1;                       
+                        if verbose
+                            disp(['Unable to find an acceptable VPop with initial worksheet in ',num2str(nTries),' VPop fit restarts, added ', num2str(length(newPassNames)), ' VPs to the worksheet in ',mfilename,' to start worksheet iteration ',num2str(wsIterCounter),'.'])
+                        end       
+                        saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);                         
+                    end    
+                else
+                    % Otherwise, if we've increased the effN a bit,
+                    % we will try clustering the worksheet
+                    % and continuing from a lower effN
+                    if ((expandCohortSize > 0) && (maxNewPerIter > 0))
+                        % Decide now far to "reduce" the worksheet
+                        reduceFactor = 0.5;
+                        nSteps = floor(((curEffN - basisEffN) / effNDelta)*reduceFactor);
+                        curEffN = basisEffN + nSteps * effNDelta; 
+						nVPTarget = basisNVPs + nSteps * maxNewPerIter;
+						if nVPTarget <= 0
+							nVPTarget = startNVPs;
+							curEffN = startEffN;
+						end
+                        % Cluster on worksheet axes, data being calibrated
+                        % and keeping the edge VPs
+                        myClusterPickOptions = clusterPickOptions;       
+                        myClusterPickOptions = myClusterPickOptions.setDefaultFromWorksheet(myWorksheet);
+                        myClusterPickOptions = myClusterPickOptions.setClusterElementFromOptions(myMapelOptions);                        
+                        if ~myExpandVPopEffNOptions.useMapelIntSeed
+                            myClusterPickOptions.intSeed = myMapelOptions.intSeed;
+                        end
+                        myClusterPickOptions.edgeVPFlag = true;
+                        myClusterPickOptions.nClusters = nVPTarget;
+                        myClusterPickOptions.algorithm = 'auto';
+                        myClusterPickOptions.distance = 'correlation';
+                        myMedoidResult = pickClusterVPs(myWorksheet,myClusterPickOptions);
+                        myVPIDs = myMedoidResult.('pickedVPIDs');
+                        [myWorksheet, oldVPop] = ...
+                            subsetWorksheetVPop(myWorksheet, newVPop, myVPIDs, false);
+                        % We also need to update the  current
+                        % effN, pValue
+                        bestPVal = -1;
+                        myMapelOptions.minEffN = curEffN;
+                        wsIterCounter = wsIterCounter + 1;
+                        % We reset the testCounter so
+                        % we can force trying to use the current
+                        % VPop PW guess from the subset
+                        myTestCounter = 0;
+                        if verbose
+                            disp(['Unable to find an acceptable VPop with initial worksheet in ',num2str(nTries),' VPop fit restarts, clustered to ', num2str(nVPTarget), ' VPs to the worksheet in ',mfilename,' to start worksheet iteration ',num2str(wsIterCounter),' with effN ',num2str(curEffN),'.'])
+                        end                            
+                        saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);                         
+                    end
+                end
             end
         end
         nVPopsFound = nVPopsFound+1;
@@ -336,9 +413,6 @@ if continueFlag
                 % Get ready to expand VPs
                 wsIterCounter = wsIterCounter+1;
                 [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet, oldVPop, myMapelOptions, suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.resampleStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.expandEdgeVPs, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
-                % We need to update the mapelOptions subpopTables with
-                % the new VPs.
-                % myMapelOptions.subpopTable = updateSubpopTableVPs(myMapelOptions.subpopTable, myWorksheet);
                 % Save the new worksheet that will be used.
                 saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);   
                 if verbose

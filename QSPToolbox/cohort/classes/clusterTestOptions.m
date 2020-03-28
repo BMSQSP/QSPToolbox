@@ -7,6 +7,9 @@ classdef clusterTestOptions
 %  clusterElement:   an N element x 4 cell array of model outputs
 %                    in the results to use as a basis.  Each row contains:
 %                    elementID, elementType (i.e. parameter, compartment, ....), interventionID, time;
+%  distance:        distance metric to use. 
+%                       'correlation': default
+%                       'seuclidean':  squared euclidean
 %  normalizeType:    type of method to center and scale the data.  
 %                    Valid options: min-max and z-score
 %  intSeed:          Integer for seeding the random number generator
@@ -21,6 +24,7 @@ classdef clusterTestOptions
       rangeNClusters
       clusterAxisIDs
       clusterElement
+      distance
       normalizeType
       intSeed
       clusterCutoff
@@ -70,6 +74,15 @@ classdef clusterTestOptions
               error(['Invalid clusterElement specified for ',mfilename,', an Nx3 cell array of form {elementID, elementType, interventionID; ...} should be specified.'])
           end
       end
+      
+      function obj = set.distance(obj,myInput)
+          allowedSettings = {'correlation','seuclidean'};
+          if sum(ismember(allowedSettings, lower(myInput))>0)
+              obj.distance = lower(myInput);
+          else
+              error(['Invalid distance metric specified for ',mfilename,', should specify one of: ',strjoin(allowedSettings,', '),'.'])
+          end
+      end      
 
       function obj = set.normalizeType(obj,myNormalizeType)
           allowedSettings = {'min-max','z-score'};
@@ -103,7 +116,9 @@ classdef clusterTestOptions
               case 'clusterAxisIDs'
                   value = obj.clusterAxisIDs;
               case 'clusterElement'
-                  value = obj.clusterElement;                  
+                  value = obj.clusterElement;  
+              case 'distance'
+                  value = obj.distance;                    
               case 'normalizeType'
                   value = obj.normalizeType;                  
               case 'intSeed'
@@ -249,6 +264,7 @@ classdef clusterTestOptions
           obj.rangeNClusters = [2 2];
           obj.clusterAxisIDs = {};
           obj.clusterElement = cell(0,4);
+	      obj.distance = 'correlation';           
 %           obj.centerType = 'mean';
 %           obj.scaleType = 'std';
           obj.normalizeType = 'min-max';

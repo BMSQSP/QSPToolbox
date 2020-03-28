@@ -112,6 +112,10 @@ classdef expandVPopEffNOptions
 
       function obj = set.suffix(obj,mySuffix)
           if ischar(mySuffix)
+              if contains(mySuffix,'_')
+                  disp(['Underscore "_" characters not supported in suffix in ',mfilename,'.  Replacing with hyphens "-".'])
+                  mySuffix = strrep(mySuffix,'_','-');
+              end
               obj.suffix = (mySuffix);
           else
               error(['Invalid suffix specified in ',mfilename,', a string should be specified.'])

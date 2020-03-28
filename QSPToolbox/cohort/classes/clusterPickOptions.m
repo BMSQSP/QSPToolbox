@@ -2,11 +2,29 @@ classdef clusterPickOptions
 % This class defines options for pickClusterVPs
 %
 % PROPERTIES:
+%  algorithm:       kmedoid algorithm to use.  These are taken from MATLAB
+%                    and valid options include:
+%                       'pam':   classical Partition Around Medoids
+%                       'clara': a good alternative if clustering more than
+%                                a couple thousand VPs.  Scales better than
+%                                PAM.
+%                       'small': uses an algorithm similar to k-means to
+%                                find medoids
+%                       'large': similar to 'small' but uses a random
+%                                sample
+%                       'auto' (default):  automatically pick the algorithm
+%                                based on the size of the problem.  A
+%                                similar strategy to MATLAB's kmedoids
+%                                algorithm is used.
 %  nClusters:       number of clusters to include
 %  clusterAxisIDs:  a cell array of IDs of the axes to cluster  
 %  clusterElement:  an N element x 4 cell array of model outputs
 %                   in the results to use as a basis.  Each row contains:
 %                   elementID, elementType (i.e. parameter, compartment, ....), interventionID, time;
+%  distance:        distance metric to use. 
+%                       'correlation': default
+%                       'seuclidean':  squared euclidean
+%                       'euclidean'
 %  normalizeType:   type of method to center and scale the data.  
 %                   Valid options: min-max and z-score
 %  intSeed:         Integer for seeding the random number generator
@@ -19,32 +37,32 @@ classdef clusterPickOptions
 %                           for responseTypeElementPoints only the last time
 %                           point will be used (boolean)
 %  maxIter:         Maximum number of iterations
-%  algorithm:       kmedoid algorithm to use.  These are taken from MATLAB
-%                    and valid options include:
-%                       'pam' (default): classical Partition Around Medoids
-%                       'clara': a good alternative if clustering more than
-%                                a couple thousand VPs.  Scales better than
-%                                PAM.
-%                       'small': uses an algorithm similar to k-means to
-%                                find medoids
-%                       'large': similar to 'small' but uses a random
-%                                sample
 %  replicates:      Number of replicates
 
    properties
+	  algorithm       
       nClusters
       clusterAxisIDs
       clusterElement
+      distance
       normalizeType
       intSeed
       edgeVPFlag
       pointsDefaultLastOnly
 	  maxIter
-	  algorithm
 	  replicates
    end
    
    methods
+      function obj = set.algorithm(obj,myAlgorithm)
+          allowedSettings = {'pam','clara','small','large','auto'};
+          if sum(ismember(allowedSettings, lower(myAlgorithm))>0)
+              obj.algorithm = lower(myAlgorithm);
+          else
+              error(['Invalid algorithm specified for ',mfilename,', should specify one of: ',strjoin(allowedSettings,', '),'.'])
+          end
+      end 	         
+       
       function obj = set.nClusters(obj,myNClusters)
           if ismatrix(myNClusters)
               if isequal(size(myNClusters),[1 1])
@@ -133,15 +151,6 @@ classdef clusterPickOptions
               error(['Invalid maxIter specified for ',mfilename,', a positive integer must be specified.'])
           end
       end 	  
-
-      function obj = set.algorithm(obj,myAlgorithm)
-          allowedSettings = {'pam','clara','small','large'};
-          if sum(ismember(allowedSettings, lower(myAlgorithm))>0)
-              obj.algorithm = lower(myAlgorithm);
-          else
-              error(['Invalid algorithm specified for ',mfilename,', should specify one of: ',strjoin(allowedSettings,', '),'.'])
-          end
-      end 	  
 	  
       function obj = set.replicates(obj,myReplicates)
           if ismatrix(myReplicates)
@@ -159,17 +168,28 @@ classdef clusterPickOptions
               error(['Invalid replicates specified for ',mfilename,', a positive integer must be specified.'])
           end
       end 	  
+      
+      function obj = set.distance(obj,myInput)
+          allowedSettings = {'correlation','euclidean','seuclidean'};
+          if sum(ismember(allowedSettings, lower(myInput))>0)
+              obj.distance = lower(myInput);
+          else
+              error(['Invalid distance metric specified for ',mfilename,', should specify one of: ',strjoin(allowedSettings,', '),'.'])
+          end
+      end       
      
       function value = get(obj,propName)
           switch propName
+              case 'algorithm'
+                  value = obj.algorithm;                
               case 'nClusters'
                   value = obj.nClusters;
               case 'clusterAxisIDs'
                   value = obj.clusterAxisIDs;
               case 'clusterElement'
-                  value = obj.clusterElement;                  
-%               case 'centerType'
-%                   value = obj.centerType;
+                  value = obj.clusterElement;   
+              case 'distance'
+                  value = obj.distance;                    
               case 'normalizeType'
                   value = obj.normalizeType;                  
               case 'intSeed'
@@ -180,10 +200,8 @@ classdef clusterPickOptions
                   value = obj.pointsDefaultLastOnly;   
               case 'maxIter'
                   value = obj.maxIter;  
-              case 'algorithm'
-                  value = obj.algorithm;  
               case 'replicates'
-                  value = obj.replicates;  				  
+                  value = obj.replicates;  		                 
               otherwise
                   error(['Error: ',propName ,' is not a valid ',mfilename,' property.'])
           end
@@ -444,16 +462,17 @@ classdef clusterPickOptions
       
       % The constructor method must have the same name as the class
       function obj = clusterPickOptions()
+	      obj.algorithm = 'auto';          
           obj.nClusters = 1;
           obj.clusterAxisIDs = {};
           obj.clusterElement = cell(0,4);
+	      obj.distance = 'correlation';          
           obj.normalizeType = 'min-max';
           obj.intSeed = -1;
           obj.edgeVPFlag = false;
           obj.pointsDefaultLastOnly = true;
 		  obj.maxIter = 1000;
-	      obj.algorithm = 'pam';
-	      obj.replicates = 100;
+	      obj.replicates = 10;
       end
     end
 end

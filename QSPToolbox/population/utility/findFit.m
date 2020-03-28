@@ -254,7 +254,7 @@ elseif sum(ismember({'surrogate'},optimizeType)) > 0
     optimizeType = 'pso'; 
 elseif sum(ismember({'ga','gapso'},optimizeType)) > 0
     optimOptions = gaoptimset;
-    optimOptions.Display = 'diagnose';
+    optimOptions.Display = 'iter';
     optimOptions.MaxTime = myVPop.optimizeTimeLimit;
     optimOptions.TolFun = myVPop.tol;
     optimOptions.UseParallel = true;    
@@ -264,12 +264,12 @@ elseif sum(ismember({'ga','gapso'},optimizeType)) > 0
 	optimOptions.MutationFcn = {@mutationuniform, 1.5/lProbs};	
 	if strcmp(myVPop.pwStrategy, 'bin')	
 		optimOptions.InitialPopulation = transProbVect;        
-		[optTransProbVect,fVal,exitFlag,output] = ga(anonymousFunction,lProbs,[],[],[],[],ones(1,lProbs)*-pi/2,ones(1,lProbs)*pi/2,[],optimOptions);
+		[optTransProbVect,fVal,exitFlag,output] = ga(anonymousFunction,lProbs,[],[],[],[],[],[],[],optimOptions);
 		% Overwrite the first solution in transProbVect in case this is a gapaso run so we can use this start point
 		transProbVect(1,:) = optTransProbVect;
     else
         optimOptions.InitialPopulation = myPWTrans;    
-		[optTransPWsVect,fVal,exitFlag,output] = ga(anonymousFunction,lProbs,[],[],[],[],ones(1,lProbs)*-pi/2,ones(1,lProbs)*pi/2,[],optimOptions);		
+		[optTransPWsVect,fVal,exitFlag,output] = ga(anonymousFunction,lProbs,[],[],[],[],[],[],[],optimOptions);		
 		% Overwrite the first solution in transProbVect in case this is a gapaso run so we can use this start point
 		myPWTrans(1,:) = optTransPWsVect;		
 	end	

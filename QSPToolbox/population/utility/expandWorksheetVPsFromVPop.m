@@ -62,14 +62,17 @@ if continueFlag
     myVPRangeTable = createVPRangeTable(newVPop);
     % Consider an entry if it is off of one of the edges by more than 10%
     myCutoff = 0.1;
+    % To avoid issues with outliers, we also consider the range OK if we at
+    % least have covered from the 10th percentile up to the 90th
+    % percentile.
 
     disp('---------')
     disp(['Check of VP filling ranges in ',mfilename,'.'])
-    myIndicesLow = find(myVPRangeTable{:,'minMissing'}>myCutoff);
-    myIndicesHigh = find(myVPRangeTable{:,'maxMissing'}>myCutoff);
+    myIndicesLow = find((myVPRangeTable{:,'minRangeMissing'}>myCutoff) & (myVPRangeTable{:,'min10PercentileMissing'}>0));
+    myIndicesHigh = find((myVPRangeTable{:,'maxRangeMissing'}>myCutoff) & (myVPRangeTable{:,'max90PercentileMissing'}>0));
     myIndices = unique(sort([myIndicesLow;myIndicesHigh],'ascend'),'stable');
     % Print portions of the table to screen so we can track progress.
-    myVPRangeTable(myIndices,{'elementID','interventionID','time','expN','rangeCover','minMissing','maxMissing'})
+    myVPRangeTable(myIndices,{'elementID','interventionID','time','expN','rangeCover','minRangeMissing','maxRangeMissing','min10PercentileMissing','max90PercentileMissing'})
 
     % We will pre-rank parent VPs we might want to add
     % to resampling based on the observed data    
@@ -78,10 +81,10 @@ if continueFlag
     if unweightedParents
         myVPRangeTable = myVPRangeTable(myIndices,:);
         [nRows,nCols] = size(myVPRangeTable);
-        myIndicesLow = find(myVPRangeTable{:,'minMissing'}>myCutoff);
-        myIndicesHigh = find(myVPRangeTable{:,'maxMissing'}>myCutoff);     
-        myValuesLow = myVPRangeTable{myIndicesLow,'minMissing'};
-        myValuesHigh = myVPRangeTable{myIndicesHigh,'maxMissing'};
+        myIndicesLow = find((myVPRangeTable{:,'minRangeMissing'}>myCutoff) & (myVPRangeTable{:,'min10PercentileMissing'}>0));
+        myIndicesHigh = find((myVPRangeTable{:,'maxRangeMissing'}>myCutoff) & (myVPRangeTable{:,'max90PercentileMissing'}>0));     
+        myValuesLow = myVPRangeTable{myIndicesLow,'minRangeMissing'};
+        myValuesHigh = myVPRangeTable{myIndicesHigh,'maxRangeMissing'};
         nLowValues = length(myValuesLow);
         nHighValues = length(myValuesHigh);
         lowTracker = 1*ones(nLowValues,1);
@@ -330,7 +333,7 @@ if continueFlag
             myTimeCol = find(ismember(testVPop.simData.rowInfoNames,'time'));
             simDataRow = find(ismember(testVPop.simData.rowInfo(:,myElementIDCol),myElementID) & ismember(testVPop.simData.rowInfo(:,myElementTypeCol),myElementType) & ismember(testVPop.simData.rowInfo(:,myInterventionIDCol),myInterventionID) & (cell2mat(testVPop.simData.rowInfo(:,myTimeCol)) == cell2mat(myTime)));
             curData = testVPop.simData.Data(simDataRow,:);
-            if myVPRangeTable{rowCounter, 'minMissing'} > myCutoff
+            if ((myVPRangeTable{rowCounter, 'minRangeMissing'} > myCutoff) && (myVPRangeTable{rowCounter,'min10PercentileMissing'}>0));
                 curVals = sort(curData(find(allChildrenBaseIndices)),'ascend');
                 curVals = unique(curVals,'stable');
                 % Any extreme edge is scored.
@@ -346,7 +349,7 @@ if continueFlag
                     edgeVPScores(rowCounter,:) = edgeVPScores(rowCounter,:) .* (curData < simMin);
                 end
             end
-            if myVPRangeTable{rowCounter, 'maxMissing'} > myCutoff
+            if ((myVPRangeTable{rowCounter, 'maxRangeMissing'} > myCutoff) && (myVPRangeTable{rowCounter,'max90PercentileMissing'}>0))
                 curVals = sort(curData(find(allChildrenBaseIndices)),'descend');
                 curVals = unique(curVals,'stable');
                 if length(curVals) >= 1 

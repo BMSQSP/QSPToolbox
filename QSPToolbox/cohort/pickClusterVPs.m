@@ -146,7 +146,19 @@ if continueFlag
     medoidIndices = nan(myNClusters-length(edgeIndices),1);
     if sum(isnan(myIndices)) > 0
         opts = statset('MaxIter',myClusterPickOptions.maxIter,'UseParallel',1);
-        [idx,theMedoids,sumd,D,midx,info] = kmedoids(theMatrixToCluster, (myNClusters - nVPFromEdges), 'Algorithm', myClusterPickOptions.algorithm, 'Start','plus', 'Replicates', myClusterPickOptions.replicates, 'Options',opts);
+        if sum(ismember(myClusterPickOptions.algorithm,'auto')) > 0
+            if nVP <= 3000
+                 myAlgorithm = 'pam';
+            elseif nVP <= 10000
+                 myAlgorithm = 'small';
+            else
+                 myAlgorithm = 'large';
+            end 
+        else
+            myAlgorithm = myClusterPickOptions.algorithm;
+        end                
+        
+        [idx,theMedoids,sumd,D,midx,info] = kmedoids(theMatrixToCluster, (myNClusters - nVPFromEdges), 'Algorithm', myAlgorithm, 'Distance', myClusterPickOptions.distance, 'Start','plus', 'Replicates', myClusterPickOptions.replicates, 'Options',opts);
 
         % Clean up the worker pool
         delete(gcp)      
