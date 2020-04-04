@@ -138,6 +138,8 @@ if continueFlag
         nVPFromEdges = length(edgeIndices);
         myIndicesMap(edgeIndices) = [];
         theMatrixToCluster(:,edgeIndices) = [];
+    else
+        edgeIndices = [];
     end
     
     % VPs should be rows for clustering

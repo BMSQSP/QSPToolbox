@@ -74,9 +74,14 @@ if nBiomarkers == 2 && ~strcmp(Biomarker{1}.ElementID, Biomarker{2}.ElementID) .
         expDataBM1Ind = find(ismember(myExpDataIDs, expDataIDBM1));
         expDataBM2Ind = find(ismember(myExpDataIDs, expDataIDBM2));
         
-        candidateRows1 = find((curWorksheet.expData{expDataBM1Ind}.data{:,'TIME'} == Biomarker{1}.Time) ...
+        if ~isempty(Biomarker{1}.TrtGrp)
+            candidateRows1 = find((curWorksheet.expData{expDataBM1Ind}.data{:,'TIME'} == Biomarker{1}.Time) ...
             & ismember(curWorksheet.expData{expDataBM1Ind}.data{:,'TRTGRP'},Biomarker{1}.TrtGrp) ...
             & ~isnan(curWorksheet.expData{expDataBM1Ind}.data{:,Biomarker{1}.ExpVarID}));
+        else
+            candidateRows1 = find((curWorksheet.expData{expDataBM1Ind}.data{:,'TIME'} == Biomarker{1}.Time) ...
+            & ~isnan(curWorksheet.expData{expDataBM1Ind}.data{:,Biomarker{1}.ExpVarID}));
+        end
         
         % get USUBJIDs for candidateRows1
         candidateUSUBJID1 = ((curWorksheet.expData{expDataBM1Ind}.data{candidateRows1,'USUBJID'}));
@@ -92,10 +97,19 @@ if nBiomarkers == 2 && ~strcmp(Biomarker{1}.ElementID, Biomarker{2}.ElementID) .
                 relSLDRowInd = false(length(candidateUSUBJID1),1);
                 
                 for k=1:length(candidateUSUBJID1)
-                    curSLDRows = find(ismember(curWorksheet.expData{expDataBM1Ind}.data{:,'USUBJID'}, candidateUSUBJID1(k)) ...
+                    
+                    if ~isempty(Biomarker{1}.TrtGrp)
+                        curSLDRows = find(ismember(curWorksheet.expData{expDataBM1Ind}.data{:,'USUBJID'}, candidateUSUBJID1(k)) ...
                         & ~isnan(curWorksheet.expData{expDataBM1Ind}.data{:,'TIME'}) ...
                         & ismember(curWorksheet.expData{expDataBM1Ind}.data{:,'TRTGRP'},Biomarker{1}.TrtGrp) ...
-                        & ~isnan(curWorksheet.expData{expDataBM1Ind}.data{:,'INDEX_LESION_SLD_RELCH'}));
+                        & ~isnan(curWorksheet.expData{expDataBM1Ind}.data{:,'INDEX_LESION_SLD_RELCH'}) ...
+                        & cellfun(@ischar,curWorksheet.expData{expDataBM1Ind}.data{:,'BRSCORENEW'}));
+                    else
+                        curSLDRows = find(ismember(curWorksheet.expData{expDataBM1Ind}.data{:,'USUBJID'}, candidateUSUBJID1(k)) ...
+                        & ~isnan(curWorksheet.expData{expDataBM1Ind}.data{:,'TIME'}) ...
+                        & ~isnan(curWorksheet.expData{expDataBM1Ind}.data{:,'INDEX_LESION_SLD_RELCH'}) ...
+                        & cellfun(@ischar,curWorksheet.expData{expDataBM1Ind}.data{:,'BRSCORENEW'}));
+                    end
                     
                     if ~isempty(curSLDRows)
                         curBRSCORE{k,1} = curWorksheet.expData{expDataBM1Ind}.data{curSLDRows,'BRSCORENEW'}{end};
@@ -111,10 +125,18 @@ if nBiomarkers == 2 && ~strcmp(Biomarker{1}.ElementID, Biomarker{2}.ElementID) .
                 % pull Patientgroup data from BRSCORE Column of
                 % expDataTable at Time specified in Patientgroup.Time
                 
-                relSLDRows = find(ismember(curWorksheet.expData{expDataBM1Ind}.data{:,'USUBJID'}, candidateUSUBJID1) ...
+                if ~isempty(Biomarker{1}.TrtGrp)
+                    relSLDRows = find(ismember(curWorksheet.expData{expDataBM1Ind}.data{:,'USUBJID'}, candidateUSUBJID1) ...
                     & (curWorksheet.expData{expDataBM1Ind}.data{:,'TIME'} == Patientgroup.Time) ...
                     & ismember(curWorksheet.expData{expDataBM1Ind}.data{:,'TRTGRP'},Biomarker{1}.TrtGrp) ...
-                    & ~isnan(curWorksheet.expData{expDataBM1Ind}.data{:,'INDEX_LESION_SLD_RELCH'}));
+                    & ~isnan(curWorksheet.expData{expDataBM1Ind}.data{:,'INDEX_LESION_SLD_RELCH'}) ...
+                    & cellfun(@ischar,curWorksheet.expData{expDataBM1Ind}.data{:,'BRSCORENEW'}));
+                else
+                    relSLDRows = find(ismember(curWorksheet.expData{expDataBM1Ind}.data{:,'USUBJID'}, candidateUSUBJID1) ...
+                    & (curWorksheet.expData{expDataBM1Ind}.data{:,'TIME'} == Patientgroup.Time) ...
+                    & ~isnan(curWorksheet.expData{expDataBM1Ind}.data{:,'INDEX_LESION_SLD_RELCH'}) ...
+                    & cellfun(@ischar,curWorksheet.expData{expDataBM1Ind}.data{:,'BRSCORENEW'}));
+                end
                 
                 curBRSCORE = curWorksheet.expData{expDataBM1Ind}.data{relSLDRows,'BRSCORENEW'};
                 
@@ -147,10 +169,16 @@ if nBiomarkers == 2 && ~strcmp(Biomarker{1}.ElementID, Biomarker{2}.ElementID) .
             % desired Patientgroups
             BRscoreUSUBJID1 = curWorksheet.expData{expDataBM1Ind}.data{relSLDRows(BRInd),'USUBJID'};
             
-            candidateRows1 = find(ismember(curWorksheet.expData{expDataBM1Ind}.data{:,'USUBJID'}, BRscoreUSUBJID1) ...
+            if ~isempty(Biomarker{1}.TrtGrp)
+                candidateRows1 = find(ismember(curWorksheet.expData{expDataBM1Ind}.data{:,'USUBJID'}, BRscoreUSUBJID1) ...
                 & (curWorksheet.expData{expDataBM1Ind}.data{:,'TIME'} == Biomarker{1}.Time) ...
                 & ismember(curWorksheet.expData{expDataBM1Ind}.data{:,'TRTGRP'},Biomarker{1}.TrtGrp) ...
                 & ~isnan(curWorksheet.expData{expDataBM1Ind}.data{:,Biomarker{1}.ExpVarID}));
+            else
+                candidateRows1 = find(ismember(curWorksheet.expData{expDataBM1Ind}.data{:,'USUBJID'}, BRscoreUSUBJID1) ...
+                & (curWorksheet.expData{expDataBM1Ind}.data{:,'TIME'} == Biomarker{1}.Time) ...
+                & ~isnan(curWorksheet.expData{expDataBM1Ind}.data{:,Biomarker{1}.ExpVarID}));
+            end
             
         end
         
@@ -158,10 +186,16 @@ if nBiomarkers == 2 && ~strcmp(Biomarker{1}.ElementID, Biomarker{2}.ElementID) .
         candidateUSUBJID1 = ((curWorksheet.expData{expDataBM1Ind}.data{candidateRows1,'USUBJID'}));
         
         % make sure to pick experimental results for the same patient IDs
-        candidateRows2 = find(ismember(curWorksheet.expData{expDataBM2Ind}.data{:,'USUBJID'},candidateUSUBJID1) ...
+        if ~isempty(Biomarker{2}.TrtGrp)
+            candidateRows2 = find(ismember(curWorksheet.expData{expDataBM2Ind}.data{:,'USUBJID'},candidateUSUBJID1) ...
             & (curWorksheet.expData{expDataBM2Ind}.data{:,'TIME'} == Biomarker{2}.Time) ...
             & ismember(curWorksheet.expData{expDataBM2Ind}.data{:,'TRTGRP'},Biomarker{2}.TrtGrp) ...
             & ~isnan(curWorksheet.expData{expDataBM2Ind}.data{:,Biomarker{2}.ExpVarID}));
+        else
+            candidateRows2 = find(ismember(curWorksheet.expData{expDataBM2Ind}.data{:,'USUBJID'},candidateUSUBJID1) ...
+            & (curWorksheet.expData{expDataBM2Ind}.data{:,'TIME'} == Biomarker{2}.Time) ...
+            & ~isnan(curWorksheet.expData{expDataBM2Ind}.data{:,Biomarker{2}.ExpVarID}));
+        end
         candidateUSUBJID2 = ((curWorksheet.expData{expDataBM2Ind}.data{candidateRows2,'USUBJID'}));
         
         candidateUSUBJID = intersect(candidateUSUBJID1, candidateUSUBJID2);
@@ -192,6 +226,7 @@ if nBiomarkers == 2 && ~strcmp(Biomarker{1}.ElementID, Biomarker{2}.ElementID) .
 else % create 1d Boxplots for all Biomarkers
     
     BiomarkerExpData = cell(nBiomarkers,1);
+    nBiomarkerExpData = zeros(nBiomarkers,1);
     BiomarkerSimData = [];
     BiomarkerSimDataPrcntl = cell(nBiomarkers,1);
     allInterventionIDs = getInterventionIDs(myWorksheet);
@@ -208,7 +243,16 @@ else % create 1d Boxplots for all Biomarkers
         if isfield(Biomarker{i},'Patientgroup')
             PatientgroupFlag = true;
             PatientGroup = Biomarker{i}.Patientgroup;
-            PatientGroup.InterventionID = Biomarker{i}.InterventionID;
+            if Biomarker{i}.InterventionID == 'nodose'
+                if isfield(Biomarker{i}.Patientgroup,'InterventionID')
+                    PatientGroup.InterventionID = Biomarker{i}.Patientgroup.InterventionID;
+                else
+                    warning(['Please set InterventionID in Biomarker.Patientgroup',newline, ...
+                        'to something else than >>nodose<<'])
+                end
+            else
+                PatientGroup.InterventionID = Biomarker{i}.InterventionID;
+            end
             [curWorksheet, curVPop] = getPatientgroup(myWorksheet, PatientGroup, myVPop);
             
         else
@@ -217,9 +261,14 @@ else % create 1d Boxplots for all Biomarkers
         end
         
         % find rows in ExpDataTable with matching TIME, TRTGRP and EXPVarID
-        candidateRows = find((curWorksheet.expData{expDataBMInd}.data{:,'TIME'} == Biomarker{i}.Time) ...
+        if ~isempty(Biomarker{i}.TrtGrp)
+            candidateRows = find((curWorksheet.expData{expDataBMInd}.data{:,'TIME'} == Biomarker{i}.Time) ...
             & ismember(curWorksheet.expData{expDataBMInd}.data{:,'TRTGRP'},Biomarker{i}.TrtGrp) ...
             & ~isnan(curWorksheet.expData{expDataBMInd}.data{:,Biomarker{i}.ExpVarID}));
+        else
+            candidateRows = find((curWorksheet.expData{expDataBMInd}.data{:,'TIME'} == Biomarker{i}.Time) ...
+            & ~isnan(curWorksheet.expData{expDataBMInd}.data{:,Biomarker{i}.ExpVarID}));
+        end
         
         % restrict candidateRows to respective Patientgroup
         if PatientgroupFlag
@@ -235,13 +284,22 @@ else % create 1d Boxplots for all Biomarkers
                 relSLDRowInd = false(length(candidateUSUBJID),1);
                 
                 for k=1:length(candidateUSUBJID)
-                    curSLDRows = find(ismember(curWorksheet.expData{expDataBMInd}.data{:,'USUBJID'}, candidateUSUBJID(k)) ...
+                    
+                    if ~isempty(Biomarker{i}.TrtGrp)
+                        curSLDRows = find(ismember(curWorksheet.expData{expDataBMInd}.data{:,'USUBJID'}, candidateUSUBJID(k)) ...
                         & ~isnan(curWorksheet.expData{expDataBMInd}.data{:,'TIME'}) ...
                         & ismember(curWorksheet.expData{expDataBMInd}.data{:,'TRTGRP'},Biomarker{i}.TrtGrp) ...
-                        & ~isnan(curWorksheet.expData{expDataBMInd}.data{:,'INDEX_LESION_SLD_RELCH'}));
+                        & ~isnan(curWorksheet.expData{expDataBMInd}.data{:,'INDEX_LESION_SLD_RELCH'}) ...
+                        & cellfun(@ischar,curWorksheet.expData{expDataBMInd}.data{:,'BRSCORENEW'}));
+                    else
+                        curSLDRows = find(ismember(curWorksheet.expData{expDataBMInd}.data{:,'USUBJID'}, candidateUSUBJID(k)) ...
+                        & ~isnan(curWorksheet.expData{expDataBMInd}.data{:,'TIME'}) ...
+                        & ~isnan(curWorksheet.expData{expDataBMInd}.data{:,'INDEX_LESION_SLD_RELCH'}) ...
+                        & cellfun(@ischar,curWorksheet.expData{expDataBMInd}.data{:,'BRSCORENEW'}));
+                    end
                     
                     if ~isempty(curSLDRows)
-                        curBRSCORE{k,1} = curWorksheet.expData{expDataBMInd}.data{curSLDRows,'BRSCORE'}{end};
+                        curBRSCORE{k,1} = curWorksheet.expData{expDataBMInd}.data{curSLDRows,'BRSCORENEW'}{end};
                         relSLDRows(k,1) = curSLDRows(end);
                         relSLDRowInd(k,1) = true;
                     end
@@ -252,12 +310,21 @@ else % create 1d Boxplots for all Biomarkers
             else
                 % pull Patientgroup data from BRSCORE Column of
                 % expDataTable at Time specified in Patientgroup.Time
-                relSLDRows = find(ismember(curWorksheet.expData{expDataBMInd}.data{:,'USUBJID'}, candidateUSUBJID) ...
+                
+                if ~isempty(Biomarker{i}.TrtGrp)
+                    relSLDRows = find(ismember(curWorksheet.expData{expDataBMInd}.data{:,'USUBJID'}, candidateUSUBJID) ...
                     & (curWorksheet.expData{expDataBMInd}.data{:,'TIME'} == Biomarker{i}.Patientgroup.Time) ...
                     & ismember(curWorksheet.expData{expDataBMInd}.data{:,'TRTGRP'},Biomarker{i}.TrtGrp) ...
-                    & ~isnan(curWorksheet.expData{expDataBMInd}.data{:,'INDEX_LESION_SLD_RELCH'}));
+                    & ~isnan(curWorksheet.expData{expDataBMInd}.data{:,'INDEX_LESION_SLD_RELCH'}) ...
+                    & cellfun(@ischar,curWorksheet.expData{expDataBMInd}.data{:,'BRSCORENEW'}));
+                else
+                    relSLDRows = find(ismember(curWorksheet.expData{expDataBMInd}.data{:,'USUBJID'}, candidateUSUBJID) ...
+                    & (curWorksheet.expData{expDataBMInd}.data{:,'TIME'} == Biomarker{i}.Patientgroup.Time) ...
+                    & ~isnan(curWorksheet.expData{expDataBMInd}.data{:,'INDEX_LESION_SLD_RELCH'}) ...
+                    & cellfun(@ischar,curWorksheet.expData{expDataBMInd}.data{:,'BRSCORENEW'}));
+                end
                 
-                curBRSCORE = curWorksheet.expData{expDataBMInd}.data{relSLDRows,'BRSCORE'};
+                curBRSCORE = curWorksheet.expData{expDataBMInd}.data{relSLDRows,'BRSCORENEW'};
                 
             end
             
@@ -283,23 +350,30 @@ else % create 1d Boxplots for all Biomarkers
             end
             
             BRInd = logical(CRInd + PRInd + SDInd + PDInd);
+            nBiomarkerExpData(i,1) = sum(BRInd); % variable not yet used!
             
             % get USUBJIDs for rows in relSLDRows corresponding to the
             % desired Patientgroups
             BRscoreUSUBJID = curWorksheet.expData{expDataBMInd}.data{relSLDRows(BRInd),'USUBJID'};
             
-            candidateRows = find(ismember(curWorksheet.expData{expDataBMInd}.data{:,'USUBJID'}, BRscoreUSUBJID) ...
+            if ~isempty(Biomarker{i}.TrtGrp)
+                candidateRows = find(ismember(curWorksheet.expData{expDataBMInd}.data{:,'USUBJID'}, BRscoreUSUBJID) ...
                 & (curWorksheet.expData{expDataBMInd}.data{:,'TIME'} == Biomarker{i}.Time) ...
                 & ismember(curWorksheet.expData{expDataBMInd}.data{:,'TRTGRP'},Biomarker{i}.TrtGrp) ...
                 & ~isnan(curWorksheet.expData{expDataBMInd}.data{:,Biomarker{i}.ExpVarID}));
             
+            else
+                candidateRows = find(ismember(curWorksheet.expData{expDataBMInd}.data{:,'USUBJID'}, BRscoreUSUBJID) ...
+                & (curWorksheet.expData{expDataBMInd}.data{:,'TIME'} == Biomarker{i}.Time) ...
+                & ~isnan(curWorksheet.expData{expDataBMInd}.data{:,Biomarker{i}.ExpVarID}));
+            end
         end
         
         if ~isempty(candidateRows)
             plot1dExpFlag(i) = true;
             BiomarkerExpData{i} = curWorksheet.expData{expDataBMInd}.data{candidateRows,Biomarker{i}.ExpVarID};
         else
-            warning(['No data available for biomarker: ',Biomarker{i}.ElementID], char(10))
+            warning(['No data available for biomarker: ',Biomarker{i}.ElementID], newline)
         end
         
         %         BRSCORERows = find(ismember(curWorksheet.expData{expDataBMInd}.data{:,'USUBJID'}, candidateUSUBJID{14}) ...
@@ -366,7 +440,7 @@ else % create 1d Boxplots for all Biomarkers
         set(plotHandle(4,i), 'YData', [BiomarkerSimDataPrcntl{i}(1) BiomarkerSimDataPrcntl{i}(1)]);
         
         if plot1dExpFlag(i) == true
-            plot(i,BiomarkerExpData{i},'ko');
+           plot(i,BiomarkerExpData{i},'ko');
         end
     end
 end

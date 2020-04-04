@@ -1,6 +1,8 @@
-function [newWorksheet, newVPop] = getPatientgroup(myWorksheet, Patientgroup, myVPop)
+function [newWorksheet, newVPop, PatientgroupTable] = getPatientgroup(myWorksheet, Patientgroup, myVPop)
 % This function takes a Worksheet and a Patientgroup, and it returns
-% a Worksheet with VPs and results belonging to this patientgroup.
+% a Worksheet with VPs and results belonging to this patientgroup. 
+% Optionally, a PatientgroupTable with the number of VPs per Patientgroup
+% can be returned.
 %
 % If a VPop is provided simData, brTable and rTable are updated for the
 % desired patientgroup and the resulting VPop is returned. Also, if the
@@ -147,7 +149,7 @@ end
 
 fprintf(['Intervention: ',Patientgroup.InterventionID, char(10), ... 
          'Patientgroups at day: ',num2str(curDay-2000),char(10)])
-table(PatientGroups, nVPs)
+PatientgroupTable = table(PatientGroups, nVPs)
 nGroup = length(find(nVPs > 0));
 
 if nGroup < 1

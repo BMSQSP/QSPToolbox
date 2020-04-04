@@ -151,19 +151,23 @@ if flagContinue
             myResultClasses = cellfun(@class,myWorksheet.results, 'UniformOutput', false);
             % Results should be stored in a structure, we assume 
             % if a structure is provided then it is a valid result
-        	flagRunVP = sum(strcmp(myResultClasses,'struct'),1);
-            flagRunVP = ~(flagRunVP == nInterventions);
-            flagRunSim = zeros(1, nSimulations);
-            for vpCounter = 1 : nVPs
-                % increment intervention first, then VP
-                if flagRunVP(vpCounter)
-                    simulationStartIndex = 1 + (vpCounter - 1) * nInterventions;
-                    simulationEndIndex = nInterventions + (vpCounter - 1) * nInterventions;                    
-                    flagRunSim(simulationStartIndex:simulationEndIndex) = ones(1,nInterventions);
-                %else
-                %    flagRunSim = cat(2, flagRunSim, zeros(1, nInterventions));
-                end
-            end
+            % This is updated to truly enable running individual 
+            % simulations without re-running all simulations for 
+            % a VP if just one of the intervention results isn't populated.
+            flagRunSim = ~(strcmp(myResultClasses,'struct'));
+        	flagRunVP = sum(flagRunSim,1);
+            flagRunVP = (flagRunVP > 0);
+            flagRunSim = reshape(flagRunSim,1,[]);
+%             for vpCounter = 1 : nVPs
+%                 % increment intervention first, then VP
+%                 if flagRunVP(vpCounter)
+%                     simulationStartIndex = 1 + (vpCounter - 1) * nInterventions;
+%                     simulationEndIndex = nInterventions + (vpCounter - 1) * nInterventions;                    
+%                     flagRunSim(simulationStartIndex:simulationEndIndex) = ones(1,nInterventions);
+%                 %else
+%                 %    flagRunSim = cat(2, flagRunSim, zeros(1, nInterventions));
+%                 end
+%             end
         end
         % This may consume some nontrivial memory with larger
         % runs, so clear it out.
@@ -256,7 +260,7 @@ if flagContinue
     
     simResults = reshape(simResults, [nInterventions, nVPs]);
     if sum(flagRunVP) < nVPs
-        myWorksheet.results(:,find(flagRunVP)) = simResults(:,find(flagRunVP));
+        myWorksheet.results(find(flagRunSim)) = simResults(find(flagRunSim));
     else
         myWorksheet.results = simResults;
     end

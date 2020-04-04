@@ -152,17 +152,17 @@ if flagContinue
     myResultClasses = cellfun(@class,myWorksheet.results, 'UniformOutput', false);
     
     % Setup tolerances to try
-    nTolStepsMax = 10;
+    nTolStepsMax = 2;
     % We shouldn't often need this, but the smallest
     % positive double is realmin, 2.2251e-308
-    endAbsTol = max(originalAbsTol/(10^nTolStepsMax),1E-300);
-    % teltol should generally stay above eps(1) = 2.2204e-16
-    endRelTol = max(originalRelTol/(10^nTolStepsMax),1E-15);
-    % Generate the pairwise combinations for tolerances to try, 
+    endAbsTol = max(originalAbsTol/(10^(nTolStepsMax*10)),1E-300);
+    % reltol should generally stay above eps(1) = 2.2204e-16
+    endRelTol = max(originalRelTol/(10^(nTolStepsMax*2)),1E-15);
+    % Generate the pairwise combinations for tolerances to try,
     % where absTol increments more quickly than relTol
     % in the first column.
-    myAbsTols = 10.^([log10(originalAbsTol):-1:log10(endAbsTol)]);
-    myRelTols = 10.^([log10(originalRelTol):-1:log10(endRelTol)]);
+    myAbsTols = 10.^([log10(originalAbsTol):-10:log10(endAbsTol)]);
+    myRelTols = 10.^([log10(originalRelTol):-2:log10(endRelTol)]);
     [A,B] = meshgrid(myAbsTols,myRelTols);
     myTols=cat(2,A',B');
     myTols=reshape(myTols,[],2);
@@ -172,7 +172,7 @@ if flagContinue
     
 	% This is clearly empirical, but try 5 submissions
 	% with decreasing absolute tolerance
-	while ((nSimFail > 0) && (resimulateFlag) && (nRetries<=nRetriesMax))
+	while ((nSimFail > 0) && (nRetries<=nRetriesMax))
 		myWorksheet.simProps.absoluteTolerance = myTols(nRetries+1,1);
 		myWorksheet.simProps.relativeTolerance = myTols(nRetries+1,2);
 		myWorksheet = simulateWorksheet(myWorksheet, mySimulateOptions);
@@ -183,9 +183,7 @@ if flagContinue
         completeFlags = strcmp(myResultClasses,'struct');
 		nSimFail = sum(sum(~(completeFlags)));	
 		nRetries = nRetries + 1;
-		if (originalAbsTol/(10^nRetries) < 1E-100)
-			resimulateFlag = false;
-        end
+
         newCompleteFlags = completeFlags - lastCompleteFlags;
         curSimSettings = myWorksheet.simProps;
         mySimulateTolerances(find(newCompleteFlags)) = {curSimSettings};
@@ -193,35 +191,36 @@ if flagContinue
 	myWorksheet.simProps.absoluteTolerance = originalAbsTol;
 	myWorksheet.simProps.relativeTolerance = originalRelTol;
     
-    % Also try new max step sizes with the original tolerances.
-    % If that was not successful.  We generally don't impose a maxstep.
-    % but it can also sometimes help the integrations.
-	originalMaxStep = myWorksheet.simProps.maxStep;	
-	if isnumeric(originalMaxStep)
-		testStepBasis = originalMaxStep;
-	else
-		testStepBasis = min(diff(myWorksheet.simProps.sampleTimes));
-	end
-	nRetries = 0;
-	resimulateFlag = true;
-	while ((nSimFail > 0) && (resimulateFlag) && (nRetries<=2))
-		myWorksheet.simProps.maxStep = testStepBasis/(10^nRetries);
-		myWorksheet = simulateWorksheet(myWorksheet, mySimulateOptions);
-		myResultClasses = cellfun(@class,myWorksheet.results, 'UniformOutput', false);
-		% Results should be stored in a structure, we assume 
-		% if a structure is provided then it is a valid result
-        lastCompleteFlags = completeFlags;
-        completeFlags = strcmp(myResultClasses,'struct');
-		nSimFail = sum(sum(~(completeFlags)));	
-		nRetries = nRetries + 1;
-		if testStepBasis/(10^nRetries) < 1E-9
-			resimulateFlag = false;
-        end
-        newCompleteFlags = completeFlags - lastCompleteFlags;
-        curSimSettings = myWorksheet.simProps;
-        mySimulateTolerances(find(newCompleteFlags)) = {curSimSettings};       
-    end	
-	myWorksheet.simProps.maxStep = originalMaxStep;
+%     % DISABLED FOR NOW
+%     % Also try new max step sizes with the original tolerances.
+%     % If that was not successful.  We generally don't impose a maxstep.
+%     % but it can also sometimes help the integrations.
+% 	originalMaxStep = myWorksheet.simProps.maxStep;	
+% 	if isnumeric(originalMaxStep)
+% 		testStepBasis = originalMaxStep;
+% 	else
+% 		testStepBasis = min(diff(myWorksheet.simProps.sampleTimes));
+% 	end
+% 	nRetries = 0;
+% 	resimulateFlag = true;
+% 	while ((nSimFail > 0) && (resimulateFlag) && (nRetries<=2))
+% 		myWorksheet.simProps.maxStep = testStepBasis/(10^nRetries);
+% 		myWorksheet = simulateWorksheet(myWorksheet, mySimulateOptions);
+% 		myResultClasses = cellfun(@class,myWorksheet.results, 'UniformOutput', false);
+% 		% Results should be stored in a structure, we assume 
+% 		% if a structure is provided then it is a valid result
+%         lastCompleteFlags = completeFlags;
+%         completeFlags = strcmp(myResultClasses,'struct');
+% 		nSimFail = sum(sum(~(completeFlags)));	
+% 		nRetries = nRetries + 1;
+% 		if testStepBasis/(10^nRetries) < 1E-9
+% 			resimulateFlag = false;
+%         end
+%         newCompleteFlags = completeFlags - lastCompleteFlags;
+%         curSimSettings = myWorksheet.simProps;
+%         mySimulateTolerances(find(newCompleteFlags)) = {curSimSettings};       
+%     end	
+% 	myWorksheet.simProps.maxStep = originalMaxStep;
     
     
     % Clean up the pool, if needed

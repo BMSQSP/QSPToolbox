@@ -361,7 +361,7 @@ if continueFlag
                     % and continuing from a lower effN
                     if ((expandCohortSize > 0) && (maxNewPerIter > 0))
                         % Decide now far to "reduce" the worksheet
-                        reduceFactor = 0.5;
+                        reduceFactor = 0;
                         nSteps = floor(((curEffN - basisEffN) / effNDelta)*reduceFactor);
                         curEffN = basisEffN + nSteps * effNDelta; 
 						nVPTarget = basisNVPs + nSteps * maxNewPerIter;

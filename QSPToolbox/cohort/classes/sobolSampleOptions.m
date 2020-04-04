@@ -249,7 +249,7 @@ classdef sobolSampleOptions
           obj.saveElementResultIDs={};
           obj.saveFileName='';
           obj.maxBatchSimulateN = 250;
-          obj.intSeed = -1;
+          obj.intSeed = 0;
           obj.simulateWorksheet=true;
           obj.verbose = true;
       end

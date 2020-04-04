@@ -300,7 +300,7 @@ if exist('myWorksheet','var')
         mySobolSampleOptions.maxBatchSimulateN = 10000*10;
         mySobolSampleOptions.saveElementResultIDs = {testWorksheetOutputVar};
         mySobolSampleOptions.saveFileName = '';
-        mySobolSampleOptions.intSeed = 1;
+        mySobolSampleOptions.intSeed = 0;
         mySobolSampleOptions.simulateWorksheet = true;
         myWorksheetSS = runSobolSample(myWorksheet,mySobolSampleOptions);
     catch

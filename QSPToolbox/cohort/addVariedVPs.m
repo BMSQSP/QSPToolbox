@@ -213,7 +213,7 @@ if continueFlag
         newVPIDs = cell(1,myVaryAxesOptions.newPerOld * nBaseVPs);
         mySobolSet = sobolset(nRAxis);
         if myVaryAxesOptions.intSeed == 0
-            disp(['Note: current behavior of Sobol sampling when intSeed is 0 is not to scramble in ',mfilename,'.'])
+            disp(['Note: current behavior of Sobol sampling when intSeed is 0 is not to scramble in ',mfilename,'.  This forces the RNG to reseed with 0.'])
         else
             disp(['Note: current behavior of Sobol sampling when intSeed is not 0 is to scramble in ',mfilename,'.'])
             mySobolSet = scramble(mySobolSet,'MatousekAffineOwen');
