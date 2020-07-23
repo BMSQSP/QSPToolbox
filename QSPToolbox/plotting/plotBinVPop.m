@@ -50,12 +50,7 @@ if flagContinue
 end
 
 if (flagContinue)
-	myTable = myVPop.binTable;
-    [myNPlots, ~] = size(myTable);
-    if ~(myPlotOptions.flagPlotUnweighted) && (myNPlots > 0)    
-        myTable(myTable.weight==0, :) =[];
-        [myNPlots, ~] = size(myTable);
-    end
+    [myNPlots, ~] = size(myVPop.binTable);
     if myNPlots < 1
         flagContinue = false;
         warning(['Invalid VPop.binTable for ',mfilename,'.'])        
@@ -64,7 +59,7 @@ end
 
 
 if (flagContinue)
-    
+    myTable = myVPop.binTable;
     
     for rowCounter = 1 : myNPlots
         plotNames{rowCounter} = {myTable{rowCounter,'interventionID'}{1},myTable{rowCounter,'elementID'}{1},num2str(myTable{rowCounter,'time'})};

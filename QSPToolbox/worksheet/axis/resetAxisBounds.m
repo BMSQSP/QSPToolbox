@@ -51,7 +51,7 @@ if continueFlag
         isMissing = ~ismember(myAxisIDs, allAxisIDs);
         missingsIDs = myAxisIDs(find(isMissing));
         if sum(isMissing) > 0
-            warning(['Axis IDs to ',mfilename, ' not all recognized in the worksheet: ',sprintf('%s ', missingsIDs{:}),'. Exiting.']);
+            warning(['Axis IDs to ',mfilename, ' not all recognized in the worksheet: ',sprintf('%s ', missingsIDs),'. Exiting.']);
             continueFlag = false; 
         end
     end

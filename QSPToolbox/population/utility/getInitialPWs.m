@@ -13,20 +13,18 @@ function initialPWs = getInitialPWs(myVPop,initialPWs, nAdd, nBootstrapIteration
 %  initialPWs:           An updated set of initial prevalence weights.
 %
 
-% ----- REMOVED -----
 % We will also try supplementing the VP scores scaled into PWs.  This
 % likely won't be very effective at finding optimal solutions but will add
 % points where VPs in sparser regions of the distributions relative to the data 
 % are more highly weighted which could help to weight to where it is needed
 % without overly focusing on a few VPs
-% [~,nTransPWs] = size(myVPop.pws);
-% vpScores = scoreWorksheetVPs(myVPop,1:nTransPWs,1:nTransPWs);
-% vpScores = (vpScores + 1E-12)./sum((vpScores + 1E-12),2);
-% 
-% [nAddScores, ~] = size(vpScores);
-% nAddScores = min(nAddScores,nAdd);
-% nAdd = nAdd - nAddScores;
-% ----- REMOVED -----
+[~,nTransPWs] = size(myVPop.pws);
+vpScores = scoreWorksheetVPs(myVPop,1:nTransPWs,1:nTransPWs);
+vpScores = (vpScores + 1E-12)./sum((vpScores + 1E-12),2);
+
+[nAddScores, ~] = size(vpScores);
+nAddScores = min(nAddScores,nAdd);
+nAdd = nAdd - nAddScores;
 
 % Hold on to VP scores until later.
 % Iteratively run linear calibrations
@@ -142,9 +140,7 @@ if nAdd > 0
 	end
 end
 
-% ----- REMOVED -----
-% if nAddScores > 0
-% 	initialPWs = [initialPWs;vpScores];
-% end
-% ----- REMOVED -----
+if nAddScores > 0
+	initialPWs = [initialPWs;vpScores];
+end
 end

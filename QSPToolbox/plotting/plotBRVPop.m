@@ -48,12 +48,7 @@ if flagContinue
 end
 
 if (flagContinue)
-    myTable = myVPop.brTableRECIST;
-    [myNPlots, ~] = size(myTable);
-    if ~(myPlotOptions.flagPlotUnweighted) && (myNPlots > 0)
-        myTable(myTable.weight==0, :) =[];
-        [myNPlots, ~] = size(myTable);
-    end    
+    [myNPlots, ~] = size(myVPop.brTableRECIST);
     if myNPlots < 1
         flagContinue = false;
         warning(['Invalid VPop.brTableRECIST for ',mfilename,'.'])        
@@ -62,6 +57,7 @@ end
 
 
 if (flagContinue)
+    myTable = myVPop.brTableRECIST;
     
     for rowCounter = 1 : myNPlots
         plotNames{rowCounter} = {myTable{rowCounter,'interventionID'}{1},myTable{rowCounter,'elementID'}{1},num2str(myTable{rowCounter,'time'})};

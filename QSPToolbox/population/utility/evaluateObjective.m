@@ -75,17 +75,8 @@ if myVPop.spreadOut > 0
 end
 
 if myVPop.minEffN > 0
-    % Add in a linear penalty term and a small discontinuity so 
-    % numerically the effN should be at least a little larger in the
-    % optimization.
-    myObjective = myObjective + (effN < myVPop.minEffN) * 1E6 * (myVPop.minEffN - effN) + (effN <= myVPop.minEffN);
+    myObjective = myObjective + (effN < myVPop.minEffN) * 1E6 * (myVPop.minEffN - effN);
 end
-
-% Renormalize the weights in the objective function so they sum to 1.
-% This will make it more straightforward to compare how well the
-% optimization is performing for the same model even as we add more
-% contraints.
-myVPop = normalizeWeights(myVPop, false);
 
 myMnSDTable = myVPop.mnSDTable;
 myBinTable = myVPop.binTable;
@@ -114,9 +105,6 @@ if isa(myVPop, 'VPopRECIST')
 	gofR = myVPop.gofR;
 end	
 minIndPVal = myVPop.minIndPVal;
-
-
-
 
 % May want to add checks here for the Mean/SD/Bin evaluations and whether
 % there are entries before adding the respective terms
