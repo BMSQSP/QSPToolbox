@@ -97,19 +97,20 @@ if continueFlag
         myIndicesCombine = myIndicesCombine(myValuesCombineIndices);
         % We will manually sort through the VPs
         parentVPs = cell(1,nLowValues + nHighValues);
-        for parentCounter = 1 : (nLowValues + nHighValues)
-            if combineTracker(parentCounter) > 1.5
-                myIndex = myIndicesCombine(parentCounter);
-                parentVPs(parentCounter) = myVPRangeTable{myIndex,'vpIDsMax'};
-            else
-                myIndex = myIndicesCombine(parentCounter);
-                parentVPs(parentCounter) = myVPRangeTable{myIndex,'vpIDsMin'};
+        if (nLowValues + nHighValues)>0
+            for parentCounter = 1 : (nLowValues + nHighValues)
+                if combineTracker(parentCounter) > 1.5
+                    myIndex = myIndicesCombine(parentCounter);
+                    parentVPs(parentCounter) = myVPRangeTable{myIndex,'vpIDsMax'};
+                else
+                    myIndex = myIndicesCombine(parentCounter);
+                    parentVPs(parentCounter) = myVPRangeTable{myIndex,'vpIDsMin'};
+                end
             end
-        end
- 
-        parentVPs(isempty(parentVPs)) = [];
-        edgeVPIDs = getMinimalEdgeSet(parentVPs);
 
+            parentVPs(isempty(parentVPs)) = [];
+        end
+        edgeVPIDs = getMinimalEdgeSet(parentVPs);
     else
         edgeVPIDs = {};
     end
@@ -186,7 +187,7 @@ if continueFlag
     myVaryAxesOptions.varyMethod = varyMethod;
     myVaryAxesOptions.gaussianStd = gaussianStd;
     myVaryAxesOptions.varyAxisIDs = getAxisDefIDs(myWorksheet);
-    myVaryAxesOptions.intSeed = wsIterCounter;
+    myVaryAxesOptions.intSeed = newVPop.intSeed;
 
     myVaryAxesOptions.additionalIDString = [suffix,num2str(wsIterCounter)];
     myVaryAxesOptions.baseVPIDs = highVPIDs;
@@ -201,15 +202,19 @@ if continueFlag
     myVaryAxesOptions.newPerOld = ceil(simChildScale*1.5);
     myVaryAxesOptions.baseVPIDs = highVPIDs(1);
     jitteredWorksheet = addVariedVPs(myWorksheet, myVaryAxesOptions);
+    % We enforce the Gaussian method with small 1% variance for edgeVPs
+    myVaryAxesOptionsEdge = myVaryAxesOptions;
+    myVaryAxesOptionsEdge.gaussianStd = 0.05;
+    myVaryAxesOptionsEdge.varyMethod = 'gaussian';
     for addCounter = 2: length(highVPIDs)
         if sum(ismember(highVPIDs(addCounter),highVPIDsMono)) > 0
             myVaryAxesOptions.newPerOld = ceil(simChildScale*1.5);
             myVaryAxesOptions.baseVPIDs = highVPIDs(addCounter);
             jitteredWorksheet = addVariedVPs(jitteredWorksheet, myVaryAxesOptions);
         else
-            myVaryAxesOptions.newPerOld = ceil(simChildScale*0.5);
-            myVaryAxesOptions.baseVPIDs = highVPIDs(addCounter);
-            jitteredWorksheet = addVariedVPs(jitteredWorksheet, myVaryAxesOptions);   
+            myVaryAxesOptionsEdge.newPerOld = ceil(simChildScale*0.5);
+            myVaryAxesOptionsEdge.baseVPIDs = highVPIDs(addCounter);
+            jitteredWorksheet = addVariedVPs(jitteredWorksheet, myVaryAxesOptionsEdge);   
         end
     end
     
@@ -279,7 +284,7 @@ if continueFlag
         testVPop.relSLDvar = newVPop.relSLDvar;
         testVPop.absALDVar = newVPop.absALDVar;
         testVPop.crCutoff = newVPop.crCutoff;             
-        testVPop.recistSimFilter = createRECISTSimFilter(jitteredWorksheet, testVPop);
+        testVPop.recistSimFilter = createRECISTSimFilter(jitteredWorksheet, testVPop, false);
     end
     if ~isa(newVPop,'VPopRECISTnoBin')
 		testVPop = testVPop.assignIndices(jitteredWorksheet, myMapelOptions);

@@ -49,7 +49,13 @@ if flagContinue
 end
 
 if (flagContinue)
-    [myNPlots, ~] = size(myVPop.mnSDTable);
+	myTable = myVPop.mnSDTable;
+    [myNPlots, ~] = size(myTable);
+    if ~(myPlotOptions.flagPlotUnweighted) && (myNPlots > 0)
+        myTable(myTable.weightMean==0 | myTable.weightSD==0, :) =[];
+        [myNPlots, ~] = size(myTable);
+    end
+    [myNPlots, ~] = size(myTable);
     if myNPlots < 1
         flagContinue = false;
         warning(['Invalid VPop.mnSDTable for ',mfilename,'.'])        
@@ -57,22 +63,22 @@ if (flagContinue)
 end
 
 if (flagContinue)
-    myMnValExp = myVPop.mnSDTable{:,'expMean'};
-    myUBValExp = myVPop.mnSDTable{:,'expSD'};
-    myLBValExp = myVPop.mnSDTable{:,'expSD'};
+    myMnValExp = myTable{:,'expMean'};
+    myUBValExp = myTable{:,'expSD'};
+    myLBValExp = myTable{:,'expSD'};
     
-    myMnValVPop = myVPop.mnSDTable{:,'predMean'};
-    myUBValVPop = myVPop.mnSDTable{:,'predSD'};
-    myLBValVPop = myVPop.mnSDTable{:,'predSD'};
+    myMnValVPop = myTable{:,'predMean'};
+    myUBValVPop = myTable{:,'predSD'};
+    myLBValVPop = myTable{:,'predSD'};
 	
-	logNVPop = myVPop.mnSDTable{:,'logN'};
+	logNVPop = myTable{:,'logN'};
 	
 	
-	expMn = myVPop.mnSDTable{:,'expMean'};
-    expSD = myVPop.mnSDTable{:,'expSD'};
-    predSD = myVPop.mnSDTable{:,'predSD'};
-	predMn = myVPop.mnSDTable{:,'predMean'};
-	logN = myVPop.mnSDTable{:,'logN'};
+	expMn = myTable{:,'expMean'};
+    expSD = myTable{:,'expSD'};
+    predSD = myTable{:,'predSD'};
+	predMn = myTable{:,'predMean'};
+	logN = myTable{:,'logN'};
 		
 	% Convert lognormal summary data
 	if sum(logN) > 0
@@ -87,7 +93,7 @@ if (flagContinue)
 	end	
 	
     for rowCounter = 1 : myNPlots
-        plotNames{rowCounter} = {myVPop.mnSDTable{rowCounter,'interventionID'}{1},myVPop.mnSDTable{rowCounter,'elementID'}{1},num2str(myVPop.mnSDTable{rowCounter,'time'})};
+        plotNames{rowCounter} = {myTable{rowCounter,'interventionID'}{1},myTable{rowCounter,'elementID'}{1},num2str(myTable{rowCounter,'time'})};
     end
     
 end

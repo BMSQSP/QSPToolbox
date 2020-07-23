@@ -37,9 +37,12 @@ classdef mapelOptionsRECIST
 %                    initialized to be uniform.  The default is [].
 %                    ONLY USED IN BIN PWSTRATEGY
 % initialPWs:        (Optional) 
-%                     - A 1 nVP vector of initial pws. OR
+%                     - A 1 x nVP vector of initial pws. It is also 
+%                       possible to provide multiple initial guesses as an
+%                       m x nVP vector. OR
 %                     - (default) If set to be [], probabilities are
-%                       initialized to be uniform.  The default is []. OR
+%                       initialized to be uniform.  
+%                       The default is []. OR
 %                     - if set to -1, we will try to find a near optimum starting
 %                       point based on a linearized problem formulation.
 %                       ONLY USED IN DIRECT PWSTRATEGY
