@@ -1,4 +1,4 @@
-function myVPop = restartMapel(myVPop, myRandomStart)
+function myVPop = restartMapel(myVPop, myRandomStart, myExtraPWs)
 % This is a function to start developing a VPop using data in an existing
 % existing VPop as a starting point.
 %
@@ -15,28 +15,35 @@ function myVPop = restartMapel(myVPop, myRandomStart)
 %                    results in uniform bin probabilities and a value >0 
 %                    results in uniform normal initial bin probabilities  
 %                    (renormalized so the margin is 1).  Default is 0.
+%  myExtraPWs:       (optional) additional m x nVP pw matrix to include
+%                     in optimization.  Only supported right now
+%                     for 'direct.'
 %
 % Returns
 %  VPop:             an instance of a VPop
 %
 continueFlag = false;
-if nargin > 2
-    warning(['Too many input arguments provided to ',mfilename,'.  Requires: myVpop and optionally myRandomStart.'])
+if nargin > 3
+    warning(['Too many input arguments provided to ',mfilename,'.  Requires: myVpop and optionally myRandomStart, myExtraPWs.'])
     continueFlag = false;
+elseif nargin > 2
+    continueFlag = true;    
 elseif nargin > 1
+    myExtraPWs = [];
     continueFlag = true;
 elseif nargin > 0
+    myExtraPWs = [];
     myRandomStart = 0;
     continueFlag = true;
 else
     continueFlag = false;
-    warning(['Insufficient input arguments provided to ',mfilename,'.  Requires: myVpop and optionally myRandomStart.'])
+    warning(['Insufficient input arguments provided to ',mfilename,'.  Requires: myVpop and optionally myRandomStart, myExtraPWs.'])
 end
 
 if continueFlag
     if (~strcmp(class(myVPop),'VPop') & ~strcmp(class(myVPop),'VPopRECIST'))
         continueFlag = false;
-        warning(['Input VPop not recongized in call to ',mfilename,'.  Requires: myVpop and optionally myRandomStart.'])
+        warning(['Input VPop not recognized in call to ',mfilename,'.  Requires: myVpop and optionally myRandomStart, myExtraPWs.'])
     end
     if ~(myRandomStart>=0)
         continueFlag = false;
@@ -67,8 +74,12 @@ if continueFlag
         % This property isn't kept for the VPop
         % Could check the binEdges of the VPop
 		% myMapelOptions.equalBinBreaks = myVPop.equalBinBreaks;
-	else
-		myMapelOptions.initialPWs = myVPop.pws;
+    else
+        if isempty(myExtraPWs)
+            myMapelOptions.initialPWs = myVPop.pws;
+        else
+            myMapelOptions.initialPWs = [myVPop.pws;myExtraPWs];
+        end
 	end
     myMapelOptions.randomStart = myRandomStart;	
     myMapelOptions.nIters = myVPop.nIters;

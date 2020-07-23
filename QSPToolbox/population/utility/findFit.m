@@ -1,10 +1,12 @@
-function myVPop = findFit(myVPop)
+function myVPop = findFit(myVPop, extraPWs)
 % This is main function for optimizing the fit to data.
 % This function operates on and returns a VPop object
 % but is a separate function rather than a VPop method.
 %
 % ARGUMENTS
-%  myVPop: An object of class VPop, VPopRECIST, or VPopRECISTnoBin
+%  myVPop:   An object of class VPop, VPopRECIST, or VPopRECISTnoBin
+%  extraPWs: (optional) Only used now for  direct PW objects.  
+%             these are additional starting PWs that will be considered.
 %
 % RETURNS
 %  myVPop: this function will populate several properties:
@@ -19,6 +21,12 @@ function myVPop = findFit(myVPop)
 %          gofDist
 %          gof
 %
+
+% This is not a strict proof on input arguments
+% but just a check to see if extra PWs are being provided.
+if nargin < 2
+    extraPWs = [];
+end
 
 p = gcp('nocreate'); % If no pool, do not create new one.
 if isempty(p)
@@ -66,6 +74,9 @@ if strcmp(myVPop.pwStrategy, 'bin')
 else
 	initialPWs=myVPop.pws;
 	lProbs=length(initialPWs)-1;
+    if ~isempty(extraPWs)
+        initialPWs = [initialPWs;extraPWs];
+    end    
 	if ~(ismember(optimizeType,{'simplex'}))
 		[nTest, ~] = size(initialPWs);
 		nAdd = floor(myVPop.optimizePopSize/2-nTest);
@@ -73,7 +84,7 @@ else
             nBoostrapIterations = max(100,poolSize*5);
 			initialPWs = getInitialPWs(myVPop, initialPWs, nAdd, nBoostrapIterations);
 		end
-	end	
+    end	
 	[nTest, ~] = size(initialPWs);
 	myPWTrans = nan(nTest,lProbs);
 	for transCounter = 1 : nTest

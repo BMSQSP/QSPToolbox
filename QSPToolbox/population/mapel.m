@@ -38,11 +38,12 @@ end
 if continueFlag
     % First copy all of the needed properties over
     myVPop = initializeOptionPropertiesToVPop(myMapelOptions);
+    extraPWs = [];
     
     % Now add additional properties not in the mapelOptions
     if isa(myVPop,'VPopRECIST')      
         if ~isa(myWorksheet,'VPopRECIST')
-            myVPop.recistSimFilter = createRECISTSimFilter(myWorksheet, myVPop);
+            myVPop.recistSimFilter = createRECISTSimFilter(myWorksheet, myVPop, false);
         else   
             myVPop.recistSimFilter = myWorksheet.recistSimFilter;
         end
@@ -197,15 +198,20 @@ if continueFlag
 				end
 			end
 		end
-        
-		if isequal(nVP, length(myInitialPWs))
+        [nInitialGuess,nInitialPW] = size(myInitialPWs);
+		if isequal(nVP, nInitialPW)
 			if myRandomStart > 0
-				myInitialProbsTrans = hyperTransform(myInitialPWs);
-				mySDs = myRandomStart*abs(myInitialProbsTrans);
-				myInitialProbsTrans = myInitialProbsTrans + randn(1,nVP-1).*mySDs;
-				myInitialPWs = invHyperTransform(myInitialProbsTrans); 
+                for rowCounter = 1 : nInitialGuess
+                    myInitialProbsTrans = hyperTransform(myInitialPWs(rowCounter,:));
+                    mySDs = myRandomStart*abs(myInitialProbsTrans);
+                    myInitialProbsTrans = myInitialProbsTrans + randn(1,nVP-1).*mySDs;
+                    myInitialPWs(rowCounter,:) = invHyperTransform(myInitialProbsTrans); 
+                end
 			end
-			myVPop.pws = myInitialPWs;
+			myVPop.pws = myInitialPWs(1,:);
+            if nInitialGuess > 1
+                extraPWs = myInitialPWs(2:end,:);
+            end
 		else
 			myVPop = myVPop.startPWs(myWorksheet,myRandomStart>0);   
 		end
@@ -215,7 +221,7 @@ if continueFlag
     % Update table values.  Not strictly necessary but a nice
     % step to diagnose and does have much computational cost            
     myVPop = myVPop.addPredTableVals();    
-    myVPop = findFit(myVPop);
+    myVPop = findFit(myVPop, extraPWs);
 	
 	% Clean up the pool, if needed
 	if myVPop.poolClose

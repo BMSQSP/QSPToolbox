@@ -48,7 +48,12 @@ if flagContinue
 end
 
 if (flagContinue)
-    [myNPlots, ~] = size(myVPop.distTable2D);
+    myTable = myVPop.distTable2D;
+    [myNPlots, ~] = size(myTable);
+    if ~(myPlotOptions.flagPlotUnweighted) && (myNPlots > 0)
+        myTable(myTable.weight==0, :) =[];
+        [myNPlots, ~] = size(myTable);
+    end        
     if myNPlots < 1
         flagContinue = false;
         warning(['Invalid VPop.distTable for ',mfilename,'.'])        
@@ -57,7 +62,6 @@ end
 
 
 if (flagContinue)
-    myTable = myVPop.distTable2D;
     plotNames1 = cell(1, myNPlots);
     plotNames2 = cell(1, myNPlots);
     for rowCounter = 1 : myNPlots
