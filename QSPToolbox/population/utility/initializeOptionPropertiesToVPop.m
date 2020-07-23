@@ -1,15 +1,6 @@
 function myVPop = initializeOptionPropertiesToVPop(myMapelOptions)
 % This is a simple utility function to copy all of the properties from
-% an options object to a VPop.  Note Copying over myMapelOptions.initialPWs 
-% is not done here.  It is assumed appropriate treatment of these
-% is done in a calling script.
-% Also can't be set up here:
-%  indexTable
-%  binEdges
-%  binMidPoints
-%  binProbs
-%  simData
-%  recistSimFilter
+% an options object to a VPop.
 %
 % ARGUMENTS
 %  myMapelOptions:         (Required) an instance of a mapelOptions object.
@@ -24,7 +15,17 @@ elseif isa(myMapelOptions, 'mapelOptionsRECIST')
     myVPop = VPopRECIST;
 end
 % First, get the properties from myMapelOptions
-
+% Copying over myMapelOptions.initialPWs is not done
+% here.  It is assumed appropriate treatment of these
+% is done in a calling script
+%  pws
+% Also can't be done here:
+%  indexTable
+%  binEdges
+%  binMidPoints
+%  binProbs
+%  simData
+%  recistSimFilter
 
 myVPop.pwStrategy = myMapelOptions.pwStrategy;
 myVPop.mnSDTable = myMapelOptions.mnSDTable;

@@ -152,7 +152,7 @@ if flagContinue
     myResultClasses = cellfun(@class,myWorksheet.results, 'UniformOutput', false);
     
     % Setup tolerances to try
-    nTolStepsMax = 5;
+    nTolStepsMax = 2;
     % We shouldn't often need this, but the smallest
     % positive double is realmin, 2.2251e-308
     endAbsTol = max(originalAbsTol/(10^(nTolStepsMax*10)),1E-300);

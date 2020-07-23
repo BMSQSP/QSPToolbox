@@ -73,7 +73,7 @@ if continueFlag
 	end
 	myResultIDs = myWorksheet.simProps.saveElementResultIDs;
 	myAxisIDs = getAxisDefIDs(myWorksheet);
-	if sum(ismember(myElement1Names,[myResultIDs,myAxisIDs])) < length(myElement1Names)
+	if sum(ismember(myElement1Names,[myResultIDs,myAxisIDs]) < length(myElement1Names))
 		warning(['Not all saveElementResultIDs/axisDefIDs found in worksheet in ',mfilename,'.  Exiting.'])
 		continueFlag = false;
 	end		

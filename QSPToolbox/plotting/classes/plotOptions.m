@@ -3,8 +3,6 @@ classdef plotOptions
 % plots of results
 %
 %  Properties
-%      flagPlotUnweighted Boolean (true/false) indicating whether to show 
-%                       unweighted.  Default is false.
 %      flagSave:        Boolean (true/false) indicating whether to save the
 %                       figure.  Default is false.
 %      fileName:        String indicating the save filename, '.tif' will be
@@ -44,7 +42,6 @@ classdef plotOptions
 %      interventionID:  String, intervention ID from the worksheet to plot.
 %   
    properties
-      flagPlotUnweighted
       flagSave
       fileName
       flagLegend
@@ -63,13 +60,6 @@ classdef plotOptions
       interventionID 
    end
    methods
-      function obj = set.flagPlotUnweighted(obj,flagvalue)
-          if (flagvalue == true) || (flagvalue == false)
-              obj.flagPlotUnweighted = flagvalue;
-          else
-            error('Invalid flagPlotUnweighted value, expecting true/false')
-          end
-      end       
       function obj = set.flagSave(obj,flagvalue)
           if (flagvalue == true) || (flagvalue == false)
               obj.flagSave = flagvalue;
@@ -280,8 +270,6 @@ classdef plotOptions
       
       function value = get(obj,propName)
           switch propName
-              case 'flagPlotUnweighted'
-                  value = obj.flagPlotUnweighted;              
               case 'flagSave'
                   value = obj.flagSave;
               case 'fileName'
@@ -321,7 +309,6 @@ classdef plotOptions
       
       % The constructor method must have the same name as the class
       function obj = plotOptions()
-            obj.flagPlotUnweighted = false;          
             obj.flagSave = false;
             obj.fileName = '';            
             obj.flagLegend = false;

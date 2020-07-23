@@ -227,12 +227,11 @@ else % create 1d Boxplots for all Biomarkers
     
     BiomarkerExpData = cell(nBiomarkers,1);
     nBiomarkerExpData = zeros(nBiomarkers,1);
-    BiomarkerData = [];
-    BiomarkerDataPrcntl = cell(2*nBiomarkers,1);
+    BiomarkerSimData = [];
+    BiomarkerSimDataPrcntl = cell(nBiomarkers,1);
     allInterventionIDs = getInterventionIDs(myWorksheet);
     allElementIDNames = myWorksheet.results{1}.Names;
     myExpDataIDs = getExpDataIDs(myWorksheet);
-    plotIDX = 2.*[1:nBiomarkers]-1;
     
     for i=1:nBiomarkers
         % gather biomarker data if available
@@ -244,7 +243,7 @@ else % create 1d Boxplots for all Biomarkers
         if isfield(Biomarker{i},'Patientgroup')
             PatientgroupFlag = true;
             PatientGroup = Biomarker{i}.Patientgroup;
-            if Biomarker{i}.InterventionID == "nodose"
+            if Biomarker{i}.InterventionID == 'nodose'
                 if isfield(Biomarker{i}.Patientgroup,'InterventionID')
                     PatientGroup.InterventionID = Biomarker{i}.Patientgroup.InterventionID;
                 else
@@ -373,15 +372,10 @@ else % create 1d Boxplots for all Biomarkers
         if ~isempty(candidateRows)
             plot1dExpFlag(i) = true;
             BiomarkerExpData{i} = curWorksheet.expData{expDataBMInd}.data{candidateRows,Biomarker{i}.ExpVarID};
-            
-            % find and eliminate '0's in ExpData
-            ZeroIDX = find(BiomarkerExpData{i} ==0);
-            BiomarkerExpData{i}(ZeroIDX) =[];
         else
             warning(['No data available for biomarker: ',Biomarker{i}.ElementID], newline)
         end
         
-
         %         BRSCORERows = find(ismember(curWorksheet.expData{expDataBMInd}.data{:,'USUBJID'}, candidateUSUBJID{14}) ...
         %             & ismember(curWorksheet.expData{expDataBMInd}.data{:,'TRTGRP'}, Biomarker{i}.TrtGrp) ...
         %             & ~isnan(curWorksheet.expData{expDataBMInd}.data{:,'TIME'}));
@@ -402,7 +396,7 @@ else % create 1d Boxplots for all Biomarkers
         end
         
         % sample size for resampling from VPop
-        nSamples = 2*nVPs;
+        nSamples = 10*nVPs;
         curBiomarkerSample = NaN(1, nSamples);
         curInterventionID = Biomarker{i}.InterventionID;
         curElementID = Biomarker{i}.ElementID;
@@ -425,45 +419,28 @@ else % create 1d Boxplots for all Biomarkers
             ind_rand = find(vp_rand < pws_cum,1);
             curBiomarkerSample(1,k) = curWorksheet.results{curInterventionInd, pws_Ind(ind_rand)}.Data(curTimeInd, curElementInd);
         end
-        BiomarkerDataPrcntl{2*i-1} = quantile(curBiomarkerSample, Biomarker{i}.Percentile);
-        BiomarkerData = [BiomarkerData; curBiomarkerSample', (2*i-1).*ones(length(curBiomarkerSample),1)];
-        if length(BiomarkerExpData{i}) >= 5
-            BiomarkerDataPrcntl{2*i} = quantile(BiomarkerExpData{i}, Biomarker{i}.Percentile);
-            BiomarkerData = [BiomarkerData; BiomarkerExpData{i}, 2*i.*ones(length(BiomarkerExpData{i}),1)];
-        else
-            plotIDX(i+1:end) = plotIDX(i+1:end)-1;
-        end
+        BiomarkerSimDataPrcntl{i} = quantile(curBiomarkerSample, Biomarker{i}.Percentile);
+        BiomarkerSimData = [BiomarkerSimData; curBiomarkerSample', i.*ones(length(curBiomarkerSample),1)];
+        
         
     end
     
     figure
-    plotHandle = boxplot(BiomarkerData(:,1),BiomarkerData(:,2));
+    plotHandle = boxplot(BiomarkerSimData(:,1),BiomarkerSimData(:,2));
     set(plotHandle(7,:),'Visible','off')
     hold on
     
     % adjust whiskers to percentile defined in the Percentile field
     for i=1:nBiomarkers
-        upWhisker = get(plotHandle(1,plotIDX(i)),'YData');
-        set(plotHandle(1,plotIDX(i)), 'YData', [upWhisker(1) BiomarkerDataPrcntl{2*i-1}(2)]);
-        set(plotHandle(3,plotIDX(i)), 'YData', [BiomarkerDataPrcntl{2*i-1}(2) BiomarkerDataPrcntl{2*i-1}(2)]);
-        dnWhisker = get(plotHandle(2,plotIDX(i)),'YData');
-        set(plotHandle(2,plotIDX(i)), 'YData', [BiomarkerDataPrcntl{2*i-1}(1) dnWhisker(2)]);
-        set(plotHandle(4,plotIDX(i)), 'YData', [BiomarkerDataPrcntl{2*i-1}(1) BiomarkerDataPrcntl{2*i-1}(1)]);
+        upWhisker = get(plotHandle(1,i),'YData');
+        set(plotHandle(1,i), 'YData', [upWhisker(1) BiomarkerSimDataPrcntl{i}(2)]);
+        set(plotHandle(3,i), 'YData', [BiomarkerSimDataPrcntl{i}(2) BiomarkerSimDataPrcntl{i}(2)]);
+        dnWhisker = get(plotHandle(2,i),'YData');
+        set(plotHandle(2,i), 'YData', [BiomarkerSimDataPrcntl{i}(1) dnWhisker(2)]);
+        set(plotHandle(4,i), 'YData', [BiomarkerSimDataPrcntl{i}(1) BiomarkerSimDataPrcntl{i}(1)]);
         
-        if length(BiomarkerExpData{i}) >= 5
-            
-            upWhisker = get(plotHandle(1,plotIDX(i) + 1),'YData');
-            set(plotHandle(1,plotIDX(i) + 1), 'YData', [upWhisker(1) BiomarkerDataPrcntl{2*i}(2)]);
-            set(plotHandle(3,plotIDX(i) + 1), 'YData', [BiomarkerDataPrcntl{2*i}(2) BiomarkerDataPrcntl{2*i}(2)]);
-            dnWhisker = get(plotHandle(2,plotIDX(i) + 1),'YData');
-            set(plotHandle(2,plotIDX(i) + 1), 'YData', [BiomarkerDataPrcntl{2*i}(1) dnWhisker(2)]);
-            set(plotHandle(4,plotIDX(i) + 1), 'YData', [BiomarkerDataPrcntl{2*i}(1) BiomarkerDataPrcntl{2*i}(1)]);
-            
-            plot(plotIDX(i) + 1,BiomarkerExpData{i},'ko');
-        else
-            if plot1dExpFlag(i) == true
-               plot(plotIDX(i),BiomarkerExpData{i},'ko');
-            end
+        if plot1dExpFlag(i) == true
+           plot(i,BiomarkerExpData{i},'ko');
         end
     end
 end

@@ -51,70 +51,46 @@ if continueFlag
     if ~isempty(myMnSDTable)
     % We will only include a term in the composite GOF if the corresponding
     % weight is > 0
-        indicesMn = find(myMnSDTable.('weightMean') > 0);
-        indicesSD = find(myMnSDTable.('weightSD') > 0);
-        weightsMn = myMnSDTable.('weightMean')(indicesMn);
-        weightsSD = myMnSDTable.('weightSD')(indicesSD);        
+        indicesMn = find(myMnSDTable{:,'weightMean'} > 0);
+        indicesSD = find(myMnSDTable{:,'weightSD'} > 0);
     else
         indicesMn = [];
         indicesSD = [];
-        weightsMn = [];
-        weightsSD = [];
     end
     if ~isempty(myBinTable)
-        indicesBin = find(myBinTable.('weight') > 0);
-        weightsBin = myBinTable.('weight')(indicesBin);
+        indicesBin = find(myBinTable{:,'weight'} > 0);
     else
         indicesBin = [];
-        weightsBin = [];
     end
     if ~isempty(myDistTable)
-        indicesDist = find(myDistTable.('weight') > 0);
-        weightsDist = myDistTable.('weight')(indicesDist);
+        indicesDist = find(myDistTable{:,'weight'} > 0);
     else
         indicesDist = [];
-        weightsDist = [];
-    end    
+    end    	
     if ~isempty(myDistTable2D)
-        indicesDist2D = find(myDistTable2D.('weight') > 0);
-        weightsDist2D = myDistTable2D.('weight')(indicesDist2D);
+        indicesDist2D = find(myDistTable2D{:,'weight'} > 0);
     else
         indicesDist2D = [];
-        weightsDist2D = [];
     end  	
     if ~isempty(myCorTable)
-        indicesCor = find(myCorTable.('weight') > 0);
-        weightsCor = myCorTable.('weight')(indicesCor);
+        indicesCor = find(myCorTable{:,'weight'} > 0);
     else
         indicesCor = [];
-        weightsCor = [];
-    end     	
+    end 	
     if ~isempty(myBRTable)
-        indicesBR = find(myBRTable.('weight') > 0);
-        weightsBR = myBRTable.('weight')(indicesBR);
+        indicesBR = find(myBRTable{:,'weight'} > 0);
     else
         indicesBR = [];
-        weightsBR = [];
     end 
     if ~isempty(myRTable)
         indicesR = find(myRTable{:,'weight'} > 0);
-        weightsR = myRTable.('weight')(indicesR);
     else
         indicesR = [];
-        weightsR = [];
     end      
-    allWeights = [weightsMn;weightsSD;weightsBin;weightsDist;weightsDist2D;weightsCor;weightsBR;weightsR];
     pVals = [myVPop.gofMn(indicesMn);myVPop.gofSD(indicesSD);myVPop.gofBin(indicesBin);myVPop.gofDist(indicesDist);myVPop.gofDist2D(indicesDist2D);myVPop.gofCor(indicesCor);myVPop.gofBR(indicesBR);myVPop.gofR(indicesR)];
-    if max(allWeights) == min(allWeights)    
-        dof = 2*length(pVals);
-        fisherStat = -2*sum(log(pVals));
-        myVPop.gof = chi2cdf(fisherStat,dof,'upper');
-    else
-        fisherStat = -2*sum(log(pVals).*allWeights);
-        % hbe and woodP assume k df, not 2k.  replicating the entries
-        % 2x corrects for this.
-        myVPop.gof = hbe(repmat(allWeights',1,2),fisherStat);
-    end        
+    dof = 2*length(pVals);
+    fisherStat = -2*sum(log(pVals));
+    myVPop.gof = chi2cdf(fisherStat,dof,'upper');
 else
     warning(['Unable to run ',mfilename,'.  Returning input.'])
 end    

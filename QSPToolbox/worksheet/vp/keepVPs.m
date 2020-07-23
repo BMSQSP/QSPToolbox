@@ -102,12 +102,12 @@ if sum(curVP_Indices_ind) > 0
         curVPop.simData.vpIDs = getVPIDs(curWorksheet);
         curVPop.subpopTable.vpIDs{1} = curVPop.simData.vpIDs;
         curVPop.subpopTable.vpIndices{1} = [1:length(curVPop.simData.vpIDs)];
-        curVPop.subpopTable = updateSubpopTableVPs(curVPop.subpopTable, curWorksheet);
+        
         % recompute weights of VPs in curVPop
         curVPop.pws = curVPop.pws./sum(curVPop.pws);
         
         if isa(curVPop,'VPopRECIST')
-            curVPop.recistSimFilter = createRECISTSimFilter(curWorksheet, curVPop, false);
+            curVPop.recistSimFilter = createRECISTSimFilter(curWorksheet, curVPop);
         end
         
         % populates the fields in curVPop.simData

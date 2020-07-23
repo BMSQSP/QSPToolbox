@@ -78,9 +78,9 @@ if flagContinue
      commonNames = loadCommonNames();
      myExpDataTable = myVPop.expData;
      if isa(myVPop, 'VPopRECIST')
-         firstDataIndex = find(ismember(myExpDataTable.Properties.VariableNames, commonNames.VPOPRECISTTABLEVARNAMESFIXED{end}))+1;
+         firstDataIndex = find(ismember(myExpDataTable.Properties.VariableNames, commonNames.VPOPRECISTTABLEVARNAMESFIXED{end}));
      else
-         firstDataIndex = find(ismember(myExpDataTable.Properties.VariableNames, commonNames.VPOPTABLEVARNAMESFIXED{end}))+1;
+         firstDataIndex = find(ismember(myExpDataTable.Properties.VariableNames, commonNames.VPOPTABLEVARNAMESFIXED{end}));
      end
     
      expDataTableRows = size(myExpDataTable,1); % number of experimental data
@@ -135,10 +135,10 @@ if flagContinue
              
              if (length(expRow) == 1) && (length(simRow) == 1)
                 nFoundElements = nFoundElements + 1;
-                expN(nFoundElements) = sum(~isnan(myExpDataTable{expRow,firstDataIndex:end}));
-                expMin(nFoundElements) = min(myExpDataTable{expRow,firstDataIndex:end});
-                expMax(nFoundElements) = max(myExpDataTable{expRow,firstDataIndex:end});
-                temp = prctile(myExpDataTable{expRow,firstDataIndex:end},[10 90]);
+                expN(nFoundElements) = sum(~isnan(myExpDataTable{expRow,firstDataIndex+1:end}));
+                expMin(nFoundElements) = min(myExpDataTable{expRow,firstDataIndex+1:end});
+                expMax(nFoundElements) = max(myExpDataTable{expRow,firstDataIndex+1:end});
+                temp = prctile(myExpDataTable{expRow,firstDataIndex+1:end},[10 90]);
                 exp10(nFoundElements) = temp(1);
                 exp90(nFoundElements) = temp(2);
                 simMin(nFoundElements) = min((mySimData(simRow,:)));
@@ -162,8 +162,7 @@ if flagContinue
              vpMaxInd = vpMaxInd(1:nFoundElements);
              vpIDsMin = vpIDsMin(1:nFoundElements);   
              vpIDsMax = vpIDsMax(1:nFoundElements); 
-             rowInfo = rowInfo(1:nFoundElements,:);
-			 
+             
              rangeCover = (min(simMax,expMax) - max(simMin,expMin)) ./ (expMax - expMin);
              minRangeMissing = max((simMin - expMin),zeros(nFoundElements,1))./(expMax - expMin);
              maxRangeMissing = max((expMax - simMax),zeros(nFoundElements,1))./(expMax - expMin);             
