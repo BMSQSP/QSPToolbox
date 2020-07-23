@@ -48,6 +48,7 @@ if continueFlag
     myVaryAxesOptions.newPerOld = mySobolSampleOptions.nRandomizationsPerSample;
     myVaryAxesOptions.varyMethod = 'saltelli';
     myVaryAxesOptions.varyAxisIDs = mySobolSampleOptions.varyAxisIDs;  
+    myVaryAxesOptions.intSeed = mySobolSampleOptions.intSeed;
     % Prepare the worksheet
     removeInterventionIDs = getInterventionIDs(myWorksheet);
     removeInterventionIDs = setdiff(removeInterventionIDs, {mySobolSampleOptions.interventionID});

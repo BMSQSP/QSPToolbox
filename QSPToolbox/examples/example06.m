@@ -123,7 +123,10 @@ end
 % outputs/interventions/times and don't exclude non-weighted times, but
 % can be generally useful to get a quick sense of issues with the
 % population fitting.
-plotMnSDVPop(myVPop)
+myPlotOptions = plotOptions;
+% We want to include the mn/sd plots
+myPlotOptions.flagPlotUnweighted = true;
+plotMnSDVPop(myVPop, myPlotOptions);
 
 % There is also a quick plot to visualize how the prevalence weights
 % are distributed in the VPop

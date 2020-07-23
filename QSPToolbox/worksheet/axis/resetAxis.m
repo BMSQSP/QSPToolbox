@@ -1,11 +1,11 @@
-function myWorksheet = resetAxisBounds(myWorksheet, myAxisCellArray)
+function myWorksheet = resetAxis(myWorksheet, myAxisCellArray)
 % Update axes bounds in a worksheet, based on the coefficients for the 
 % VPs that are present
 %
 % ARGUMENTS
 % myWorksheet:   a worksheet, required
 % myAxisCellArray: 1 X nAxes cell array, each element contains:
-%                {axes ID, bounds matrix}
+%                {axes ID, bounds matrix, scale}
 %                set each bounds matrix to empty if you just want
 %                to use max/min values in the worksheet, otherwise
 %                set to [lowval highval]
@@ -29,7 +29,7 @@ elseif nargin > 0
     myAxisIDs = getAxisDefIDs(myWorksheet);
     myAxisCellArray = cell(0,1);
     for axisCounter = 1 :length(myAxisIDs)
-        myAxisCellArray{1, axisCounter} = {myAxisIDs{axisCounter}, []};
+        myAxisCellArray{1, axisCounter} = {myAxisIDs{axisCounter}, [], myWorksheet.axisProps.axisDef{axisCounter}.scale};
     end
 else
     warning(['Insufficient input arguments to ',mfilename, '. Arguments should be: myWorksheet; optionally: myAxisCellArray. Exiting.'])
@@ -39,9 +39,11 @@ if continueFlag
     [dummy, nTestAxis] = size(myAxisCellArray);
     axisBoundsArray = cell(1,0);
     myAxisIDs = cell(1,0);
+    axisScaleArray = cell(1,0);
     for axisCounter = 1 : nTestAxis
         myAxisIDs{axisCounter} = myAxisCellArray{axisCounter}{1};
         axisBoundsArray{axisCounter} = myAxisCellArray{axisCounter}{2};
+        axisScaleArray{axisCounter} = myAxisCellArray{axisCounter}{3};
     end
     allAxisIDs = getAxisDefIDs(myWorksheet);
     if nTestAxis < 1
@@ -63,33 +65,15 @@ if continueFlag
     [nAxes, nVPs] = size(getVPCoeffs(myWorksheet));
     for axisCounter = 1 : nTestAxis
         curAxisID = myAxisIDs{axisCounter};
-        myAxisDef = getAxisDef(myWorksheet, curAxisID);
-        myScale = myAxisDef.scale;
-        axisIndex = find(ismember(allAxisIDs, curAxisID));
         specifiedAxisBounds = axisBoundsArray{axisCounter};
-        % Stick too working with coefficients since one axis may have
-        % multiple elements (parameters/initial values)
-        oldMinCoef = min(myVPCoeffs(axisIndex, :));
-        oldMaxCoef = max(myVPCoeffs(axisIndex, :));
-        % Update the bounds in the axis definition
-        oldAxisDevBounds = getAxisDefBounds(myWorksheet, curAxisID);
-        oldMinVals = oldAxisDevBounds(:,1);
-        oldMaxVals = oldAxisDevBounds(:,2);        
-        [nBoundsVars, nBoundsCols] = size(specifiedAxisBounds);
-        if (nBoundsVars > 0) && (nBoundsCols == 2)
-            newMinVals = specifiedAxisBounds(:,1);
-            newMaxVals = specifiedAxisBounds(:,2);
-        else
-            if strcmp(myScale,'linear')
-                newMinVals = oldMinVals+oldMinCoef*(oldMaxVals-oldMinVals);
-                newMaxVals = oldMinVals+oldMaxCoef*(oldMaxVals-oldMinVals);
-            else
-                newMinVals = 10.^(log10(oldMinVals)+oldMinCoef*(log10(oldMaxVals)-log10(oldMinVals)));
-                newMaxVals = 10.^(log10(oldMinVals)+oldMaxCoef*(log10(oldMaxVals)-log10(oldMinVals)));
-            end
-        end
-        % Set the axis bounds
+        mynewScale = axisScaleArray{axisCounter};
+        newMinVals = specifiedAxisBounds(:,1);
+        newMaxVals = specifiedAxisBounds(:,2);
+        axisIndex = find(ismember(allAxisIDs, curAxisID));
+        % reset the axis bounds
         myWorksheet = setAxisDefBounds(myWorksheet, curAxisID, [newMinVals, newMaxVals]);
+        % reset the axis scale
+        myWorksheet.axisProps.axisDef{axisIndex}.scale = mynewScale;
         % Set the VP coefs
         for vpCounter = 1 : nVPs
             myWorksheet.axisProps.axisVP = myWorksheet.axisProps.axisVP.calculateCoefficientFromValues([axisIndex, vpCounter], myVPValues{axisIndex,vpCounter}, myWorksheet);
