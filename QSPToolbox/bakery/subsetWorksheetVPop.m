@@ -41,7 +41,7 @@ if flagContinue
 	vpIDsKeep = vpIDsAll(iMaskVPIDsKeep);
 	myWorksheet = copyWorksheet(myWorksheet,vpIDsKeep);
 	if isa(myVPop,'VPopRECIST')
-		myVPop.recistSimFilter = createRECISTSimFilter(myWorksheet, myVPop);  
+		myVPop.recistSimFilter = createRECISTSimFilter(myWorksheet, myVPop, false);  
 	end		
 	myVPop = myVPop.getSimData(myWorksheet);	
 	

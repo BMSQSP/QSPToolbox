@@ -113,11 +113,12 @@ if nStopTrials > 0
 end
 
 commonNames = loadCommonNames();
-tableVariableNames = [commonNames.VPOPRECISTRESPONSETABLEVARNAMESFIXED,{'weight','expN','expCR','expPR','expSD','expPD','predN','predCR','predPR','predSD','predPD'}];
-myBRTableRECIST = cell2table(cell(0,length(tableVariableNames)));
-myBRTableRECIST.Properties.VariableNames = tableVariableNames;
-myRTableRECIST = cell2table(cell(0,length(tableVariableNames)));
-myRTableRECIST.Properties.VariableNames = tableVariableNames;
+rTableVariableNames = [commonNames.VPOPRECISTRESPONSETABLEVARNAMESFIXED,{'weight','expN','expCR','expPR','expSD','expPD','predN','predCR','predPR','predSD','predPD'}];
+brTableVariableNames = [commonNames.VPOPRECISTRESPONSETABLEVARNAMESFIXED,{'weight','expN','expCR','expPR','expSD','expPD','predN','predCR','predPR','predSD','predPD','expNPD21LS'}]; % ,'expNMS1LS'
+myBRTableRECIST = cell2table(cell(0,length(brTableVariableNames)));
+myBRTableRECIST.Properties.VariableNames = brTableVariableNames;
+myRTableRECIST = cell2table(cell(0,length(rTableVariableNames)));
+myRTableRECIST.Properties.VariableNames = rTableVariableNames;
 
 if continueFlag
 
@@ -136,7 +137,7 @@ if continueFlag
         new_variable = arrayfun(@(value) cast(value{1}, 'char'), curData.(RSCOREVar), 'uniform', 0);
         curData.(RSCOREVar) = new_variable;  
         % We are just looking for BR, so this filter makes sense
-        curData = curData(find(ismember(curData{:,BRSCOREVar},{'PD','SD','PR','CR'})),:);
+        curData = curData(find(ismember(curData{:,BRSCOREVar},{'PD','SD','PR','CR','PD2'})),:);
         
         
         
@@ -144,6 +145,7 @@ if continueFlag
         curPatientIDs = unique(curData{:,PatientIDVar},'stable');
         nPatients = length(curPatientIDs);
         allRows = nan(0,1);
+        PD2onlyRows = nan(0,1);
         for patientCounter = 1 : nPatients
             curRows = find(ismember(curData{:,PatientIDVar},curPatientIDs(patientCounter)));
             %lastRows = find(ismember(curData{curRows,BRSCOREVar},{'PD','CR'}) | ismember(curData{curRows,RSCOREVar},{'PD','CR'}));
@@ -151,7 +153,12 @@ if continueFlag
 			% We will exclude all data with PD2 for now
 			lastRows = find(ismember(curData{curRows,BRSCOREVar},{'PD2'}) | ismember(curData{curRows,RSCOREVar},{'PD2'}));
 			if ~isempty(lastRows)
-				lastRows = lastRows(1)-1;
+                if lastRows == 1
+                    PD2onlyRows = [PD2onlyRows;curRows(1:lastRows)];
+                    lastRows = lastRows(1)-1;
+                else
+                    lastRows = lastRows(1)-1;
+                end
                 if lastRows > 0
                     curRows = curRows(1:lastRows);
                 else
@@ -166,6 +173,7 @@ if continueFlag
                 allRows = [allRows; curRows];
             end
         end
+        pd2Data = curData(PD2onlyRows,:);
         selectData = curData(allRows,:);
         new_variable = arrayfun(@(value) cast(value{1}, 'char'), selectData.(BRSCOREVar), 'uniform', 0);
         selectData.(BRSCOREVar) = new_variable;  
@@ -186,6 +194,7 @@ if continueFlag
         % unless we are beyond startTime anyway.
         allTimes = allTimes(find(allTimes>startTime));
         fullCell = cell(length(allTimes),nPatients);
+        cumPD2 = zeros(length(allTimes),1);
         for patientCounter = 1 :nPatients
             patientID = curPatientIDs{patientCounter};
             curRows = find(ismember(selectData{:,PatientIDVar},patientID));
@@ -211,8 +220,16 @@ if continueFlag
                     lastBRSCORE = '.';
                 end
                 fullCell{timeCounter,patientCounter} = lastBRSCORE;
+                
             end
+            
         end
+        
+        for timeCounter = 1 : length(allTimes)
+            curTime = allTimes(timeCounter);
+            cumPD2(timeCounter) = sum(pd2Data{:,timeVar}<=curTime);
+        end
+        
         % Now we want to count...
         for timeCounter = 1 : length(allTimes);
             curData = fullCell(timeCounter,:);
@@ -223,7 +240,7 @@ if continueFlag
             expN = nCR+nPR+nSD+nPD;
             curProbs = [nCR, nPR, nSD, nPD] / expN;
             curRow = {1, allTimes(timeCounter), 'BRSCORE', interventionID, 'BRSCORE','derived',myExpDataID, timeVar,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar};
-            curRow = [curRow,{1, expN, curProbs(1), curProbs(2), curProbs(3), curProbs(4), nan, nan, nan, nan, nan}];
+            curRow = [curRow,{1, expN, curProbs(1), curProbs(2), curProbs(3), curProbs(4), nan, nan, nan, nan, nan,cumPD2(timeCounter)}];
             curRow = cell2table(curRow);
             curRow.Properties.VariableNames = myBRTableRECIST.Properties.VariableNames; 
             myBRTableRECIST = [myBRTableRECIST; curRow];    

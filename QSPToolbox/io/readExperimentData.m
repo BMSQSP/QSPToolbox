@@ -97,7 +97,7 @@ if continueFlag
             % but there haven't been any issues so far.
             warning('off','all');
             %unformatTable = tdfread([fileName,'.txt'],'\t');
-            unformatTable = readtable([filePath,filesep,noPathName,'.',fileTypeExt],'Delimiter','\t');
+            unformatTable = readtable([filePath,filesep,noPathName,'.',fileTypeExt],'Delimiter','\t','Format','auto');
             warning('on','all');
             if ~(strcmp(class(unformatTable),'table'))
                 warning(['Cannot read specified file in ',mfilename,'.'])

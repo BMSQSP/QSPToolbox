@@ -25,9 +25,24 @@ function [sample1Ind, sample2Ind, SC] = alignSamples(sample1, sample2)
     [sample2,Inu2,~]=unique(sample2,'last');
     SC = unique([sample1,sample2]);
     SC = sort(SC, 'ascend');
-    sample1Ind = interp1(sample1,[1:length(sample1)],SC,'previous');
-    sample2Ind = interp1(sample2,[1:length(sample2)],SC,'previous');
-    % Right fill with last value, leave the left size as nan
+    % Get the indices of length SC where every entry in SC is found to be
+    % >= the indicated index in sample1
+    if length(sample1) > 1
+        sample1Ind = interp1(sample1,[1:length(sample1)],SC,'previous');
+    else
+        % If there is just one unique value in sample1 
+        sample1Ind = ones(1,length(SC));
+        sample1Ind(sample1<SC) = nan;
+    end        
+    % Get the indices of length SC where every entry in SC is found to be
+    % >= the indicated index in sample2    
+    if length(sample2) > 1
+        sample2Ind = interp1(sample2,[1:length(sample2)],SC,'previous');
+    else
+        sample2Ind = ones(1,length(SC));
+        sample2Ind(sample2<SC) = nan;
+    end
+    % Right fill with last value, leave the left side as nan
     if sum(isnan(sample1Ind)) > 0
         t = 1:numel(sample1Ind);
         sample1Ind = interp1(t(~isnan(sample1Ind)),sample1Ind(~isnan(sample1Ind)),t,'previous','extrap');    

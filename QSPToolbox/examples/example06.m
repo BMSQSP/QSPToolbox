@@ -151,3 +151,80 @@ for myTestCounter = 1 : 1
     newVPop.mnSDTable{1,'predN'}
     newVPop.gof
 end
+
+% These additional sections were not in the AAPS 2017 publication but
+% highlight additional algorithms implemented since then.  For the first
+% example, we run "MAPEL" without imposing the binned axis
+% distributions and allowing the prevalence weights to vary
+myVPop = loadVPop('example_vpop');
+myVPop.pwStrategy = 'direct';
+myVPop.optimizeType = 'gapso';
+newVPop = restartMapel(myVPop);
+newVPop.useEffN = true;
+newVPop = evaluateGOF(newVPop);
+newVPop.mnSDTable{1,'predN'}
+newVPop.gof
+
+% This is a sample run with the linearCalibration module
+% Set up the optimization options, which will automatically spit back a set
+% of default values
+optimOptions = LinearCalibrationOptions();
+% Define the probabilities of the cumulative
+% distribution functions (CDF) to fit. The default is to fit all points on
+% the CDF. We will only fit certain probabilities
+% along the CDF in order to make the fit faster. These probabilities are
+% defined here:
+optimOptions.cdfProbsToFit = 0.05:0.05:0.95;
+% Other options:
+optimOptions.optimizationAlgorithm = "nnls";
+optimOptions.optimizationAlgorithmOptions.Accy = 0;
+optimOptions.method = "bagging";
+optimOptions.fractionVPsPerBaggingIteration = 0.1;
+% Initialize a 'LinearCalibration' object:
+linearCalibrationObject = LinearCalibration(myVPop,'optimOptions',optimOptions);
+% Run the optimization:
+linearCalibrationObject = linearCalibrationObject.run();
+% Update VPop:
+newVPop = linearCalibrationObject.OptimizedVPop;
+newVPop.useEffN = true;
+newVPop = evaluateGOF(newVPop);
+newVPop.mnSDTable{1,'predN'}
+newVPop.gof
+
+% This is a sample run with expandVPopEffN
+myVPop = loadVPop('example_vpop');
+myVPop.pwStrategy = 'direct';
+myVPop.optimizeType = 'gapso';
+myMapelOptions = initializeVPopPropertiesToOption(myVPop);
+myExpandVPopEffNOptions = expandVPopEffNOptions;
+% An identifying suffix
+myExpandVPopEffNOptions.suffix = 'example06Test';
+myExpandVPopEffNOptions.wsIterCounter = 0;
+% Normally target 150 and often pause at 50
+% in initial run.  We'll stop here too in order to
+% adjust expansion sized
+myExpandVPopEffNOptions.targetEffN = 40;
+myExpandVPopEffNOptions.maxNewPerIter= 10;
+myExpandVPopEffNOptions.expandCohortSize = 5000;
+myExpandVPopEffNOptions.effNDelta = 2;
+myExpandVPopEffNOptions.minPVal = 0.2;
+myExpandVPopEffNOptions.nTries = 1;
+myExpandVPopEffNOptions.nRetries = 1;
+myExpandVPopEffNOptions.verbose = true;
+myExpandVPopEffNOptions.restartPVal = 1E-4;
+myExpandVPopEffNOptions.expandRandomStart = 0;
+myExpandVPopEffNOptions.varyMethod = 'gaussian';
+myExpandVPopEffNOptions.resampleStd = 0.05;
+myExpandVPopEffNOptions.expandEdgeVPs=true;
+myExpandVPopEffNOptions.maxNewPerOld = 3;
+% Here, we enforce any checks on sampled VPs,
+% before simulation and adjust VPs if needed.
+myExpandVPopEffNOptions.screenFunctionName = '';
+% This takes a while to run.  Every iteration will
+% write to file when a better VPop is found
+% and a new worksheet will write to file
+% when new VPs are added.
+% You can delete intermediate iterations between your start file and
+% stopping point.  They are included to allow you to more easily
+% track progress.
+[newWorksheet, newVPop] = expandVPopEffN(myWorksheet,myExpandVPopEffNOptions,myMapelOptions,myVPop);

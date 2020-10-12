@@ -23,12 +23,13 @@ if nargin > 2
     continueFlag = false; 
 elseif nargin > 1
     allVPIDs = getVPIDs(myWorksheet);
-    continueFlag = true;
+    continueFlag = true;      
 elseif nargin > 0
     allVPIDs = getVPIDs(myWorksheet);
     myClusterPickOptions = clusterPickOptions();
     myClusterPickOptions = myClusterPickOptions.setDefaultFromWorksheet(myWorksheet);
     continueFlag = true; 
+    mySimulateOptions = simulateOptions;     
 else
     warning(['Insufficient input arguments to ',mfilename, '. Arguments should be: myWorksheet; optionally: myClusterPickOptions.'])
     continueFlag = false; 
@@ -40,6 +41,19 @@ if continueFlag
 end
 
 if continueFlag
+    
+    if myClusterPickOptions.poolRestart
+        if ~isempty(gcp('nocreate'))
+            delete(gcp);
+        end
+    end    
+    if isempty(gcp('nocreate'))
+        % First check the default number of workers, if needed
+        myClusterPickOptions = checkNWorkers(myClusterPickOptions);
+        myPool = parpool(mySimulateOptions.clusterID,myClusterPickOptions.nWorkers,'SpmdEnabled',false);
+    end    
+    
+    
     if myClusterPickOptions.intSeed > -1
         rng(myClusterPickOptions.intSeed, 'twister');
     end
@@ -196,6 +210,13 @@ if continueFlag
 	medoidData.('D') = transpose(D);
 	medoidData.('midx') = transpose(midx);
 	medoidData.('info') = info;
+    
+    % Clean up the pool, if needed
+    if myClusterPickOptions.poolClose
+        if ~isempty(gcp('nocreate'))
+            delete(gcp);
+        end
+    end    
     
 else
     warning(['Unable to run ',mfilename,'.'])

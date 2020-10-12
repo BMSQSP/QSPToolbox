@@ -852,6 +852,14 @@ methods (Hidden = true)
         else
             error('The specified optimOptions.priorPrevalenceWeightAssumption is not supported.');
         end
+        
+        % 0 for not adjusted based ont the number of rows a data group takes up 
+        % 1 for 1/sqrt(nRows)
+        % 2 for 1/(nRows)
+        % 3 for 1/(nRows)^2
+        % Original behavior is 0, but in spot checks 3 looked like
+        % it started closer to some of the targets from hypothesis testing
+        groupWeightMethod = 3;
 
         % Convert the VPop simData into a table, for easier indexing later
         % on:
@@ -906,6 +914,15 @@ methods (Hidden = true)
                     dataParticular.observationWeights(iBin) = Obj.InputVPop.binTable.weight(iBinTableRow);
                     dataParticular.observationDescriptions{iBin} = descriptionParticular;
                     dataParticular.expWeight(iBin) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.binTable.expN(iBinTableRow),nan,descriptionParticular);
+                end
+                if groupWeightMethod == 0
+                    dataParticular.dataGroupWeight = 1;
+                elseif groupWeightMethod == 1
+                    dataParticular.dataGroupWeight = 1/sqrt(length(dataParticular.observationVals));
+                elseif groupWeightMethod == 2
+                    dataParticular.dataGroupWeight = 1/(length(dataParticular.observationVals));
+                elseif groupWeightMethod == 3
+                    dataParticular.dataGroupWeight = 1/(length(dataParticular.observationVals))^2;                    
                 end
                 dataConsolidated = [dataConsolidated dataParticular];
             end
@@ -970,6 +987,15 @@ methods (Hidden = true)
                     dataParticular.observationDescriptions{iIncludedProbs} = descriptionParticular;
                     dataParticular.expWeight(iIncludedProbs) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.distTable.expN(iDistTableRow),nan,descriptionParticular);
                 end
+                if groupWeightMethod == 0
+                    dataParticular.dataGroupWeight = 1;
+                elseif groupWeightMethod == 1
+                    dataParticular.dataGroupWeight = 1/sqrt(length(dataParticular.observationVals));
+                elseif groupWeightMethod == 2
+                    dataParticular.dataGroupWeight = 1/(length(dataParticular.observationVals));
+                elseif groupWeightMethod == 3
+                    dataParticular.dataGroupWeight = 1/(length(dataParticular.observationVals))^2;
+                end                
                 dataConsolidated = [dataConsolidated dataParticular];
             end
         end
@@ -979,55 +1005,77 @@ methods (Hidden = true)
         % 0 = CR, 1 = PR, 2 = SD, 3 = PD
         recistClassStr = {'CR','PR','SD','PD'};
         resistClassNum = [0 1 2 3];
-        if istable(Obj.InputVPop.brTableRECIST)
-            for iBRTblRow = 1:height(Obj.InputVPop.brTableRECIST)
-            % Loop through table rows
-                % Extract the simulation data:
-                iMaskSimDataRow = Obj.InputVPop.simData.brRows == iBRTblRow;
-                brDataParticular = Obj.InputVPop.simData.brData(iMaskSimDataRow,:);
-                nObservations = length(resistClassNum);
-                dataParticular = initDataParticular(Obj.NumVPs,nObservations,Obj.OptimOptions.brTableRECISTGroupWeight);
-                for iRECISTClass = 1:nObservations
-                % loop through RECIST classes
-                    % The response value is the experimentally observed probability for
-                    % this RECIST class:
-                    observationValParticular = Obj.InputVPop.brTableRECIST.(['exp' recistClassStr{iRECISTClass}])(iBRTblRow);
-                    descriptionParticular = ['brTableRECIST; Row ' num2str(iBRTblRow) '; RECIST Class ' num2str(iRECISTClass)];
-                    % The values of the independent variables will be set to 1 for
-                    % VPs that are in the RECIST class, and 0 for those that aren't
-                    vpsInClass = brDataParticular == resistClassNum(iRECISTClass);
-                    dataParticular.independentVarVals(iRECISTClass,:) = vpsInClass;
-                    dataParticular.observationVals(iRECISTClass) = observationValParticular;
-                    dataParticular.observationWeights(iRECISTClass) = Obj.InputVPop.brTableRECIST.weight(iBRTblRow);
-                    dataParticular.observationDescriptions{iRECISTClass} = descriptionParticular;
-                    dataParticular.expWeight(iRECISTClass) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.brTableRECIST.expN(iBRTblRow),nan,descriptionParticular);
+        if isa(Obj.InputVPop, 'VPopRECIST');
+            if istable(Obj.InputVPop.brTableRECIST)
+                for iBRTblRow = 1:height(Obj.InputVPop.brTableRECIST)
+                % Loop through table rows
+                    % Extract the simulation data:
+                    iMaskSimDataRow = Obj.InputVPop.simData.brRows == iBRTblRow;
+                    brDataParticular = Obj.InputVPop.simData.brData(iMaskSimDataRow,:);
+                    nObservations = length(resistClassNum);
+                    dataParticular = initDataParticular(Obj.NumVPs,nObservations,Obj.OptimOptions.brTableRECISTGroupWeight);
+                    for iRECISTClass = 1:nObservations
+                    % loop through RECIST classes
+                        % The response value is the experimentally observed probability for
+                        % this RECIST class:
+                        observationValParticular = Obj.InputVPop.brTableRECIST.(['exp' recistClassStr{iRECISTClass}])(iBRTblRow);
+                        descriptionParticular = ['brTableRECIST; Row ' num2str(iBRTblRow) '; RECIST Class ' num2str(iRECISTClass)];
+                        % The values of the independent variables will be set to 1 for
+                        % VPs that are in the RECIST class, and 0 for those that aren't
+                        vpsInClass = brDataParticular == resistClassNum(iRECISTClass);
+                        dataParticular.independentVarVals(iRECISTClass,:) = vpsInClass;
+                        dataParticular.observationVals(iRECISTClass) = observationValParticular;
+                        dataParticular.observationWeights(iRECISTClass) = Obj.InputVPop.brTableRECIST.weight(iBRTblRow);
+                        dataParticular.observationDescriptions{iRECISTClass} = descriptionParticular;
+                        dataParticular.expWeight(iRECISTClass) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.brTableRECIST.expN(iBRTblRow),nan,descriptionParticular);
+                    end
+                    if groupWeightMethod == 0
+                        dataParticular.dataGroupWeight = 1;
+                    elseif groupWeightMethod == 1
+                        dataParticular.dataGroupWeight = 1/sqrt(length(dataParticular.observationVals));
+                    elseif groupWeightMethod == 2
+                        dataParticular.dataGroupWeight = 1/(length(dataParticular.observationVals));
+                    elseif groupWeightMethod == 3
+                        dataParticular.dataGroupWeight = 1/(length(dataParticular.observationVals))^2;                    
+                    end  
+                    dataConsolidated = [dataConsolidated dataParticular];
                 end
-                dataConsolidated = [dataConsolidated dataParticular];
             end
         end
         
-        if istable(Obj.InputVPop.rTableRECIST)
-            for iRTblRow = 1:height(Obj.InputVPop.rTableRECIST)
-                iMaskSimDataRow = Obj.InputVPop.simData.rRows == iRTblRow;
-                rDataParticular = Obj.InputVPop.simData.rData(iMaskSimDataRow,:);
-                nObservations = length(resistClassNum);
-                dataParticular = initDataParticular(Obj.NumVPs,nObservations,Obj.OptimOptions.rTableRECISTGroupWeight);
-                for iRECISTClass = 1:nObservations
-                % loop through RECIST classes
-                    % The response value is the experimentally observed probability for
-                    % this RECIST class:
-                    observationValParticular = Obj.InputVPop.rTableRECIST.(['exp' recistClassStr{iRECISTClass}])(iRTblRow);
-                    descriptionParticular = ['rTableRECIST; Row ' num2str(iRTblRow) '; RECIST Class ' num2str(iRECISTClass)];
-                    % The values of the independent variables will be set to 1 for
-                    % VPs that are in the RECIST class, and 0 for those that aren't
-                    vpsInClass = rDataParticular == resistClassNum(iRECISTClass);
-                    dataParticular.independentVarVals(iRECISTClass,:) = vpsInClass;
-                    dataParticular.observationVals(iRECISTClass) = observationValParticular;
-                    dataParticular.observationWeights(iRECISTClass) = Obj.InputVPop.rTableRECIST.weight(iRTblRow);
-                    dataParticular.observationDescriptions{iRECISTClass} = descriptionParticular;
-                    dataParticular.expWeight(iRECISTClass) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.rTableRECIST.expN(iRTblRow),nan,descriptionParticular);
+        if isa(Obj.InputVPop, 'VPopRECIST');        
+            if istable(Obj.InputVPop.rTableRECIST)
+                for iRTblRow = 1:height(Obj.InputVPop.rTableRECIST)
+                    iMaskSimDataRow = Obj.InputVPop.simData.rRows == iRTblRow;
+                    rDataParticular = Obj.InputVPop.simData.rData(iMaskSimDataRow,:);
+                    nObservations = length(resistClassNum);
+                    dataParticular = initDataParticular(Obj.NumVPs,nObservations,Obj.OptimOptions.rTableRECISTGroupWeight);
+                    for iRECISTClass = 1:nObservations
+                    % loop through RECIST classes
+                        % The response value is the experimentally observed probability for
+                        % this RECIST class:
+                        observationValParticular = Obj.InputVPop.rTableRECIST.(['exp' recistClassStr{iRECISTClass}])(iRTblRow);
+                        descriptionParticular = ['rTableRECIST; Row ' num2str(iRTblRow) '; RECIST Class ' num2str(iRECISTClass)];
+                        % The values of the independent variables will be set to 1 for
+                        % VPs that are in the RECIST class, and 0 for those that aren't
+                        vpsInClass = rDataParticular == resistClassNum(iRECISTClass);
+                        dataParticular.independentVarVals(iRECISTClass,:) = vpsInClass;
+                        dataParticular.observationVals(iRECISTClass) = observationValParticular;
+                        dataParticular.observationWeights(iRECISTClass) = Obj.InputVPop.rTableRECIST.weight(iRTblRow);
+                        dataParticular.observationDescriptions{iRECISTClass} = descriptionParticular;
+                        dataParticular.expWeight(iRECISTClass) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.rTableRECIST.expN(iRTblRow),nan,descriptionParticular);
+                    end
+                    if groupWeightMethod == 0
+                        dataParticular.dataGroupWeight = 1;
+                    elseif groupWeightMethod == 1
+                        dataParticular.dataGroupWeight = 1/sqrt(length(dataParticular.observationVals));
+                    elseif groupWeightMethod == 2
+                        dataParticular.dataGroupWeight = 1/(length(dataParticular.observationVals));
+                    elseif groupWeightMethod == 3
+                        dataParticular.dataGroupWeight = 1/(length(dataParticular.observationVals))^2;                    
+                    end  
+                    dataConsolidated = [dataConsolidated dataParticular];
                 end
-                dataConsolidated = [dataConsolidated dataParticular];
             end
         end
 
@@ -1059,6 +1107,9 @@ methods (Hidden = true)
                     sumPWsForNonNanVPs = 1;
                 else
                     sumPWsForNonNanVPs = sum(pws(~nanValsIndexMask));
+                    if sumPWsForNonNanVPs == 0
+                        continue;
+                    end
                 end
 
                 % Fit mean
@@ -1168,6 +1219,9 @@ methods (Hidden = true)
                     sumPWsForNonNanVPs = 1;
                 else
                     sumPWsForNonNanVPs = sum(pws(~nanValsIndexMask));
+                    if sumPWsForNonNanVPs == 0
+                        continue;
+                    end                    
                 end
 
                 % Fit the correlations
@@ -1287,11 +1341,10 @@ methods (Hidden = true)
                         sumPWsForNonNanVPs = 1;
                     else
                         sumPWsForNonNanVPs = sum(pws(~nanValsIndexMask));
+                        if sumPWsForNonNanVPs == 0
+                            continue;
+                        end                        
                     end
-                
-                
-                
-                
                 
                 % the length of vectors should be the same so we can choose
                 % any to get number of Observations
@@ -1324,6 +1377,15 @@ methods (Hidden = true)
                     dataParticular.observationDescriptions{iIncludedProbs} = descriptionParticular;
                     dataParticular.expWeight(iIncludedProbs) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.distTable2D.expN(iDistTableRow),nan,descriptionParticular);
                 end
+                if groupWeightMethod == 0
+                    dataParticular.dataGroupWeight = 1;
+                elseif groupWeightMethod == 1
+                    dataParticular.dataGroupWeight = 1/sqrt(length(dataParticular.observationVals));
+                elseif groupWeightMethod == 2
+                    dataParticular.dataGroupWeight = 1/(length(dataParticular.observationVals));
+                elseif groupWeightMethod == 3
+                    dataParticular.dataGroupWeight = 1/(length(dataParticular.observationVals))^2;                    
+                end  
                 dataConsolidated = [dataConsolidated dataParticular];
 
             end

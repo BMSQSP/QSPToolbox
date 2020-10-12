@@ -121,8 +121,11 @@ classdef VPopRECIST
 %                       random number generator.  Set to -1 to avoid
 %                       changing the state of the random number generator.
 %  tol:                 Numerical tolerance for optimization.
-%  nIters:              Maximum number of iterations for fminsearch.
-%  minEffN:             Minimum effective N.  A large penalty is applied
+%  nIters:             (Optional) default is 10,000.
+%                      simplex: number of iterations
+%                      ga,gapso: maximum number of generations
+%                      ignored for other optimizeType options.
+%   minEffN:             Minimum effective N.  A large penalty is applied
 %                       if the effN drops below this N during optimization,
 %                       better ensuring solutions that weight multiple VPs.
 %                       The minEffN setting operates independently of 
@@ -1732,7 +1735,7 @@ methods
               curSimValues(rRowsTarget,:) = (myRData(rRowsSource, :));
               binEdgeValues = [.9,1.9,2.9];   
 
-			  mySubpopNo = myBRTableRECIST.('subpopNo');
+			  mySubpopNo = myRTableRECIST.('subpopNo');
                             
               for rowCounter = 1 : nRRows
 				   curIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};			  

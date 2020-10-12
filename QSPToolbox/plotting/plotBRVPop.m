@@ -75,8 +75,27 @@ if (flagContinue)
     plotHandle = figure;
     for plotCounter = 1 : myNPlots
         subplot(nPlotsVer, nPlotsHor, plotCounter);
-        expBins = [myTable{plotCounter,'expCR'},myTable{plotCounter,'expPR'},myTable{plotCounter,'expSD'},myTable{plotCounter,'expPD'}];
-        predBins = [myTable{plotCounter,'predCR'},myTable{plotCounter,'predPR'},myTable{plotCounter,'predSD'},myTable{plotCounter,'predPD'}];
+        if ~myPlotOptions.flagPD2
+            expBins = [myTable{plotCounter,'expCR'},myTable{plotCounter,'expPR'},myTable{plotCounter,'expSD'},myTable{plotCounter,'expPD'}];
+            predBins = [myTable{plotCounter,'predCR'},myTable{plotCounter,'predPR'},myTable{plotCounter,'predSD'},myTable{plotCounter,'predPD'}];
+        else
+            expNPD21LS = myTable{plotCounter,'expNPD21LS'};
+            if isnan(expNPD21LS)
+                expNPD21LS = 0;
+            end
+            predN = myTable{plotCounter,'predN'};
+            expN = myTable{plotCounter,'expN'};
+            expPD = (expNPD21LS + myTable{plotCounter,'expPD'}*expN)/(expN+expNPD21LS);
+            expSD = (myTable{plotCounter,'expSD'}*expN)/(expN+expNPD21LS);
+            expPR = (myTable{plotCounter,'expPR'}*expN)/(expN+expNPD21LS);
+            expCR = (myTable{plotCounter,'expCR'}*expN)/(expN+expNPD21LS);
+            predPD = (expNPD21LS*predN/expN + myTable{plotCounter,'predPD'}*predN)/(predN+expNPD21LS*predN/expN);
+            predSD = (myTable{plotCounter,'predSD'}*predN)/(predN+expNPD21LS*predN/expN);
+            predPR = (myTable{plotCounter,'predPR'}*predN)/(predN+expNPD21LS*predN/expN);
+            predCR = (myTable{plotCounter,'predCR'}*predN)/(predN+expNPD21LS*predN/expN);
+            expBins = [expCR,expPR,expSD,expPD];
+            predBins = [predCR,predPR,predSD,predPD];
+        end            
         binLabels = {'CR','PR','SD','PD'};
         barplot = bar([expBins;predBins]');
         set(gca,'XTickLabel',binLabels);

@@ -51,22 +51,40 @@ end
 if flagContinue
     myCheckElement = cell(0,5);
     if ~isempty(myVPop.mnSDTable)
-        myVPop.mnSDTable(:, 'weight') = table(max(myVPop.mnSDTable{:, 'weightMean'},myVPop.mnSDTable{:, 'weightSD'}));
-        myCheckElement = [myCheckElement; table2cell(myVPop.mnSDTable(:,{'elementID','elementType','interventionID','time','weight'}))];
+        % We will only consider mn/sd data for ranges if the variance is
+        % included, we will not try to match if we are only calibrating
+        % the mean
+        keepRows = find(myVPop.mnSDTable{:, 'weightSD'} > 0);
+        if length(keepRows) > 0
+            myVPop.mnSDTable(:, 'weight') = table(max(myVPop.mnSDTable{:, 'weightMean'},myVPop.mnSDTable{:, 'weightSD'}));
+            myCheckElement = [myCheckElement; table2cell(myVPop.mnSDTable(keepRows,{'elementID','elementType','interventionID','time','weight'}))];
+        end
     end
     if ~isempty(myVPop.distTable)
-        myCheckElement = [myCheckElement; table2cell(myVPop.distTable(:,{'elementID','elementType','interventionID','time','weight'}))];
+        keepRows = find(myVPop.distTable{:, 'weight'} > 0);
+        if length(keepRows) > 0        
+            myCheckElement = [myCheckElement; table2cell(myVPop.distTable(keepRows,{'elementID','elementType','interventionID','time','weight'}))];
+        end
     end
     if ~isempty(myVPop.binTable)
-        myCheckElement = [myCheckElement; table2cell(myVPop.binTable(:,{'elementID','elementType','interventionID','time','weight'}))];
+        keepRows = find(myVPop.binTable{:, 'weight'} > 0);
+        if length(keepRows) > 0           
+            myCheckElement = [myCheckElement; table2cell(myVPop.binTable(keepRows,{'elementID','elementType','interventionID','time','weight'}))];
+        end
     end    
     if ~isempty(myVPop.distTable2D)
-        myCheckElement = [myCheckElement; table2cell(myVPop.distTable2D(:,{'elementID1','elementType1','interventionID1','time1','weight'}))];
-        myCheckElement = [myCheckElement; table2cell(myVPop.distTable2D(:,{'elementID2','elementType2','interventionID2','time2','weight'}))];
+        keepRows = find(myVPop.distTable2D{:, 'weight'} > 0);
+        if length(keepRows) > 0            
+            myCheckElement = [myCheckElement; table2cell(myVPop.distTable2D(keepRows,{'elementID1','elementType1','interventionID1','time1','weight'}))];
+            myCheckElement = [myCheckElement; table2cell(myVPop.distTable2D(keepRows,{'elementID2','elementType2','interventionID2','time2','weight'}))];
+        end
     end  
     if ~isempty(myVPop.corTable)
-        myCheckElement = [myCheckElement; table2cell(myVPop.corTable(:,{'elementID1','elementType1','interventionID1','time1','weight'}))];
-        myCheckElement = [myCheckElement; table2cell(myVPop.corTable(:,{'elementID2','elementType2','interventionID2','time2','weight'}))];
+        keepRows = find(myVPop.corTable{:, 'weight'} > 0);
+        if length(keepRows) > 0         
+            myCheckElement = [myCheckElement; table2cell(myVPop.corTable(keepRows,{'elementID1','elementType1','interventionID1','time1','weight'}))];
+            myCheckElement = [myCheckElement; table2cell(myVPop.corTable(keepRows,{'elementID2','elementType2','interventionID2','time2','weight'}))];
+        end
     end    
     [~,idx]=unique(cell2table(myCheckElement),'rows');
     myCheckElement = myCheckElement(idx,:);

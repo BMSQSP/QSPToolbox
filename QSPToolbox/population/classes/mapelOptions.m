@@ -55,10 +55,11 @@ classdef mapelOptions
 %                    - If initialProbs/initialPWs are not specified, a value > 0 
 %                      results in uniformly sampled initial probabilities,
 %                      renormalized 
-% nIters:            (Optional) number of iterations for the simplex 
-%                    solver, ignored for other optimizeType options.  The
-%                    default is 10,000.
-% equalBinBreaks     (Optional)Boolean (true/false). Whether to adjust bin 
+% nIters:            (Optional) default is 10,000.
+%                    simplex: number of iterations
+%                    ga,gapso: maximum number of generations
+%                    ignored for other optimizeType options.
+% equalBinBreaks     (Optional) Boolean (true/false). Whether to adjust bin 
 %                    edges so they cover an equal numeric interval (true),
 %                    or a ~ equal number of VPs are
 %                    included in each bin (false).  Default is false.

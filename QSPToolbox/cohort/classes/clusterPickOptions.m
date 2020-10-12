@@ -21,6 +21,7 @@ classdef clusterPickOptions
 %  clusterElement:  an N element x 4 cell array of model outputs
 %                   in the results to use as a basis.  Each row contains:
 %                   elementID, elementType (i.e. parameter, compartment, ....), interventionID, time;
+%  clusterID:       which cluster to use, parallel.defaultClusterProfile is default
 %  distance:        distance metric to use. 
 %                       'correlation': default
 %                       'seuclidean':  squared euclidean
@@ -36,7 +37,11 @@ classdef clusterPickOptions
 %  pointsDefaultLastOnly:   When defining clusters by default method, if true,
 %                           for responseTypeElementPoints only the last time
 %                           point will be used (boolean)
+%  poolClose:       whether to close the pool at the end of the optimization  
+%  poolRestart:     whether to restart the pool at the beginning of the optimization 
 %  maxIter:         Maximum number of iterations
+%  nWorkers:        how many workers in the pool to use.  Set to nan to
+%                    use the default (default).
 %  replicates:      Number of replicates
 
    properties
@@ -44,12 +49,16 @@ classdef clusterPickOptions
       nClusters
       clusterAxisIDs
       clusterElement
+      clusterID	  
       distance
       normalizeType
       intSeed
       edgeVPFlag
       pointsDefaultLastOnly
+	  poolClose
+	  poolRestart		  
 	  maxIter
+      nWorkers	  
 	  replicates
    end
    
@@ -101,6 +110,14 @@ classdef clusterPickOptions
               error(['Invalid clusterElement specified for ',mfilename,', an Nx4 cell array of form {elementID, elementType, interventionID, time; ...} should be specified.'])
           end
       end
+	  
+      function obj = set.clusterID(obj,myClusterID)
+          if ischar(myClusterID)
+              obj.clusterID = myClusterID;
+          else
+            error(['Invalid clusterID in ',mfilename,'.'])
+          end
+      end  
 
       function obj = set.normalizeType(obj,myNormalizeType)
           allowedSettings = {'min-max','z-score'};
@@ -133,7 +150,23 @@ classdef clusterPickOptions
           else
               error(['Invalid pointsDefaultLastOnly specified for ',mfilename,', a boolean (true/false) should be specified.'])
           end
-      end     
+      end    
+
+      function obj = set.poolClose(obj,myInput)
+          if islogical(myInput)
+               obj.poolClose = myInput;
+          else
+               error(['Property poolClose in ',mfilename,' must be logical.'])
+          end
+      end  	  
+	  
+      function obj = set.poolRestart(obj,myInput)
+          if islogical(myInput)
+               obj.poolRestart = myInput;
+          else
+               error(['Property poolRestart in ',mfilename,' must be logical.'])
+          end
+      end 	  
 	  
       function obj = set.maxIter(obj,myMaxIter)
           if ismatrix(myMaxIter)
@@ -151,6 +184,14 @@ classdef clusterPickOptions
               error(['Invalid maxIter specified for ',mfilename,', a positive integer must be specified.'])
           end
       end 	  
+	  
+      function obj = set.nWorkers(obj,myNWorkers)
+          if (isnumeric(myNWorkers) == true)
+              obj.nWorkers = myNWorkers;
+          else
+            error(['Invalid nWorkers value in ',mfilename,'.'])
+          end
+      end
 	  
       function obj = set.replicates(obj,myReplicates)
           if ismatrix(myReplicates)
@@ -187,7 +228,9 @@ classdef clusterPickOptions
               case 'clusterAxisIDs'
                   value = obj.clusterAxisIDs;
               case 'clusterElement'
-                  value = obj.clusterElement;   
+                  value = obj.clusterElement;
+              case 'clusterID'
+                  value = obj.clusterID; 
               case 'distance'
                   value = obj.distance;                    
               case 'normalizeType'
@@ -198,8 +241,14 @@ classdef clusterPickOptions
                   value = obj.edgeVPFlag;               
               case 'pointsDefaultLastOnly'
                   value = obj.pointsDefaultLastOnly;   
+              case 'poolRestart'
+                  value = obj.poolRestart;
+              case 'poolClose'
+                  value = obj.poolClose;				  
               case 'maxIter'
                   value = obj.maxIter;  
+              case 'nWorkers'
+                  value = obj.nWorkers;  				  
               case 'replicates'
                   value = obj.replicates;  		                 
               otherwise
@@ -466,12 +515,16 @@ classdef clusterPickOptions
           obj.nClusters = 1;
           obj.clusterAxisIDs = {};
           obj.clusterElement = cell(0,4);
+          obj.clusterID = parallel.defaultClusterProfile;		  
 	      obj.distance = 'correlation';          
           obj.normalizeType = 'min-max';
           obj.intSeed = -1;
           obj.edgeVPFlag = false;
           obj.pointsDefaultLastOnly = true;
+          obj.poolClose = true;  
+		  obj.poolRestart = true;		  
 		  obj.maxIter = 1000;
+          obj.nWorkers = nan;		  
 	      obj.replicates = 10;
       end
     end

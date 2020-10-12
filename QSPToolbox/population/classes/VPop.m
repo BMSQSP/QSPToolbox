@@ -111,7 +111,10 @@ classdef VPop
 %                       random number generator.  Set to -1 to avoid
 %                       changing the state of the random number generator.
 %  tol:                 Numerical tolerance for optimization.
-%  nIters:              Maximum number of iterations for fminsearch.
+%  nIters:             (Optional) default is 10,000.
+%                      simplex: number of iterations
+%                      ga,gapso: maximum number of generations
+%                      ignored for other optimizeType options.
 %  minEffN:             Minimum effective N.  A large penalty is applied
 %                       if the effN drops below this N during optimization,
 %                       better ensuring solutions that weight multiple VPs.

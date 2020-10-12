@@ -28,6 +28,7 @@ if nargin < 2
     extraPWs = [];
 end
 
+
 p = gcp('nocreate'); % If no pool, do not create new one.
 if isempty(p)
     poolSize = 1;
@@ -45,6 +46,9 @@ if strcmp(myVPop.pwStrategy, 'bin')
 	end
 	transProbVect = probsToProbVect(myTransProbs);
 	[nTest, lProbs] = size(transProbVect);
+    % A single call to evaluateOobjective to force it to be loaded
+    % onto workers
+    evaluateObjective(myVPop,transProbVect);
     % Surrogate parallel is not very good, so we do something else for that
     % case
     if ~(ismember(optimizeType,{'simplex'}))
@@ -100,6 +104,9 @@ else
             myPWTrans = [myPWTrans; ((lhsdesign(myVPop.optimizePopSize - nTest,lProbs)))*pi()-pi()/2];
         end
         [nTest, ~] = size(myPWTrans);
+        % A single call to evaluateOobjective to force it to be loaded
+        % onto workers
+        evaluateObjectiveNoBin(myVPop,myPWTrans(1,:));        
     end
 end
 
@@ -273,6 +280,7 @@ elseif sum(ismember({'ga','gapso'},optimizeType)) > 0
 	optimOptions.ObjectiveLimit = myVPop.objectiveLimit;
 	optimOptions.PopInitRange = cat(1,ones(1,lProbs)*-pi/2,ones(1,lProbs)*pi/2);
 	optimOptions.MutationFcn = {@mutationuniform, 1.5/lProbs};	
+    optimOptions.Generations = myVPop.nIters;
 	if strcmp(myVPop.pwStrategy, 'bin')	
 		optimOptions.InitialPopulation = transProbVect;        
 		[optTransProbVect,fVal,exitFlag,output] = ga(anonymousFunction,lProbs,[],[],[],[],[],[],[],optimOptions);

@@ -105,6 +105,7 @@ if continueFlag
         mySimulateOptions = simulateOptions;
         mySimulateOptions = checkNWorkers(mySimulateOptions);		
         myPool = parpool(mySimulateOptions.clusterID,mySimulateOptions.nWorkers,'SpmdEnabled',false);
+        % addAttachedFiles(myPool,{'evaluateObjective.m','evaluateObjectiveNoBin.m'});
     end	    
 
     % Make sure results are present.  Here, we don't re-simulate VPs if 
@@ -288,7 +289,8 @@ if continueFlag
                     bestPVal = newVPop.gof;   
                 end								
                 while (((restartCounter <= nRetries) && ~(newVPop.gof ...
-                                                          >= minPVal)) || ((newVPop.gof > (0.96 * minPVal)) && ~(newVPop.gof >= minPVal)))
+                      >= minPVal)) || ((newVPop.gof > (0.96 * minPVal)) ...
+                      && (restartCounter <= max(2*nRetries,2)) && ~(newVPop.gof >= minPVal)))
                     % We will keep trying a restart until we get an
                     % OK value or we run out of retries.  If we're
                     % really close we will let the algorithm
@@ -354,7 +356,7 @@ if continueFlag
                         if verbose
                             disp(['Unable to find an acceptable VPop with initial worksheet in ',num2str(nTries),' VPop fit restarts, added ', num2str(length(newPassNames)), ' VPs to the worksheet in ',mfilename,' to start worksheet iteration ',num2str(wsIterCounter),'.'])
                         end       
-                        saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);                         
+                        saveWorksheetAutoSplit(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);                         
                     end    
                 else
                     % Otherwise, if we've increased the effN a bit,
@@ -380,6 +382,10 @@ if continueFlag
                         myClusterPickOptions.nClusters = nVPTarget;
                         myClusterPickOptions.algorithm = 'auto';
                         myClusterPickOptions.distance = 'correlation';
+						myClusterPickOptions.nWorkers = mySimulateOptions.nWorkers;
+						myClusterPickOptions.poolClose = mySimulateOptions.poolClose;
+						myClusterPickOptions.poolRestart = mySimulateOptions.poolRestart;
+						myClusterPickOptions.clusterID = mySimulateOptions.clusterID;
                         myMedoidResult = pickClusterVPs(myWorksheet,myClusterPickOptions);
                         myVPIDs = myMedoidResult.('pickedVPIDs');
                         [myWorksheet, oldVPop] = ...
@@ -396,7 +402,7 @@ if continueFlag
                         if verbose
                             disp(['Unable to find an acceptable VPop with initial worksheet in ',num2str(nTries),' VPop fit restarts, clustered to ', num2str(nVPTarget), ' VPs to the worksheet in ',mfilename,' to start worksheet iteration ',num2str(wsIterCounter),' with effN ',num2str(curEffN),'.'])
                         end                            
-                        saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);                         
+                        saveWorksheetAutoSplit(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);                         
                     end
                 end
             end
@@ -415,7 +421,7 @@ if continueFlag
                 rng(newVPop.intSeed, 'twister');
                 [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet, oldVPop, myMapelOptions, suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.resampleStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.expandEdgeVPs, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
                 % Save the new worksheet that will be used.
-                saveWorksheet(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);   
+                saveWorksheetAutoSplit(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);   
                 if verbose
                     disp(['Added ', num2str(length(newPassNames)), ' VPs to the worksheet in ',mfilename,' to start worksheet iteration ',num2str(wsIterCounter),'.'])
                 end

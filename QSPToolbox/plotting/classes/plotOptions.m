@@ -11,6 +11,8 @@ classdef plotOptions
 %                       appended.  Leave as '' for a default name if saving.
 %      flagLegend:      Boolean (true/false) indicating whether to add a
 %                       legend. Default is false.
+%      flagPD2:         Boolean (true/false) indicating whether to include
+%                       PD2 at first lesion scan in plotBRVPop.
 %      scale:           String indicating X/Y scale, valid strings are:
 %                       'xlinylin' (default)
 %                       'xlinylog'
@@ -48,6 +50,7 @@ classdef plotOptions
       flagSave
       fileName
       flagLegend
+      flagPD2      
       scale
       xLim
       yLim
@@ -90,7 +93,14 @@ classdef plotOptions
           else
             error('Invalid flagLegend value, expecting true/false')
           end
-      end         
+      end     
+      function obj = set.flagPD2(obj,flagvalue)
+          if (flagvalue == true) || (flagvalue == false)
+              obj.flagPD2 = flagvalue;
+          else
+            error('Invalid flagPD2 value, expecting true/false')
+          end
+      end          
       function obj = set.scale(obj,scalevalue)
           if (strcmpi(scalevalue,'xlinylin') ||...
                strcmpi(scalevalue,'xlinylog') ||...
@@ -288,6 +298,8 @@ classdef plotOptions
                   value = obj.fileName;                  
               case 'flagLegend'
                   value = obj.flagLegend;
+              case 'flagPD2'
+                  value = obj.flagPD2;                  
               case 'scale'
                   value = obj.scale;                  
               %case 'axesCor'
@@ -325,6 +337,7 @@ classdef plotOptions
             obj.flagSave = false;
             obj.fileName = '';            
             obj.flagLegend = false;
+            obj.flagPD2 = false;            
             obj.scale = 'xlinylin';
             obj.xLim = [];
             obj.yLim = [];

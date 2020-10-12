@@ -302,7 +302,7 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
                 vpIndicesSubpop = testVPop.subpopTable{subpopNo,'vpIndices'}{1};
                 vpIndicesNewSubpopSubset = ismembc(newIndices, vpIndicesSubpop);
 
-                addScore(rowCounter,vpIndicesNewSubpopSubset) = (curSimValues(rowCounter,:)==0) .* curWeights(1);
+                addScore(rowCounter,vpIndicesNewSubpopSubset) = (curSimValues(rowCounter,vpIndicesNewSubpopSubset)==0) .* curWeights(1);
                 addScore(rowCounter,vpIndicesNewSubpopSubset) = addScore(rowCounter,vpIndicesNewSubpopSubset)+(curSimValues(rowCounter,vpIndicesNewSubpopSubset)==1) .* curWeights(2);
                 addScore(rowCounter,vpIndicesNewSubpopSubset) = addScore(rowCounter,vpIndicesNewSubpopSubset)+(curSimValues(rowCounter,vpIndicesNewSubpopSubset)==2) .* curWeights(3);
                 addScore(rowCounter,vpIndicesNewSubpopSubset) = addScore(rowCounter,vpIndicesNewSubpopSubset)+(curSimValues(rowCounter,vpIndicesNewSubpopSubset)==3) .* curWeights(4);

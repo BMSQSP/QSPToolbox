@@ -282,3 +282,9 @@ plotHandle = plotAcrossIntervention(myWorksheet, myPlotOptions);
 myPlotCoefficientsOptions = plotCoefficientsOptions;
 myPlotCoefficientsOptions.fontSize = 12;
 plotCoefficients(myWorksheet,myPlotCoefficientsOptions);
+
+
+% Since the 2017 AAPS paper, resampling steps were automized more in
+% the expandVPopEffN function.  However, the resampling is guided by 
+% calibration targets.  This requires first making a valid mapelOptions
+% object, which is explained in later example06.  
