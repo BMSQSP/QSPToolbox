@@ -162,7 +162,7 @@ if flagContinue
     % where absTol increments more quickly than relTol
     % in the first column.
     myAbsTols = 10.^([log10(originalAbsTol):-10:log10(endAbsTol)]);
-    myRelTols = 10.^([log10(originalRelTol):-2:log10(endRelTol)]);
+    myRelTols = 10.^([log10(originalRelTol):-1:log10(endRelTol)]);
     [A,B] = meshgrid(myAbsTols,myRelTols);
     myTols=cat(2,A',B');
     myTols=reshape(myTols,[],2);

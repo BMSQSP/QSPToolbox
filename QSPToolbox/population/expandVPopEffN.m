@@ -83,6 +83,9 @@ if continueFlag
     verbose = myExpandVPopEffNOptions.verbose;
     expandCohortSize = myExpandVPopEffNOptions.expandCohortSize;
     restartPVal = myExpandVPopEffNOptions.restartPVal;
+    nVPMax = myExpandVPopEffNOptions.nVPMax;
+    samplePastCompletion = myExpandVPopEffNOptions.nSamplePastCompletion;
+    nClusterSpec = myExpandVPopEffNOptions.nCluster;    
 
     % Maximal optimizePopSize.  We'll try to use smaller to save time.
     maxOptimizePopSize = myMapelOptions.optimizePopSize;
@@ -122,9 +125,34 @@ if continueFlag
     % Basis and nVPs for clustering
 	basisEffN = 0;    
 	nSteps = floor(((startEffN - basisEffN) / effNDelta)); 
-	basisNVPs = floor(startNVPs - nSteps * maxNewPerIter);
-	
+    
+    % Also check the number of VPs from the axes and data targets
+    myClusterPickOptions = clusterPickOptions;       
+    myClusterPickOptions = myClusterPickOptions.setDefaultFromWorksheet(myWorksheet);
+    myClusterPickOptions = myClusterPickOptions.setClusterElementFromOptions(myMapelOptions);  
+    nClusterAxis = length(myClusterPickOptions.clusterAxisIDs);
+    [nClusterOutput, ~] = size(myClusterPickOptions.clusterElement);
+    nFromCluster = ceil(1.05)*(2*(nClusterOutput+nClusterAxis));
+    
+    if ~isnan(nClusterSpec)
+        % In this case we try to give preference to nClusterSpec
+        if nClusterSpec < nFromCluster
+            if verbose
+                disp(['Specified number of VPs ',num2str(nClusterSpec),' as a basis for clustering steps too small, increasing to ',num2str(nFromCluster),'.'])
+            end
+            basisNVPs = nFromCluster;
+        else
+            basisNVPs = nClusterSpec;
+        end
+    else
+        basisNVPs = min(max(floor(startNVPs - nSteps * maxNewPerIter),nFromCluster),nVPMax-samplePastCompletion);
+        if verbose
+            disp(['Setting ',num2str(basisNVPs),' VPs as a basis for clustering steps.'])
+        end           
+    end
 	curEffN = startEffN;
+    
+    startedSamplePastCompletionFlag = false;
 
     % Create a screen table
     % so we can enforce new VPs will need pass within bounds
@@ -159,7 +187,7 @@ if continueFlag
 
     % START ITERATIONS
     % OUTER LOOP
-    while curEffN < (targetEffN + effNDelta)
+    while (curEffN < (targetEffN + effNDelta)) 
         % Set the initial best p value to a negative
 		% number to force the algorithm to record
 		% and write out the first VPop calibration
@@ -345,7 +373,7 @@ if continueFlag
                     if ((expandCohortSize > 0) && (maxNewPerIter > 0))
                         % There should be no -1 intseeds.
                         rng(newVPop.intSeed, 'twister');
-                        [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.resampleStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.expandEdgeVPs, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
+                        [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.resampleStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.expandEdgeVPs, myExpandVPopEffNOptions.selectByParent, 0.01, myExpandVPopEffNOptions.screenFunctionName);
                         % We force myTestCounter to 0
                         % so we can generate a new
                         % initial VPop spreading
@@ -365,6 +393,8 @@ if continueFlag
                     if ((expandCohortSize > 0) && (maxNewPerIter > 0))
                         % Decide now far to "reduce" the worksheet
                         reduceFactor = 0;
+                        % This calculation is just left here for reference
+                        % as reduceFactor = 0                        
                         nSteps = floor(((curEffN - basisEffN) / effNDelta)*reduceFactor);
                         curEffN = basisEffN + nSteps * effNDelta; 
 						nVPTarget = basisNVPs + nSteps * maxNewPerIter;
@@ -386,6 +416,7 @@ if continueFlag
 						myClusterPickOptions.poolClose = mySimulateOptions.poolClose;
 						myClusterPickOptions.poolRestart = mySimulateOptions.poolRestart;
 						myClusterPickOptions.clusterID = mySimulateOptions.clusterID;
+                        myClusterPickOptions.verbose = verbose;
                         myMedoidResult = pickClusterVPs(myWorksheet,myClusterPickOptions);
                         myVPIDs = myMedoidResult.('pickedVPIDs');
                         [myWorksheet, oldVPop] = ...
@@ -409,17 +440,92 @@ if continueFlag
         end
         nVPopsFound = nVPopsFound+1;
         oldVPop = newVPop;
-        % Increment target
-        curEffN = curEffN + effNDelta;
-        myMapelOptions.minEffN = curEffN;
 
-        if curEffN <= targetEffN
+
+        % We will sample for more VPs if we hove not finished
+        % expanding or we want to resample for more past
+        % completion of the expansion
+        if (curEffN < targetEffN) || ((curEffN >= targetEffN) && (samplePastCompletion > 0))
             if expandCohortSize > 0
                 % Get ready to expand VPs
                 wsIterCounter = wsIterCounter+1;
                 % There should be no -1 intseeds.
                 rng(newVPop.intSeed, 'twister');
-                [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet, oldVPop, myMapelOptions, suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.resampleStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.expandEdgeVPs, myExpandVPopEffNOptions.selectByParent, myExpandVPopEffNOptions.screenFunctionName);
+                lastWorksheet = myWorksheet;
+                if (curEffN >= targetEffN) && (samplePastCompletion > 0)
+                    % If we're continuing to resample past achieving the target effN
+                    pwExpandCutoff = 1/(targetEffN*2);
+                    curMaxNewPerIter = samplePastCompletion;
+                    curEdgeVPs = false;
+                    nHigh = sum(oldVPop.pws>=pwExpandCutoff);
+                    curMaxNewPerOld = ceil(curMaxNewPerIter/nHigh);
+                    % We'll also fix the target effN to the current size
+                    % on the first iteration
+                    if ~startedSamplePastCompletionFlag
+                        allVPIDs = getVPIDs(myWorksheet);
+                        nVPs = length(allVPIDs);
+                        nVPMax = min(nVPs,nVPMax);                        
+                        startedSamplePastCompletionFlag = true;
+                        if verbose
+                            disp(['Fixing maximum number of cohort VPs for sampling past completion to ',num2str(nVPMax),'.'])
+                        end
+                    end
+                else
+                    pwExpandCutoff = 0.01;
+                    curMaxNewPerIter = maxNewPerIter;
+                    curEdgeVPs = myExpandVPopEffNOptions.expandEdgeVPs;  
+                    curMaxNewPerOld = myExpandVPopEffNOptions.maxNewPerOld;
+                end
+                [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet, oldVPop, myMapelOptions, suffix,wsIterCounter, curMaxNewPerIter, myScreenTable, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.resampleStd, curMaxNewPerOld, curEdgeVPs, myExpandVPopEffNOptions.selectByParent, pwExpandCutoff, myExpandVPopEffNOptions.screenFunctionName);
+                % Limit the worksheet size if desired
+                allVPIDs = getVPIDs(myWorksheet);
+                nVPs = length(allVPIDs);    
+                if nVPs > nVPMax
+                    if verbose
+                        disp(['Number of VPs, ',num2str(nVPs),', exceeds nVPMax, ',num2str(nVPMax),', allowed for a worksheet in ',mfilename,'.  Reducing to the max allowed.'])
+                    end
+                    lastVPIDs = getVPIDs(lastWorksheet);
+                    nVPover = nVPs - nVPMax;
+                    % Remove the old, low weighted ones that would not
+                    % be kept by clustering a reasonable minimum set.
+                    % If some were parents we won't spread their weight, 
+                    % in the next iteration, but that should be OK
+                    % Decide now far to "reduce" the worksheet
+                    reduceFactor = 0;
+                    % +1 is needed since we increment the curEffN
+                    % This calculation is just left here for reference
+                    % as reduceFactor = 0
+                    nSteps = floor((((curEffN - basisEffN) / effNDelta)+1)*reduceFactor);
+                    nVPTarget = basisNVPs + nSteps * maxNewPerIter;
+                    if nVPTarget <= 0
+                        nVPTarget = startNVPs;
+                    end
+                    myClusterPickOptions = clusterPickOptions;
+                    myClusterPickOptions = myClusterPickOptions.setDefaultFromWorksheet(lastWorksheet);
+                    myClusterPickOptions = myClusterPickOptions.setClusterElementFromOptions(myMapelOptions);
+                    myClusterPickOptions.intSeed = intSeedTarget;
+                    myClusterPickOptions.edgeVPFlag = true;
+                    myClusterPickOptions.nClusters = nVPTarget;
+                    myClusterPickOptions.algorithm = 'auto';
+                    myClusterPickOptions.distance = 'correlation';
+                    myClusterPickOptions.nWorkers = mySimulateOptions.nWorkers;
+                    myClusterPickOptions.poolClose = mySimulateOptions.poolClose;
+                    myClusterPickOptions.poolRestart = mySimulateOptions.poolRestart;
+                    myClusterPickOptions.clusterID = mySimulateOptions.clusterID;
+                    myClusterPickOptions.verbose = false;
+                    myMedoidResult = pickClusterVPs(lastWorksheet,myClusterPickOptions);
+                    clusterVPIDs = myMedoidResult.('pickedVPIDs');
+                    nonClusterIdx = find(~ismember(lastVPIDs,clusterVPIDs));
+                    
+                    [~,idx] = sort(oldVPop.pws(nonClusterIdx),'ascend');
+                    nonClusterDiscardIDs = lastVPIDs(nonClusterIdx(idx(1:nVPover)));
+                    keepVPIDs = lastVPIDs(~ismember(lastVPIDs,nonClusterDiscardIDs));
+                    
+                    [~, oldVPop] = subsetWorksheetVPop(lastWorksheet, oldVPop, keepVPIDs, false);
+                    keepVPIDs = [keepVPIDs, allVPIDs(length(lastVPIDs) + 1 : nVPs)];
+                    myWorksheet = copyWorksheet(myWorksheet, keepVPIDs);
+                end
+                clear lastWorksheet;
                 % Save the new worksheet that will be used.
                 saveWorksheetAutoSplit(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);   
                 if verbose
@@ -427,6 +533,29 @@ if continueFlag
                 end
             end
         end
+        
+        % Increment target if needed
+        % we definitely increment if we are not
+        % at the target yet
+        if (curEffN < targetEffN)
+            curEffN = curEffN + effNDelta;
+        % We will increment at target just to trigger exiting the
+        % loop, only if we are not supposed to just keep sampling
+        % past completion
+        elseif (samplePastCompletion <= 0)
+            curEffN = curEffN + effNDelta;
+        end
+        
+        % This is just here to avoid the case where effNDelta
+        % could bypass the target without hitting it exactly
+        % and ending the loop early
+        if (samplePastCompletion > 0) && (curEffN > targetEffN)
+            curEffN = targetEffN;
+        end
+        
+        myMapelOptions.minEffN = curEffN;        
+        
+        
     end
 	% Close the pool before exiting.
 	if ~isempty(gcp('nocreate'))

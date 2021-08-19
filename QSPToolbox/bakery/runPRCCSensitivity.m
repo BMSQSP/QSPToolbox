@@ -1,4 +1,7 @@
-function myCorrCoefs = runPRCCSensitivity(myWorksheet, myPRCCSensitivityOptions)
+function [myCorrCoefs] = runPRCCSensitivity(myWorksheet, myPRCCSensitivityOptions, w)
+
+%clear finalf
+
 % Here, calculate Partial Rank Correlation Coefficients
 %
 % ARGUMENTS:
@@ -15,34 +18,33 @@ function myCorrCoefs = runPRCCSensitivity(myWorksheet, myPRCCSensitivityOptions)
 %                           cell.PRCC: matrix of partial rank correlation coefficients (nTimes x nParams)
 %                           cell.interventionID: string with current interventionID
 %                           cell.outputVariable: string with output variable
-%							
+%
 continueFlag = true;
-if nargin > 2
+if nargin > 5 % Come back here modify
     warning(['Too many input arguments provided to ',mfilename,'.  Expecting myWorksheet, myOutputVariables, mySampleTimes.  Exiting.'])
     continueFlag = false;
 elseif nargin > 1
-	continueFlag = true;
+    continueFlag = true;
 elseif nargin > 0
-	myPRCCSensitivityOptions = prccSensitivityOptions;
+    myPRCCSensitivityOptions = prccSensitivityOptions;
     myPRCCSensitivityOptions.analyzeElementResultIDs = myWorksheet.simProps.saveElementResultIDs;
     myPRCCSensitivityOptions.analyzeInterventionIDs = getInterventionIDs(myWorksheet);
     myPRCCSensitivityOptions.analyzeTimes = myWorksheet.simProps.sampleTimes;
-	continueFlag = true;	
+    continueFlag = true;
 else
     warning(['Too few input arguments provided to ',mfilename,'.  Expecting myWorksheet, and optionally myPRCCSensitivityOptions.  Exiting.'])
     continueFlag = false;
 end
 
-
-
 if continueFlag
     continueFlag = myPRCCSensitivityOptions.verify(myWorksheet);
     if ~(continueFlag)
-       warning(['Please correct the options provided to ',mfilename, '.']) 
+        warning(['Please correct the options provided to ',mfilename, '.'])
     else
-    myOutputVariables = myPRCCSensitivityOptions.analyzeElementResultIDs;
-    mySampleTimes = myPRCCSensitivityOptions.analyzeTimes;
-    myInterventionIDs = myPRCCSensitivityOptions.analyzeInterventionIDs;    
+        myOutputVariables = myPRCCSensitivityOptions.analyzeElementResultIDs;
+        mySampleTimes = myPRCCSensitivityOptions.analyzeTimes;
+        myInterventionIDs = myPRCCSensitivityOptions.analyzeInterventionIDs;
+    end
 end
 
 if continueFlag
@@ -60,11 +62,17 @@ myCorrCoefs = cell(1,0);
 if continueFlag
     allElementResultIDs = myWorksheet.simProps.saveElementResultIDs;
     allSampleTimes = myWorksheet.simProps.sampleTimes;
-    allInterventionIDs = getInterventionIDs(myWorksheet);
-    
+    allInterventionIDs = getInterventionIDs(myWorksheet); % Myintervations PRCC handles this.
     % find indices for myOutputVariable and mySampleTimes
     [~,myOutputVariableIndex] = ismember(myOutputVariables,allElementResultIDs);
     [~,mySampleTimesIndices] = ismember(mySampleTimes,allSampleTimes);
+    
+    %mySampleTimes= myPRCCSensitivityOptions.analyzeElementResultIDs = myWorksheet.simProps.saveElementResultIDs;
+    mySampleTimes= myPRCCSensitivityOptions.analyzeTimes;
+    myPRCCSensitivityOptions.analyzeInterventionIDs = getInterventionIDs(myWorksheet);
+    
+    %myOutputVariables= myPRCCSensitivityOptions.analyzeTimes = myWorksheet.simProps.sampleTimes;
+    
     
     % get names of all mechanistic axes (Parameters)
     myAxisDefs = getAxisDefIDs(myWorksheet)';
@@ -78,44 +86,82 @@ if continueFlag
     
     % As a precaution, restart any existing parallel
     % pools
-    if myPRCCSensitivityOptions.poolRestart
-        if ~isempty(gcp('nocreate'))
-            delete(gcp);
-        end
-    end
-
-    if isempty(gcp('nocreate'))
-        % First check the default number of workers, if needed
-        myPRCCSensitivityOptions = checkNWorkers(myPRCCSensitivityOptions);
-        myPool = parpool(myPRCCSensitivityOptions.clusterID,myPRCCSensitivityOptions.nWorkers,'SpmdEnabled',false);
-    end    
+    %     if myPRCCSensitivityOptions.poolRestart
+    %         if ~isempty(gcp('nocreate'))
+    %             delete(gcp);
+    %         end
+    %     end
     
-    parfor n=1:nOutputs
+    %     if isempty(gcp('nocreate'))
+    %         % First check the default number of workers, if needed
+    %         myPRCCSensitivityOptions = checkNWorkers(myPRCCSensitivityOptions);
+    %         myPool = parpool(myPRCCSensitivityOptions.clusterID,myPRCCSensitivityOptions.nWorkers,'SpmdEnabled',false);
+    %     end
+    mySampleTimes= myPRCCSensitivityOptions.analyzeTimes;
+    
+    for n=1:nOutputs
         
         for i=1:nInterventionIDs
             
             myCorrCoefs{i,n}.Names = myAxisDefs;
             myCorrCoefs{i,n}.Times = mySampleTimes;
-			myCorrCoefs{i,n}.interventionID = myInterventionIDs{i};
-			myCorrCoefs{i,n}.outputVariable = allElementResultIDs{myOutputVariableIndex(n)};
+            myCorrCoefs{i,n}.interventionID = myInterventionIDs{i};
+            myCorrCoefs{i,n}.outputVariable = allElementResultIDs{myOutputVariableIndex(n)};
+            
+            
             % curResult.Data (nTimes x nVPs) contains times series for all VPs
             % for specified Intervention and OutputVariable
+           
             curResult = getResultOutputforIntervention(myWorksheet,myInterventionIDs{i},allElementResultIDs{myOutputVariableIndex(n)});
+            
+           
             curData = curResult.Data(mySampleTimesIndices,2:end);
             myData = curData'; % nVPs x nTimes
             
+            myVPCoeffs = getVPCoeffs(myWorksheet); % nParams x nVPs
+            myParams = myVPCoeffs'; % nVPs x nParams
+            %curResultm = getResultOutputforIntervention(myWorksheetm,myInterventionIDs{i},allElementResultIDs{myOutputVariableIndex(n)});
+            %curDatam = curResultm.Data(mySampleTimesIndices,2:end);
+            %myDatam = curDatam'; % nVPs x nTimes
+            
+            %myVPCoeffsm = getVPCoeffs(myWorksheetm); % nParams x nVPs
+            %myParamsm = myVPCoeffsm'; % nVPs x nParams
+            
+            
+            
+            
+            
+            % % find indices for myOutputVariable and mySampleTimes
+            [~,myOutputVariableIndex] = ismember(myOutputVariables,allElementResultIDs);
+            [~,mySampleTimesIndices] = ismember(mySampleTimes,allSampleTimes);
+            
+            %             %elementsids_int=myPRCCSensitivityOptions.analyzeElementResultIDs
+            %             intervation= i;
+            %             if doseresponse==1
+            %                 [finalf]= runprccsensitivityc.bingen(myData,myParams ,intervation,  myWorksheet);
+            %             else
+            %                 finalf=[];
+            %             end
+            
+            
             % PearsonCorrMatrix (nParams x nTimes) contains Pearson correlation
             % coefficient between each axis and the OutputVariable at specified time
+            
             PearsonCorrMatrix = corr(myParams,myData);
             myCorrCoefs{i,n}.Pearson = PearsonCorrMatrix';
             
             % compute Spearman correlationusing rank-ordered
             % parameters and outputs
+            
+            
             myDataOrdered = tiedrank(myData);
             myParamsOrdered = tiedrank(myParams);
+        
+            
             
             % SpearmanCorrMatrix (nParams x nTimes) contains Spearman correlation
             % coefficient between each axis and the OutputVariable at specified time
+            
             SpearmanCorrMatrix = corr(myParamsOrdered,myDataOrdered);
             myCorrCoefs{i,n}.Spearman = SpearmanCorrMatrix';
             
@@ -123,6 +169,18 @@ if continueFlag
             % and parameters in myDataOrdered and myParamsOrdered
             % PRCCMatrix: nParams x nTimes
             PRCCMatrix = zeros(size(myParamsOrdered,2),size(myDataOrdered,2));
+           
+            
+            
+            PRCCMatrixabs = zeros(size(myParamsOrdered,2),size(myDataOrdered,2));
+            PRCCMatrixw = zeros(size(myParamsOrdered,2),size(myDataOrdered,2));
+            PRCCMatrixabsw= zeros(size(myParamsOrdered,2),size(myDataOrdered,2));
+            pvalue = zeros(size(myParamsOrdered,2),size(myDataOrdered,2));
+            pvalueabs = zeros(size(myParamsOrdered,2),size(myDataOrdered,2));
+            pvaluew = zeros(size(myParamsOrdered,2),size(myDataOrdered,2));
+            pvaluewabs= zeros(size(myParamsOrdered,2),size(myDataOrdered,2));
+            
+
             
             for j=1:nTimes % for all time points
                 curDataOrderedCol = myDataOrdered(:,j); % nVPs x 1
@@ -152,19 +210,59 @@ if continueFlag
                     
                     % compute correlation coefficients between rank-ordered
                     % residuals
+
+                    wequal = (ones(1,length(myDataOrderedRes))./length(myDataOrderedRes))';
+                    dparams=length(myWorksheet.axisProps.axisDef)-1;
+                    nSample=length(myDataOrderedRes);
+                    
+                    %PRCC matrix abs
+                    PRCCMatrixabs(k,j)= myPRCCSensitivityOptions.weightedCorr(abs(myParamsOrderedRes),abs(myDataOrderedRes), wequal, false);
+                    %PRCCMatrixabs(k,j)= myPRCCSensitivityOptions.weightedCorr(abs(myParamsOrderedRes),abs(myDataOrderedRes), wequal, false);
+                    ccvalue= PRCCMatrixabs(k,j);
+                    pvalueabs(k,j)= myPRCCSensitivityOptions.pvaluePRCC(nSample,dparams, ccvalue, true);
+                    %pvalueabs(k,j)= myPRCCSensitivityOptions.pvaluePRCC(nSample,dparams, ccvalue, false);
+                    
+                    PRCCMatrixabsw(k,j)= myPRCCSensitivityOptions.weightedCorr(abs(myParamsOrderedRes), abs(myDataOrderedRes), w, false);
+                    %PRCCMatrixabsw(k,j)= myPRCCSensitivityOptions.weightedCorr(abs(myParamsOrderedRes), abs(myDataOrderedRes), w, false);
+                    ccvalue=   PRCCMatrixabsw(k,j);
+                    pvaluewabs(k,j)= myPRCCSensitivityOptions.pvaluePRCC(nSample,dparams, ccvalue, true);
+                    %pvaluewabs(k,j)= myPRCCSensitivityOptions.pvaluePRCC(nSample,dparams, ccvalue, false);
+                    
+                    %PRCC matrix
                     PRCCMatrix(k,j) = corr(myParamsOrderedRes,myDataOrderedRes);
+                    ccvalue=   PRCCMatrix(k,j);
+                    pvalue(k,j)= myPRCCSensitivityOptions.pvaluePRCC(nSample,dparams, ccvalue, false);
+
+                    %PRCC matrix w
+                    PRCCMatrixw(k,j)= myPRCCSensitivityOptions.weightedCorr(myParamsOrderedRes, myDataOrderedRes, w, false);
+                    ccvalue=   PRCCMatrix(k,j);
+                    pvaluew(k,j)= myPRCCSensitivityOptions.pvaluePRCC(nSample,dparams, ccvalue, false);
+                    
+                    
+                    
                 end
             end
-            
+
             myCorrCoefs{i,n}.PRCC = PRCCMatrix';
-        end
-    end
-    if myPRCCSensitivityOptions.poolClose
-        if ~isempty(gcp('nocreate'))
-            delete(gcp);
+            myCorrCoefs{i,n}.pvalue=pvalue;
+            myCorrCoefs{i,n}.PRCCabs = PRCCMatrixabs';
+            myCorrCoefs{i,n}.pvalueabs= pvalueabs;
+            myCorrCoefs{i,n}.PRCCw = PRCCMatrixw';
+            myCorrCoefs{i,n}.pvaluew=pvaluew;
+            myCorrCoefs{i,n}.PRCCwabs=    PRCCMatrixabsw';
+            myCorrCoefs{i,n}.pvaluewabs= pvaluewabs;
+            
+
         end
     end
 
+    
+    %     if myPRCCSensitivityOptions.poolClose
+    %         if ~isempty(gcp('nocreate'))
+    %             delete(gcp);
+    %         end
+    %     end
+    
 else
     warning(['Exiting ',mfilename,'.'])
 end

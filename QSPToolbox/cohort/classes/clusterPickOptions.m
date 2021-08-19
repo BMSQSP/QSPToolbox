@@ -43,6 +43,8 @@ classdef clusterPickOptions
 %  nWorkers:        how many workers in the pool to use.  Set to nan to
 %                    use the default (default).
 %  replicates:      Number of replicates
+%  verbose:         Boolean flag.  Whether to return more information to
+%                   screen
 
    properties
 	  algorithm       
@@ -60,6 +62,7 @@ classdef clusterPickOptions
 	  maxIter
       nWorkers	  
 	  replicates
+      verbose
    end
    
    methods
@@ -217,7 +220,15 @@ classdef clusterPickOptions
           else
               error(['Invalid distance metric specified for ',mfilename,', should specify one of: ',strjoin(allowedSettings,', '),'.'])
           end
-      end       
+      end      
+      
+      function obj = set.verbose(obj,myInput)
+          if islogical(myInput)
+               obj.verbose = myInput;
+          else
+               error(['Property verbose in ',mfilename,' must be logical.'])
+          end
+      end        
      
       function value = get(obj,propName)
           switch propName
@@ -250,7 +261,9 @@ classdef clusterPickOptions
               case 'nWorkers'
                   value = obj.nWorkers;  				  
               case 'replicates'
-                  value = obj.replicates;  		                 
+                  value = obj.replicates;  	
+              case 'verbose'
+                  value = obj.verbose;                   
               otherwise
                   error(['Error: ',propName ,' is not a valid ',mfilename,' property.'])
           end
@@ -526,6 +539,7 @@ classdef clusterPickOptions
 		  obj.maxIter = 1000;
           obj.nWorkers = nan;		  
 	      obj.replicates = 10;
+          obj.verbose = true;
       end
     end
 end

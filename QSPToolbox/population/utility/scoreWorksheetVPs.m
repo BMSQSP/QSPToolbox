@@ -32,6 +32,7 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
     interventionIDCol = find(ismember(testVPop.simData.rowInfoNames,'interventionID'));
     elementIDCol = find(ismember(testVPop.simData.rowInfoNames,'elementID'));
     elementTypeCol = find(ismember(testVPop.simData.rowInfoNames,'elementType'));
+    expDataIDCol = find(ismember(testVPop.simData.rowInfoNames,'expDataID'));
 
     % We will also score the VPs to add based on the data
     vpScores = zeros(1,length(newIndices));
@@ -64,22 +65,30 @@ function vpScores = scoreWorksheetVPs(testVPop,originalIndices,newIndices)
 	[nMnSdRows, nMnSdCols] = size(myMnSdData);    
 
     for rowCounter = 1 : nTestOutcomes
-        
         simTime = testVPop.simData.rowInfo{rowCounter,simTimeCol};
         interventionID = testVPop.simData.rowInfo{rowCounter,interventionIDCol};
         elementID = testVPop.simData.rowInfo{rowCounter,elementIDCol};
         elementType = testVPop.simData.rowInfo{rowCounter,elementTypeCol};
+        expDataID = testVPop.simData.rowInfo{rowCounter,expDataIDCol};
         % If this is a RECIST VPop, we need to get RECIST-filtered
         % observed experimental data...
         
         foundSubpop = false;
-        expDataRow = find((ismember(testVPop.expData{:,'time'},simTime))&(ismember(testVPop.expData{:,'interventionID'},interventionID))&(ismember(testVPop.expData{:,'elementID'},elementID))&(ismember(testVPop.expData{:,'elementType'},elementType)));
+        expDataRow = find((ismember(testVPop.expData{:,'time'},simTime)) ... 
+                         &(ismember(testVPop.expData{:,'interventionID'},interventionID)) ... 
+                         &(ismember(testVPop.expData{:,'elementID'},elementID)) ... 
+                         &(ismember(testVPop.expData{:,'elementType'},elementType)) ...
+                         &(ismember(testVPop.expData{:,'expDataID'},expDataID)));
         if ~isempty(expDataRow)
             subpopNo = testVPop.expData{expDataRow,'subpopNo'};
             vpIndicesSubpop = testVPop.subpopTable{subpopNo,'vpIndices'}{1};
             foundSubpop = true;
         elseif nMnSdRows > 0
-			mnSDRow = find((ismember(myMnSdData{:,'time'},simTime))&(ismember(myMnSdData{:,'interventionID'},interventionID))&(ismember(myMnSdData{:,'elementID'},elementID))&(ismember(myMnSdData{:,'elementType'},elementType)));
+			mnSDRow = find((ismember(myMnSdData{:,'time'},simTime)) ... 
+                          &(ismember(myMnSdData{:,'interventionID'},interventionID)) ...
+                          &(ismember(myMnSdData{:,'elementID'},elementID)) ...
+                          &(ismember(myMnSdData{:,'elementType'},elementType)) ...
+                          &(ismember(myMnSdData{:,'expDataID'},expDataID)));
             if ~isempty(mnSDRow)
                 subpopNo = testVPop.mnSDTable{mnSDRow,'subpopNo'};
                 vpIndicesSubpop = testVPop.subpopTable{subpopNo,'vpIndices'}{1};

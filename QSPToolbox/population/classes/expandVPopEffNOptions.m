@@ -26,12 +26,22 @@ classdef expandVPopEffNOptions
 %                       Default = false
 %  minPVal:            (Optional) minimum p-value for a good VPop
 %                       Default = 0.9
+%  nCluster:           (Optional) Number of VPs to keep following a cluster
+%                       step.  If set to nan, expandVPopEffN will make
+%                       an intelligent guess.
+%                       Default = nan;
 %  nTries:             (Optional) Number of times to try a solution before triggering expansion.
 %                       Default = 5
+%  nVPMax:             (Optional) Maximum number of VPs in the cohort.
+%                       Default = Inf    
 %  nRetries:           (Optional) Number of times to try a solution that is not quite at acceptance.
 %                       Default = 30
 %  restartPVal:        (Optional) p-value that will trigger a restart of the algorithm.
 %                       Default = 1E-4
+%  nSamplePastCompletion (Optional) if > 0, will continue to sample this many
+%                        VPs and reweight to develop alternate VPops once
+%                        targetEffN is achieved.
+%                       Default = 0
 %  expandRandomStart:  (Optional) If 0, the prevalence 
 %                      weights are not perturbed from initial guesses on the first iteration or
 %                      following a successful solution for the population and expansion.
@@ -82,8 +92,6 @@ classdef expandVPopEffNOptions
 %                       pick them based on their scores.
 %  verbose:            (Optional) report progress to screen
 %                       Default = true;
-%
-% 
 
    properties
 		suffix
@@ -94,12 +102,15 @@ classdef expandVPopEffNOptions
 		effNDelta
 		useMapelIntSeed
 		minPVal
+        nCluster
 		nTries
+        nVPMax
 		nRetries
 		restartPVal
 		expandRandomStart
 		varyMethod
 		resampleStd
+        nSamplePastCompletion
 		maxNewPerOld
 		expandEdgeVPs
         plausibleResponseTypeIDs
@@ -258,6 +269,28 @@ classdef expandVPopEffNOptions
               error(['Invalid minPVal specified for ',mfilename,'. A number between 0 and 1 should be specified.'])
           end
       end  
+      
+      function obj = set.nCluster(obj,myVal)
+          failFlag = false;
+          if isnumeric(myVal) 
+              if isequal(size(myVal),[1 1])
+                  if round(myVal) > 0
+                      obj.nCluster = round(myVal);
+                  elseif isnan(myVal) 
+                      obj.nCluster = myVal;
+                  else
+                      failFlag = true;
+                  end
+              else
+                  failFlag = true;
+              end
+          else
+              failFlag = true;
+          end
+          if failFlag
+              error(['Invalid nCluster specified for ',mfilename,'. A positive number, or NaN, should be specified.'])
+          end
+      end        
 	
       function obj = set.nTries(obj,myNTries)
           failFlag = false;
@@ -277,7 +310,27 @@ classdef expandVPopEffNOptions
           if failFlag
               error(['Invalid nTries specified for ',mfilename,'. A positive number should be specified.'])
           end
-      end  	  	
+      end  
+      
+      function obj = set.nVPMax(obj,myNVPMax)
+          failFlag = false;
+          if isnumeric(myNVPMax) 
+              if isequal(size(myNVPMax),[1 1])
+                  if round(myNVPMax) > 0
+                      obj.nVPMax = round(myNVPMax);
+                  else
+                      failFlag = true;
+                  end
+              else
+                  failFlag = true;
+              end
+          else
+              failFlag = true;
+          end
+          if failFlag
+              error(['Invalid nVPMax specified for ',mfilename,'. A positive number should be specified.'])
+          end
+      end       
 
       function obj = set.nRetries(obj,myNRetries)
           failFlag = false;
@@ -367,6 +420,26 @@ classdef expandVPopEffNOptions
               error(['Invalid resampleStd specified for ',mfilename,'. A number >= 0 should be specified.'])
           end
       end     	
+      
+      function obj = set.nSamplePastCompletion(obj,nSamplePastCompletion)
+          failFlag = false;
+          if isnumeric(nSamplePastCompletion) 
+              if isequal(size(nSamplePastCompletion),[1 1])
+                  if round(nSamplePastCompletion) >= 0
+                      obj.nSamplePastCompletion = round(nSamplePastCompletion);
+                  else
+                      failFlag = true;
+                  end
+              else
+                  failFlag = true;
+              end
+          else
+              failFlag = true;
+          end
+          if failFlag
+              error(['Invalid nSamplePastCompletion specified for ',mfilename,'. A nonnegative number should be specified.'])
+          end
+      end         
 
       function obj = set.maxNewPerOld(obj,myMaxNewPerOld)
           failFlag = false;
@@ -447,8 +520,12 @@ classdef expandVPopEffNOptions
 				  value = obj.useMapelIntSeed;
               case 'minPVal'
                   value = obj.minPVal;
+              case 'nCluster'
+                  value = obj.nCluster;                  
               case 'nTries'
                   value = obj.nTries;
+              case 'nVPMax'
+                  value = obj.nVPMax;                  
               case 'nRetries'
                   value = obj.nRetries;
               case 'restartPVal'
@@ -459,6 +536,8 @@ classdef expandVPopEffNOptions
                   value = obj.varyMethod;				  
               case 'resampleStd'
                   value = obj.resampleStd;
+              case 'nSamplePastCompletion'
+                  value = obj.nSamplePastCompletion;                  
               case 'maxNewPerOld'
                   value = obj.maxNewPerOld;	
               case 'expandEdgeVPs'
@@ -484,23 +563,26 @@ classdef expandVPopEffNOptions
           obj.suffix = '';
           obj.wsIterCounter = 0;
           obj.targetEffN = 100;
-          obj.maxNewPerIter = 50;          
+          obj.maxNewPerIter = 50;
 		  obj.expandCohortSize = 2500;
           obj.effNDelta = 2;
 		  obj.useMapelIntSeed = false;
           obj.minPVal = 0.9;
+          obj.nCluster = nan;           
           obj.nTries = 5;
+          obj.nVPMax = Inf;          
           obj.nRetries = 30;
 		  obj.restartPVal = 1E-4;
 		  obj.expandRandomStart = 0;
 		  obj.varyMethod = 'gaussian';
 		  obj.resampleStd = 0.05;
+          obj.nSamplePastCompletion = 0;
 		  obj.maxNewPerOld = 2;
 		  obj.expandEdgeVPs = false;
           obj.plausibleResponseTypeIDs = {};
           obj.screenFunctionName = '';
 		  obj.selectByParent = true;
-		  obj.verbose = true;		  
+		  obj.verbose = true;	
       end
    end
 end

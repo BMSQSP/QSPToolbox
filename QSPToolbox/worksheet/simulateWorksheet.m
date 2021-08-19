@@ -259,7 +259,7 @@ if flagContinue
     end
     
     simResults = reshape(simResults, [nInterventions, nVPs]);
-    if sum(flagRunVP) < nVPs
+    if sum(flagRunSim) < nSimulations
         myWorksheet.results(find(flagRunSim)) = simResults(find(flagRunSim));
     else
         myWorksheet.results = simResults;

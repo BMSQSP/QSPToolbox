@@ -1,5 +1,5 @@
-function plotHandle = plotBinVPop(myVPop, myPlotOptions)
-% This function takes the bin data in a VPop distribution table
+function plotHandle = plotBRVPop(myVPop, myPlotOptions)
+% This function takes the data in a VPop BR table
 % to plot the experimental data side-by-side with the population
 % to facilitate diagnosing fitting during
 % the population calibration/prevalence weighting process.
@@ -70,6 +70,10 @@ if (flagContinue)
 end
 
 if (flagContinue)
+    if myPlotOptions.flagPD2    
+        % Make sure this is updated
+        myVPop = predNPDTFLS(myVPop);
+    end
     nPlotsVer = floor(sqrt(myNPlots));
     nPlotsHor = ceil(myNPlots / nPlotsVer);
     plotHandle = figure;
@@ -80,19 +84,27 @@ if (flagContinue)
             predBins = [myTable{plotCounter,'predCR'},myTable{plotCounter,'predPR'},myTable{plotCounter,'predSD'},myTable{plotCounter,'predPD'}];
         else
             expNPD21LS = myTable{plotCounter,'expNPD21LS'};
+            predNPD21LS = myTable{plotCounter,'expNPD21LS'};
             if isnan(expNPD21LS)
                 expNPD21LS = 0;
             end
+            if isnan(predNPD21LS)
+                predNPD21LS = 0;
+            end            
             predN = myTable{plotCounter,'predN'};
             expN = myTable{plotCounter,'expN'};
             expPD = (expNPD21LS + myTable{plotCounter,'expPD'}*expN)/(expN+expNPD21LS);
             expSD = (myTable{plotCounter,'expSD'}*expN)/(expN+expNPD21LS);
             expPR = (myTable{plotCounter,'expPR'}*expN)/(expN+expNPD21LS);
             expCR = (myTable{plotCounter,'expCR'}*expN)/(expN+expNPD21LS);
-            predPD = (expNPD21LS*predN/expN + myTable{plotCounter,'predPD'}*predN)/(predN+expNPD21LS*predN/expN);
-            predSD = (myTable{plotCounter,'predSD'}*predN)/(predN+expNPD21LS*predN/expN);
-            predPR = (myTable{plotCounter,'predPR'}*predN)/(predN+expNPD21LS*predN/expN);
-            predCR = (myTable{plotCounter,'predCR'}*predN)/(predN+expNPD21LS*predN/expN);
+            %             predPD = (expNPD21LS*predN/expN + myTable{plotCounter,'predPD'}*predN)/(predN+expNPD21LS*predN/expN);
+            %             predSD = (myTable{plotCounter,'predSD'}*predN)/(predN+expNPD21LS*predN/expN);
+            %             predPR = (myTable{plotCounter,'predPR'}*predN)/(predN+expNPD21LS*predN/expN);
+            %             predCR = (myTable{plotCounter,'predCR'}*predN)/(predN+expNPD21LS*predN/expN);
+            predPD = (predNPD21LS + myTable{plotCounter,'predPD'}*predN)/(predN+predNPD21LS);
+            predSD = (myTable{plotCounter,'predSD'}*predN)/(predN+predNPD21LS);
+            predPR = (myTable{plotCounter,'predPR'}*predN)/(predN+predNPD21LS);
+            predCR = (myTable{plotCounter,'predCR'}*predN)/(predN+predNPD21LS);
             expBins = [expCR,expPR,expSD,expPD];
             predBins = [predCR,predPR,predSD,predPD];
         end            

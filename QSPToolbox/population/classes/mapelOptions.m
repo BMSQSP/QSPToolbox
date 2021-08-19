@@ -86,12 +86,13 @@ classdef mapelOptions
 % optimizeTimeLimit: (Optional) Time limit to stop the solver, does not 
 %                    apply to the simplex method.  Default is 10*60 s,
 %                    which will not be sufficient in many cases.
-% optimizeType:      Type of optimization algorithm to employ: "pso,"
-%                     "ga," "gapso," "simplex," or "surrogate."  Default is
+% optimizeType:      Type of optimization algorithm to employ.  Default is
 %                     "pso".
 %						"ga" - MATLAB's GA
 %						"pso" - MATLAB's PSO
+%						"papso" - MATLAB's PAPSO
 %						"gapso" - MATLAB's GA, polished by MATLAB's PSO
+%						"gapapso" - MATLAB's GA, polished by MATLAB's PAPSO
 %						"simplex" - MATLAB's simplex
 %						"surrogate" - a short run of MATLAB's surrogate,
 %                                     polished by MATLAB's PSO
@@ -261,12 +262,24 @@ classdef mapelOptions
       end  
       
       function obj = set.optimizeType(obj,myOptimizeType)
-          if sum(ismember({'pso','ga','gapso','simplex','surrogate'},lower(myOptimizeType))) == 1
-              obj.optimizeType = lower(myOptimizeType);
+          if sum(ismember({'pso','papso','ga','gapso','gapapso','simplex','surrogate'},lower(myOptimizeType))) == 1
+              if sum(ismember({'papso','gapapso'},lower(myOptimizeType))) == 1
+				opts = optimoptions('particleswarm');
+				if ~isprop(opts,'UseAsync')
+					if isequal('papso',lower(myOptimizeType))
+						disp(['Parallel asynchronous mode not available for ',lower(myOptimizeType),' in ',mfilename,'.  Using pso.'])
+						myOptimizeType = 'pso';
+					else
+						disp(['Parallel asynchronous mode not available for ',lower(myOptimizeType),' in ',mfilename,'.  Using gapso.'])
+						myOptimizeType = 'gapso';
+					end
+				end
+              end
+			  obj.optimizeType = lower(myOptimizeType);
           else
-              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," "gapso," "simplex," or "surrogate."'])
+              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," "gapso," "simplex," or "surrogate.  Parallel asynchronous options may also be available, "papso" and "gapapso."'])
           end
-      end      
+      end     
       
       function obj = set.optimizePopSize(obj,myPopulationSize)
           if ((isnumeric(myPopulationSize) == true) && (myPopulationSize >= 0))

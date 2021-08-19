@@ -270,7 +270,7 @@ elseif sum(ismember({'surrogate'},optimizeType)) > 0
     %     end
     disp(['Exited a set of iterations of surrogate optimization, with current best objective of ',num2str(fVals(optIndex)),'.  Attempting to refine in PSO.'])
     optimizeType = 'pso'; 
-elseif sum(ismember({'ga','gapso'},optimizeType)) > 0
+elseif sum(ismember({'ga','gapso','gapapso'},optimizeType)) > 0
     optimOptions = gaoptimset;
     optimOptions.Display = 'iter';
     optimOptions.MaxTime = myVPop.optimizeTimeLimit;
@@ -295,7 +295,7 @@ elseif sum(ismember({'ga','gapso'},optimizeType)) > 0
 end
 
 % Separate statement for pso since this may be called as a secondary type.
-if sum(ismember({'pso','gapso'},optimizeType)) > 0
+if sum(ismember({'pso','papso','gapso','gapapso'},optimizeType)) > 0
     optimOptions = optimoptions('particleswarm');
     optimOptions.Display = 'iter';
     optimOptions.MaxTime = myVPop.optimizeTimeLimit;
@@ -303,6 +303,17 @@ if sum(ismember({'pso','gapso'},optimizeType)) > 0
     optimOptions.UseParallel = true;                
     optimOptions.SwarmSize = myVPop.optimizePopSize;  
 	optimOptions.ObjectiveLimit = myVPop.objectiveLimit;
+	if isprop(optimOptions,'UseAsync')
+		if sum(ismember({'papso','gapapso'},optimizeType)) > 0
+			optimOptions.UseAsync = true;
+            optimOptions.NumAsyncBlocks = poolSize;
+            p.addAttachedFiles('AsyncEvaluator');
+            % p.addAttachedFiles(func2str(anonymousFunction));
+		else
+			optimOptions.UseAsync = false;
+		end
+	end
+	
 	if strcmp(myVPop.pwStrategy, 'bin')	
 		optimOptions.InitialSwarm = transProbVect;
 		[optTransProbVect,fVal,exitFlag,output] = particleswarm(anonymousFunction,lProbs,ones(1,lProbs)*-pi/2,ones(1,lProbs)*pi/2,optimOptions);

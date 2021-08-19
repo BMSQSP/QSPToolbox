@@ -33,15 +33,15 @@ else
 end
 
 if continueFlag
-    if sum(ismember({'VPop','VPopRECIST','VPopRECISTnoBin','mapelOptions','mapelOptionsRECIST','mapelOptionsRECISTnoBin'},class(myVPop))) < 1
-        warning(['Wrong input arguments for ',mfilename,'. Should provide a RECIST type myVPop (or mapelOptions).'])
+    if sum(ismember({'VPop','VPopRECIST','mapelOptions','mapelOptionsRECIST',class(myVPop))) < 1
+        warning(['Wrong input arguments for ',mfilename,'. Should provide a VPop or mapelOptions object (or RECIST version).'])
         continueFlag = false;
     end
 end
         
 if continueFlag
     if sum(ismember({'table'},class(myVPop.expData))) < 1
-        warning(['Wrong input arguments for ',mfilename,'. Should provide: myVPop (or mapelOptions) with a populated expData property.'])
+        warning(['Wrong input arguments for ',mfilename,'. Should provide a VPop or mapelOptions object (or RECIST version) with a populated expData property.'])
         continueFlag = false;
     end
 end

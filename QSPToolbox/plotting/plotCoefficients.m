@@ -55,6 +55,9 @@ if (flagContinue)
         pos(1) = myPlotCoefficientsOptions.leftPosition;
         pos(3) = myPlotCoefficientsOptions.width;
         set(gca, 'Position', pos);
+        [ksdens, u, bb]=ksdensity(allCoefficients(:,plotOrder(plotCounter)));
+        ksdens=ksdens/max(ksdens)*0.3;
+        median=nanmedian(allCoefficients(:,plotOrder(plotCounter)));
         scatter(allCoefficients(:,plotOrder(plotCounter)),jitterVals,10,randColors,'filled');
         ylim([-0.3 0.3]);
         xlim(myPlotCoefficientsOptions.xLim);

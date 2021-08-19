@@ -6,14 +6,14 @@ function myOutputTable = convertExpDataToCorTable(myVPop,myExpVars1,myExpVars2,m
 %  myVPop:                            A VPop object with a populated expData field.  A
 %                                      mapelOptions structure is also OK.
 %  myExpVars1,myExpVars2:             Two paired cell arrays of length N 
-%                                      (number of 2D distributions to calibrate to)
+%                                      (number of correlations to calibrate to)
 %                                      with the experimental/data variable
 %                                      names.
 %  mySimTimepoints1,mySimTimepoints2: Two paired cell arrays of length N 
-%                                      (number of 2D distributions to calibrate to)
+%                                      (number of correlations to calibrate to)
 %                                      with the simulation timepoints.
 %  myInterventions1,myInterventions2: Two paired cell arrays of length N 
-%                                      (number of 2D distributions to calibrate to)
+%                                      (number of correlations to calibrate to)
 %                                      with the interventions.
 %
 %
@@ -34,15 +34,15 @@ else
 end
 
 if continueFlag
-    if sum(ismember({'VPop','VPopRECIST','VPopRECISTnoBin','mapelOptions','mapelOptionsRECIST','mapelOptionsRECISTnoBin'},class(myVPop))) < 1
-        warning(['Wrong input arguments for ',mfilename,'. Should provide a RECIST type myVPop (or mapelOptions).'])
+    if sum(ismember({'VPop','VPopRECIST','mapelOptions','mapelOptionsRECIST'},class(myVPop))) < 1
+        warning(['Wrong input arguments for ',mfilename,'. Should provide a VPop or mapelOptions object (or RECIST version).'])
         continueFlag = false;
     end
 end
         
 if continueFlag
     if sum(ismember({'table'},class(myVPop.expData))) < 1
-        warning(['Wrong input arguments for ',mfilename,'. Should provide: myVPop (or mapelOptions) with a populated expData property.'])
+        warning(['Wrong input arguments for ',mfilename,'. Should provide a VPop or mapelOptions object (or RECIST version) with a populated expData property.'])
         continueFlag = false;
     end
 end

@@ -38,7 +38,7 @@ function myMnSDTableRECIST = createMnSDTableRECIST(myWorksheet,myExpDataIDs,Pati
 continueFlag = true;
 
 commonNames = loadCommonNames();
-tableVariableNames = [commonNames.VPOPRECISTTABLEVARNAMESFIXED,{'logN','weightMean', 'weightSD', 'expN', 'expMean', 'expSD', 'predN', 'predIndices', 'predMean', 'predSD'}];
+tableVariableNames = [commonNames.VPOPRECISTTABLEVARNAMESFIXED,{'logN','weightMean', 'weightSD', 'expN', 'expMean', 'expSD', 'predN', 'predIndices', 'predSample', 'predMean', 'predSD'}];
 myMnSDTableRECIST = cell2table(cell(0,length(tableVariableNames)));
 myMnSDTableRECIST.Properties.VariableNames = tableVariableNames;
 
@@ -226,7 +226,7 @@ if continueFlag
         end
     end
     
-    myMnSDTableRECIST = table(subpopNo, expTime,interverventionIDCell,elementIDCell,elementTypeCell,expDataIDCell,expTimeVarIDCell,expVarIDCell,PatientIDCell,TRTCell,BRSCORECell,RSCORECell,false(length(expTime),1),ones(length(expTime),1),ones(length(expTime),1),expN,expMean,expSD,nan(length(expTime),1),repmat({{nan}},length(expTime),1),nan(length(expTime),1),nan(length(expTime),1));
+    myMnSDTableRECIST = table(subpopNo, expTime,interverventionIDCell,elementIDCell,elementTypeCell,expDataIDCell,expTimeVarIDCell,expVarIDCell,PatientIDCell,TRTCell,BRSCORECell,RSCORECell,false(length(expTime),1),ones(length(expTime),1),ones(length(expTime),1),expN,expMean,expSD,nan(length(expTime),1),repmat({{nan}},length(expTime),1),repmat({nan},length(expTime),1),nan(length(expTime),1),nan(length(expTime),1));
     % We also filter where SD > 0.  SD = 0 can show up when normalizing
     % to a baseline value, and it doesn't make sense to calibrate
     % the baseline value to zero.

@@ -64,30 +64,31 @@ if continueFlag
 	end
 end
 
-
 if continueFlag
 	allInterventionIDs = getInterventionIDs(myWorksheet);
-	if sum(ismember(myInterventionIDs,allInterventionIDs)) < length(myInterventionIDs)
+    if sum(cellfun(@(x) sum(ismember(x,allInterventionIDs)),myInterventionIDs)) < sum(cellfun(@(x) length(x),myInterventionIDs))       
 		warning(['Not all interventionIDs found in worksheet in ',mfilename,'.  Exiting.'])
 		continueFlag = false;
-	end
+    end
 	myResultIDs = myWorksheet.simProps.saveElementResultIDs;
 	myAxisIDs = getAxisDefIDs(myWorksheet);
-	if sum(ismember(myElement1Names,[myResultIDs,myAxisIDs])) < length(myElement1Names)
+    if sum(cellfun(@(x) sum(ismember(x,[myResultIDs,myAxisIDs])),myElement1Names)) < sum(cellfun(@(x) length(x),myElement1Names))
 		warning(['Not all saveElementResultIDs/axisDefIDs found in worksheet in ',mfilename,'.  Exiting.'])
 		continueFlag = false;
-	end		
+    end		
 end
 
 
 if continueFlag
+    %% reformat the first row
 	allVPIDs = getVPIDs(myWorksheet);
-	curRow = ['all',nan,' ',' ', ' ',' ',nan,{{allVPIDs}},{{[1:length(allVPIDs)]}},1];
-	curRow = cell2table(curRow);
+    curRow = ['all',{{{nan}}},{{{}}},{{{}}}, {{{}}},{{{}}},{{{nan}}},{{allVPIDs}},{{[1:length(allVPIDs)]}},1];
+	
+    curRow = cell2table(curRow);
     curRow.Properties.VariableNames = tableVariableNames;
 	mySubpopTable = [mySubpopTable; curRow]; 
-	for rowCounter = 1 : testN
-		curRow = [mySubpopIDs{rowCounter},myTimePoints(rowCounter),myInterventionIDs{rowCounter},myElement1Names{rowCounter}, myElement1Types{rowCounter},myComparators{rowCounter},myValues(rowCounter),{{}},{{[]}},nan];
+	for rowCounter = 1 : testN     
+        curRow = [mySubpopIDs{rowCounter},{myTimePoints(rowCounter)},{myInterventionIDs(rowCounter)},{myElement1Names(rowCounter)}, {myElement1Types(rowCounter)},{myComparators(rowCounter)},{myValues(rowCounter)},{{}},{{[]}},nan];
 		curRow = cell2table(curRow);
         curRow.Properties.VariableNames = tableVariableNames;
 		mySubpopTable = [mySubpopTable; curRow];     

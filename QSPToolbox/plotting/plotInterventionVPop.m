@@ -1,4 +1,4 @@
-function plotHandleVector = plotInterventionVPop(myWorksheet, myVPop, myPlotOptions)
+function plotHandleVector = plotInterventionVPop(myWorksheet, myVPop, myPlotOptions, existingFigure)
 % This function plots results for a single variable stored in a worksheet.
 % The returned plots show the 5th, 50th, and 95th percentile.
 %
@@ -8,6 +8,9 @@ function plotHandleVector = plotInterventionVPop(myWorksheet, myVPop, myPlotOpti
 %                   solution.  VPopRECIST also allowed, in which
 %                   case only on-therapy VPs will be plotted.
 % myPlotOptions:    Options structure to adjust the plotting
+% existingFigure:   'true' if you want to plot into an existing figure
+%                   (such as a subplot), 'false' creates a new figure
+%                   DEFAULT is false
 %
 % RETURNS
 % plotHandle
@@ -19,10 +22,11 @@ function plotHandleVector = plotInterventionVPop(myWorksheet, myVPop, myPlotOpti
 % rather than interrupting higher level execution with an error.
 plotHandleVector = [];
 flagExpData = false;
+flagSubPlot = false;
 
-if nargin > 3
+if nargin > 4
     flagContinue = false;
-    warning(['Too many input arguments for ',mfilename,', require: myWorksheet, myVPop; optionally myPlotOptions. Exiting.'])
+    warning(['Too many input arguments for ',mfilename,', require: myWorksheet, myVPop, myPlotOptions; optionally: existingFigure. Exiting.'])
 elseif nargin > 2
     flagContinue = true;
 else
@@ -82,6 +86,14 @@ if flagContinue
     nVPs = length(allVPIDs);
     interventionID = myPlotOptions.interventionID;    
     varName = myPlotOptions.varName;
+end
+
+if flagContinue && nargin == 4
+    if ~islogical(existingFigure)
+        warning(['4th argument must be logical (true or false). Assuming FALSE by default.'])
+    else
+        flagSubPlot = existingFigure;
+    end
 end
 
 if flagExpData && flagContinue
@@ -151,7 +163,11 @@ if flagContinue
         intervalsToPlot(:,iCounter) = temp(cumsum(curIndices));
     end
     
-    figure;
+    if flagSubPlot
+        % plot into existing figure
+    else
+        figure;
+    end
     hold on
     plotHandleVector(1) = fill([curTime-myPlotOptions.xShiftSim;flipud(curTime-myPlotOptions.xShiftSim)],[intervalsToPlot(:,1);flipud(intervalsToPlot(:,2))],'b','edgecolor','none');
     set(plotHandleVector(1),'FaceAlpha',0.5);

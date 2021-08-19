@@ -43,46 +43,55 @@ if continueFlag
 	allVPIDs = getVPIDs(myWorksheet);
 	mySubpopTable{1,'vpIDs'} = {allVPIDs};
 	mySubpopTable{1,'vpIndices'} = {[1:length(allVPIDs)]};
-	if nRows > 1
-		for rowCounter = 2 : nRows
-			curTime = mySubpopTable{rowCounter,'time'};
-			curIntervention = mySubpopTable{rowCounter,'interventionID'}{1};
-			curElementID = mySubpopTable{rowCounter,'elementID'}{1};
-			curElementType = mySubpopTable{rowCounter,'elementType'}{1};
-			curComparator = mySubpopTable{rowCounter,'comparator'}{1};
-			curValue = mySubpopTable{rowCounter,'value'};
-			if isequal(curElementType, 'axis')
-				axisIndex = find(ismember(allAxisDefIDs,curElementID));
-				vpVals = allCoefficients(axisIndex,:);
-			else
-				vpVals = nan(1,nVPs);
-				interventionIndex = find(ismember(allInterventionIDs,curIntervention));
-				testResult = myWorksheet.results{interventionIndex,1};
-				timeIndex = find(ismember(testResult.Names, 'time'));
-				timeIndex = find(testResult.Data(:,timeIndex) == curTime);
-				varIndex = find(ismember(testResult.Names,curElementID));
-				for vpCounter = 1 : nVPs
-					% For the sake of speed assume these indices are consistent
-					vpVals(vpCounter) = myWorksheet.results{interventionIndex,vpCounter}.Data(timeIndex,varIndex);
-				end
-			end
-			if 	isequal(curComparator,'>')
-				vpVals = vpVals > curValue;
-			elseif isequal(curComparator,'>=')
-				vpVals = vpVals >= curValue;
-			elseif isequal(curComparator,'<')
-				vpVals = vpVals < curValue;
-			elseif isequal(curComparator,'<=')
-				vpVals = vpVals <= curValue;	
-			elseif isequal(curComparator,'==')
-				vpVals = vpVals == curValue;
-			end
-			vpIndices = find(vpVals);
-			vpIDs = allVPIDs(vpIndices);
-			mySubpopTable{rowCounter,'vpIDs'} = {vpIDs};
-			mySubpopTable{rowCounter,'vpIndices'} = {vpIndices};			
-		end
-	end
+    if nRows > 1
+		for rowCounter = 2 : nRows    
+            Ncomparator = size(mySubpopTable{rowCounter,'comparator'}{1},2);
+            if Ncomparator>=1
+                totvpVals = nan(Ncomparator,nVPs);
+                for i=1:Ncomparator
+                    curTime = mySubpopTable{rowCounter,'time'}{1}{i};
+                    curIntervention = mySubpopTable{rowCounter,'interventionID'}{1}{i}; %% this will allow comparators from different intervention
+                    curElementID = mySubpopTable{rowCounter,'elementID'}{1}{i};
+                    curElementType = mySubpopTable{rowCounter,'elementType'}{1}{i};
+                    curComparator = mySubpopTable{rowCounter,'comparator'}{1}{i};
+                    curValue = mySubpopTable{rowCounter,'value'}{1}{i};
+
+                    if isequal(curElementType, 'axis')
+                        axisIndex = find(ismember(allAxisDefIDs,curElementID));
+                        vpVals = allCoefficients(axisIndex,:);
+                    else
+                        vpVals = nan(1,nVPs);
+                        interventionIndex = find(ismember(allInterventionIDs,curIntervention));
+                        testResult = myWorksheet.results{interventionIndex,1};
+                        timeIndex = find(ismember(testResult.Names, 'time'));
+                        timeIndex = find(testResult.Data(:,timeIndex) == curTime);
+                        varIndex = find(ismember(testResult.Names,curElementID));
+                        for vpCounter = 1 : nVPs
+                            % For the sake of speed assume these indices are consistent
+                            vpVals(vpCounter) = myWorksheet.results{interventionIndex,vpCounter}.Data(timeIndex,varIndex);
+                        end
+                    end
+                    if 	isequal(curComparator,'>')
+                        vpVals = vpVals > curValue;
+                    elseif isequal(curComparator,'>=')
+                        vpVals = vpVals >= curValue;
+                    elseif isequal(curComparator,'<')
+                        vpVals = vpVals < curValue;
+                    elseif isequal(curComparator,'<=')
+                        vpVals = vpVals <= curValue;	
+                    elseif isequal(curComparator,'==')
+                        vpVals = vpVals == curValue;
+                    end
+                    totvpVals(i,:)=vpVals;
+                end
+            end
+            
+           vpIndices = find(sum(totvpVals,1)==Ncomparator); 
+           vpIDs = allVPIDs(vpIndices);
+           mySubpopTable{rowCounter,'vpIDs'} = {vpIDs};
+           mySubpopTable{rowCounter,'vpIndices'} = {vpIndices};		
+        end
+    end
 else
     warning(['Unable to complete ',mfilename,', exiting.'])    
 end    

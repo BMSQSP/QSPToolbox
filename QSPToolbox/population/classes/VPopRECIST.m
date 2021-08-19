@@ -867,13 +867,13 @@ methods
            % We want the {expVarID, element, elementType, time} sets
            % from the experimental summaries that will be paired
            % with real data.
-           rowInfoNames = {'expVarID','interventionID','elementID','elementType','time'};
-		   rowInfoNames2D = {'expVarID1','expVarID2','interventionID1','interventionID2','elementID1','elementID2','elementType1','elementType2','time1','time2'};	
-           rowInfoNames2D1 = {'expVarID1','interventionID1','elementID1','elementType1','time1'};
-           rowInfoNames2D2 = {'expVarID2','interventionID2','elementID2','elementType2','time2'};
+           rowInfoNames = {'expVarID','interventionID','elementID','elementType','time','expDataID'};
+		   rowInfoNames2D = {'expVarID1','expVarID2','interventionID1','interventionID2','elementID1','elementID2','elementType1','elementType2','time1','time2','expDataID1','expDataID2'};	
+           rowInfoNames2D1 = {'expVarID1','interventionID1','elementID1','elementType1','time1','expDataID1'};
+           rowInfoNames2D2 = {'expVarID2','interventionID2','elementID2','elementType2','time2','expDataID2'};
            brInfoNames = {'expVarID','interventionID','elementID','elementType','time'};
            rInfoNames = brInfoNames;
-           myDataSource = cell2table(cell(0,5), 'VariableNames', rowInfoNames);
+           myDataSource = cell2table(cell(0,6), 'VariableNames', rowInfoNames);
            if ~isempty(myMnSdData)
                myDataSource = [myDataSource; myMnSdData(:,rowInfoNames)];
                mnsdDataFlag = true;
@@ -922,7 +922,9 @@ methods
            if continueFlag
                % Eliminate duplicate rows
                myDataSource = unique(myDataSource, 'rows');
-               myDataSource = sortrows(myDataSource,{'interventionID','elementID','time','elementType'},{'ascend','ascend','ascend','ascend'});
+               myDataSource = sortrows(myDataSource, ...
+                   {'interventionID','elementID','time','elementType','expDataID'},...
+                   {'ascend','ascend','ascend','ascend','ascend'});
            end
            
            if continueFlag
@@ -957,6 +959,7 @@ methods
                elementIDIndex = find(ismember(rowInfoNames,'elementID'));
                elementTypeIndex = find(ismember(rowInfoNames,'elementType'));
                expTimeIndex = find(ismember(rowInfoNames,'time'));
+               expDataIDIndex = find(ismember(rowInfoNames,'expDataID'));
                simData.Data = dataValues;
                simData.rowInfoNames = rowInfoNames;
                simData.rowInfo = rowInfo;
@@ -974,6 +977,7 @@ methods
                     elementType = simData.rowInfo{rowCounter,elementTypeIndex};
                     wshInterventionIndex = find(ismember(interventionIDs,interventionID));
                     expTime = simData.rowInfo{rowCounter,expTimeIndex};
+                    expDataID = simData.rowInfo{rowCounter,expDataIDIndex};
                     simFilterValues = double(myRECISTFilter{wshInterventionIndex}.filterMatrix);
                     simFilterTimes = myRECISTFilter{wshInterventionIndex}.time;
                     simFilterValuesInf = simFilterValues;
@@ -982,19 +986,31 @@ methods
                     % To avoid re-searching for the right rows on every
                     % iteration mapel, we provide the indices here 
                     if mnsdDataFlag
-                        temp = find((ismember(myMnSdData{:,'interventionID'},interventionID)) & ((myMnSdData{:,'time'})==expTime) & (ismember(myMnSdData{:,'elementID'},elementID)) & (ismember(myMnSdData{:,'elementType'},elementType)));
+                        temp = find((ismember(myMnSdData{:,'interventionID'},interventionID)) ...
+                                 & ((myMnSdData{:,'time'})==expTime) ...
+                                 & (ismember(myMnSdData{:,'elementID'},elementID)) ...
+                                 & (ismember(myMnSdData{:,'elementType'},elementType) ...
+                                 & (ismember(myMnSdData{:,'expDataID'},expDataID))));
                         if ~isempty(temp)
                             mnSDRows(rowCounter) = temp;
                         end
                     end
                     if binDataFlag
-                        temp = find((ismember(myBinTable{:,'interventionID'},interventionID)) & ((myBinTable{:,'time'})==expTime) & (ismember(myBinTable{:,'elementID'},elementID)) & (ismember(myBinTable{:,'elementType'},elementType)));
+                        temp = find((ismember(myBinTable{:,'interventionID'},interventionID)) ...
+                                 & ((myBinTable{:,'time'})==expTime) ...
+                                 & (ismember(myBinTable{:,'elementID'},elementID)) ...
+                                 & (ismember(myBinTable{:,'elementType'},elementType)) ...
+                                 & (ismember(myBinTable{:,'expDataID'},expDataID)));
                         if ~isempty(temp)
                             binRows(rowCounter) = temp;
                         end
                     end
                     if distDataFlag
-                        temp = find((ismember(myDistTable{:,'interventionID'},interventionID)) & ((myDistTable{:,'time'})==expTime) & (ismember(myDistTable{:,'elementID'},elementID)) & (ismember(myDistTable{:,'elementType'},elementType)));
+                        temp = find((ismember(myDistTable{:,'interventionID'},interventionID)) ...
+                                 & ((myDistTable{:,'time'})==expTime) ...
+                                 & (ismember(myDistTable{:,'elementID'},elementID)) ...
+                                 & (ismember(myDistTable{:,'elementType'},elementType)) ...
+                                 & (ismember(myDistTable{:,'expDataID'},expDataID)));
                         if ~isempty(temp)
                             distRows(rowCounter) = temp;
                         end
@@ -1002,11 +1018,17 @@ methods
                     if distData2DFlag
                         % One row of source data may be involved in
                         % multiple 2D distributions
-                        temp = find((ismember(myDistTable2D{:,'interventionID1'},interventionID)) & ((myDistTable2D{:,'time1'})==expTime) & (ismember(myDistTable2D{:,'elementID1'},elementID)) & (ismember(myDistTable2D{:,'elementType1'},elementType)));
+                        temp = find((ismember(myDistTable2D{:,'interventionID1'},interventionID)) ...
+                                 & ((myDistTable2D{:,'time1'})==expTime) ...
+                                 & (ismember(myDistTable2D{:,'elementID1'},elementID)) ...
+                                 & (ismember(myDistTable2D{:,'elementType1'},elementType)));
                         if ~isempty(temp)
                             distRows2D{rowCounter,1} = temp;
                         end
-                        temp = find((ismember(myDistTable2D{:,'interventionID2'},interventionID)) & ((myDistTable2D{:,'time2'})==expTime) & (ismember(myDistTable2D{:,'elementID2'},elementID)) & (ismember(myDistTable2D{:,'elementType2'},elementType)));
+                        temp = find((ismember(myDistTable2D{:,'interventionID2'},interventionID)) ...
+                                 & ((myDistTable2D{:,'time2'})==expTime) ...
+                                 & (ismember(myDistTable2D{:,'elementID2'},elementID)) ...
+                                 & (ismember(myDistTable2D{:,'elementType2'},elementType)));
                         if ~isempty(temp)
                             distRows2D{rowCounter,2} = temp;
                         end						
@@ -1014,11 +1036,17 @@ methods
                     if corDataFlag
                         % One row of source data may be involved in
                         % multiple 2D distributions
-                        temp = find((ismember(myCorTable{:,'interventionID1'},interventionID)) & ((myCorTable{:,'time1'})==expTime) & (ismember(myCorTable{:,'elementID1'},elementID)) & (ismember(myCorTable{:,'elementType1'},elementType)));
+                        temp = find((ismember(myCorTable{:,'interventionID1'},interventionID)) ...
+                                 & ((myCorTable{:,'time1'})==expTime) ...
+                                 & (ismember(myCorTable{:,'elementID1'},elementID)) ...
+                                 & (ismember(myCorTable{:,'elementType1'},elementType)));
                         if ~isempty(temp)
                             corRows{rowCounter,1} = temp;
                         end
-                        temp = find((ismember(myCorTable{:,'interventionID2'},interventionID)) & ((myCorTable{:,'time2'})==expTime) & (ismember(myCorTable{:,'elementID2'},elementID)) & (ismember(myCorTable{:,'elementType2'},elementType)));
+                        temp = find((ismember(myCorTable{:,'interventionID2'},interventionID)) ...
+                                 & ((myCorTable{:,'time2'})==expTime) ...
+                                 & (ismember(myCorTable{:,'elementID2'},elementID)) ...
+                                 & (ismember(myCorTable{:,'elementType2'},elementType)));
                         if ~isempty(temp)
                             corRows{rowCounter,2} = temp;
                         end						
@@ -1076,7 +1104,9 @@ methods
                % BR results for each VP for each row
                if ~isempty(myBRTableRECIST)
                    myDataSource = myBRTableRECIST(:,rowInfoNames);
-                   myDataSource = sortrows(myDataSource,{'interventionID','elementID','time','elementType'},{'ascend','ascend','ascend','ascend'});
+                   myDataSource = sortrows(myDataSource, ...
+                       {'interventionID','elementID','time','elementType','expDataID'}, ...
+                       {'ascend','ascend','ascend','ascend','ascend'});
                
                    brRowInfo = table2cell(myDataSource);
 
@@ -1084,8 +1114,8 @@ methods
                    dataValues = nan(nEntries, length(vpIDs));
                    interventionIDIndex = find(ismember(rowInfoNames,'interventionID'));
                    expTimeIndex = find(ismember(rowInfoNames,'time'));
+                   expDataIDIndex = find(ismember(rowInfoNames,'expDataID'));
                    rData.Data = dataValues;
-
                    interventionIDs = getInterventionIDs(myWorksheet);
                    brRows = nan(nEntries,1);
 
@@ -1093,7 +1123,10 @@ methods
                        interventionID = brRowInfo{rowCounter,interventionIDIndex};
                        wshInterventionIndex = find(ismember(interventionIDs,interventionID));
                        expTime = brRowInfo{rowCounter,expTimeIndex};
-                       temp = find((ismember(myBRTableRECIST{:,'interventionID'},interventionID)) & ((myBRTableRECIST{:,'time'})==expTime) );
+                       expDataID = brRowInfo{rowCounter,expDataIDIndex};
+                       temp = find((ismember(myBRTableRECIST{:,'interventionID'},interventionID)) ...
+                                & ((myBRTableRECIST{:,'time'})==expTime) ... 
+                                & ismember(myBRTableRECIST{:,'expDataID'},expDataID));
                        brRows(rowCounter) = temp;
                        % To avoid re-searching for the right rows on every
                        % iteration mapel, we provide the indices here
@@ -1140,7 +1173,9 @@ methods
                % R results for each VP for each row
                if ~isempty(myRTableRECIST)
                    myDataSource = myRTableRECIST(:,rowInfoNames);
-                   myDataSource = sortrows(myDataSource,{'interventionID','elementID','time','elementType'},{'ascend','ascend','ascend','ascend'});
+                   myDataSource = sortrows(myDataSource, ...
+                       {'interventionID','elementID','time','elementType','expDataID'}, ...
+                       {'ascend','ascend','ascend','ascend','ascend'});
 
                    rRowInfo = table2cell(myDataSource);
 
@@ -1148,16 +1183,20 @@ methods
                    dataValues = nan(nEntries, length(vpIDs));
                    interventionIDIndex = find(ismember(rowInfoNames,'interventionID'));
                    expTimeIndex = find(ismember(rowInfoNames,'time'));
+                   expDataIDIndex = find(ismember(rowInfoNames,'expDataID'));
                    rData.Data = dataValues;
 
                    interventionIDs = getInterventionIDs(myWorksheet);
                    rRows = nan(nEntries,1);
 
                    for rowCounter = 1 : nEntries
-                       interventionID = brRowInfo{rowCounter,interventionIDIndex};
+                       interventionID = rRowInfo{rowCounter,interventionIDIndex};
                        wshInterventionIndex = find(ismember(interventionIDs,interventionID));
-                       expTime = brRowInfo{rowCounter,expTimeIndex};
-                       temp = find((ismember(myRTableRECIST{:,'interventionID'},interventionID)) & ((myRTableRECIST{:,'time'})==expTime) );
+                       expTime = rRowInfo{rowCounter,expTimeIndex};
+                       expDataID = brRowInfo{rowCounter,expDataIDIndex};
+                       temp = find((ismember(myRTableRECIST{:,'interventionID'},interventionID)) ... 
+                                & ((myRTableRECIST{:,'time'})==expTime) ...
+                                & ismember(myRTableRECIST{:,'expDataID'},expDataID));
                        rRows(rowCounter) = temp;
                        % To avoid re-searching for the right rows on every
                        % iteration mapel, we provide the indices here

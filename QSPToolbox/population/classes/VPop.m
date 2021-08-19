@@ -91,15 +91,16 @@ classdef VPop
 %                apply a large penalty if any of the individual pvalues.
 %                fall below the target.
 %  optimizeTimeLimit:   Time limit for optimizing the VPop in s.
-%  optimizeType:        Type of optimization algorithm to employ: "pso,"
-%                       "ga," "gapso," "simplex," or "surrogate."  Default is
-%                       "pso".
-%						 "ga" - MATLAB's GA
-%						 "pso" - MATLAB's PSO
-%						 "gapso" - MATLAB's GA, polished by MATLAB's PSO
-%						 "simplex" - MATLAB's simplex
-%						 "surrogate" - a short run of MATLAB's surrogate,
-%                                      polished by MATLAB's PSO
+%  optimizeType:     Type of optimization algorithm to employ.  Default is
+%                    "pso".
+%						"ga" - MATLAB's GA
+%						"pso" - MATLAB's PSO
+%						"papso" - MATLAB's PAPSO
+%						"gapso" - MATLAB's GA, polished by MATLAB's PSO
+%						"gapapso" - MATLAB's GA, polished by MATLAB's PAPSO
+%						"simplex" - MATLAB's simplex
+%						"surrogate" - a short run of MATLAB's surrogate,
+%                                     polished by MATLAB's PSO
 %  optimizePopSize:     Number of solutions to try in each optimization
 %                       generation.  Most directly impacts GA and PSO steps.  This 
 %                       is the population size to use in the optimization 
@@ -301,12 +302,24 @@ methods
       end  
       
       function obj = set.optimizeType(obj,myOptimizeType)
-          if sum(ismember({'pso','ga','gapso','simplex','surrogate'},lower(myOptimizeType))) == 1
-              obj.optimizeType = lower(myOptimizeType);
+          if sum(ismember({'pso','papso','ga','gapso','gapapso','simplex','surrogate'},lower(myOptimizeType))) == 1
+              if sum(ismember({'papso','gapapso'},lower(myOptimizeType))) == 1
+				opts = optimoptions('particleswarm');
+				if ~isprop(opts,'UseAsync')
+					if isequal('papso',lower(myOptimizeType))
+						disp(['Parallel asynchronous mode not available for ',lower(myOptimizeType),' in ',mfilename,'.  Using pso.'])
+						myOptimizeType = 'pso';
+					else
+						disp(['Parallel asynchronous mode not available for ',lower(myOptimizeType),' in ',mfilename,'.  Using gapso.'])
+						myOptimizeType = 'gapso';
+					end
+				end
+              end
+			  obj.optimizeType = lower(myOptimizeType);
           else
-              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," "gapso," "simplex," or "surrogate."'])
+              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," "gapso," "simplex," or "surrogate.  Parallel asynchronous options may also be available, "papso" and "gapapso."'])
           end
-      end       
+      end         
       
       function obj = set.optimizePopSize(obj,myPopulationSize)
           if ((isnumeric(myPopulationSize) == true) && (myPopulationSize >= 0))
@@ -757,7 +770,9 @@ methods
            % from the experimental summaries that will be paired
            % with real data.
            rowInfoNames = {'expVarID','interventionID','elementID','elementType','time'};
-		   rowInfoNames2D = {'expVarID1','expVarID2','interventionID1','interventionID2','elementID1','elementID2','elementType1','elementType2','time1','time2'};																																							
+		   rowInfoNames2D = {'expVarID1','expVarID2','interventionID1','interventionID2','elementID1','elementID2','elementType1','elementType2','time1','time2'};
+           rowInfoNames2D1 = {'expVarID1','interventionID1','elementID1','elementType1','time1'};
+           rowInfoNames2D2 = {'expVarID2','interventionID2','elementID2','elementType2','time2'};
            myDataSource = cell2table(cell(0,5), 'VariableNames', rowInfoNames);
            if ~isempty(myMnSdData)
                myDataSource = [myDataSource; myMnSdData(:,rowInfoNames)];

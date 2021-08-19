@@ -1,13 +1,17 @@
-function [newWorksheet, newVPop, PatientgroupTable] = getPatientgroup(myWorksheet, Patientgroup, myVPop)
+function [newWorksheet, newVPop, PatientgroupTable] = getPatientgroup(myWorksheet, Patientgroup, myVPopRECIST, VPopFLAG)
 % This function takes a Worksheet and a Patientgroup, and it returns
-% a Worksheet with VPs and results belonging to this patientgroup. 
+% a Worksheet with VPs and results belonging to this patientgroup.
 % Optionally, a PatientgroupTable with the number of VPs per Patientgroup
 % can be returned.
 %
-% If a VPop is provided simData, brTable and rTable are updated for the
-% desired patientgroup and the resulting VPop is returned. Also, if the
-% Patientgroup.Time field is empty patient groups will be pulled from
-% myVPop.recistSimFilter{}.bestResp at the last time point available
+% If a VPopRECIST is provided simData, brTable and rTable are updated for the
+% desired patientgroup and the resulting VPop is returned. Also, if a VPop
+% is provided CR, PR, SD and PD patients are pulled at the time point
+% defined by Patientgroup.Time from myVPop.recistSimFilter{}.bestResp or
+% if Patientgroup.Time is not defined data are pulled from the last
+% availabe entry in myVPop.recistSimFilter{}.bestResp
+% If VPopFLAG is 'VPop' myVPopRECIST is converted to a VPop object and
+% returned in newVPop
 
 % ARGUMENTS
 % myWorksheet:      (required) A worksheet with results field populated
@@ -20,47 +24,63 @@ function [newWorksheet, newVPop, PatientgroupTable] = getPatientgroup(myWorkshee
 %                   .Time (day at which RECIST criteria are evaluated)
 %                   .InterventionID
 %
-% myVPop:           (optional) A VPop, VPopRECIST, or VPopRECISTnoBin.
-%                    myVPop should correspond to myWorksheet.
+% myVPopRECIST:     (optional) A VPopRECIST object which should
+%                    correspond to myWorksheet.
+% VPopFLAG:         (optional) A string 'VPop' if myVPopRECIST shall be
+%                    converted into a VPop object before return.
 %
 % RETURNS
 % newWorksheet:     new Worksheet with updated results according to Patientgroup
-% newVpop:          new VPop with updated simData, rTable and brTable
+% newVpop:          VPop or VPopRECIST with updated simData, rTable and brTable
 %                   according to Patientgroup.
+% PatientgroupTable: A Table indicating how many CR, PR, SD and PD patients were found.
 
 % get all VPs
-
 allVPIDs = getVPIDs(myWorksheet);
 nVPs = length(allVPIDs);
 allElementIDNames = myWorksheet.results{1}.Names;
 allInterventionIDs = getInterventionIDs(myWorksheet);
 computeRECISTfromSLDFlag = false;
+convertVPopFLAG = false;
+initDoseDay = 2000; % this should be the end of the initialization phase!
 
 % find timepoint for starting dose: If VPop is provided we pull the initial
 % Dose time from the 'nodose' intervention of the mnSDTable
 if nargin > 2
+    myVPop = myVPopRECIST;
+    
+    if nargin > 3
+        if strcmp(VPopFLAG,'VPop')
+            convertVPopFLAG = true;
+        else
+            warning(['VPopFLAG not recognized (try "help getPatientgroup")',newline])
+        end
+    end
     if isa(myVPop,'VPopRECIST')
+        
+        [~, curInterventionInd] = ismember(Patientgroup.InterventionID, allInterventionIDs);
         % pull CR, PR, SD, PD information from myVPop.recistFilter
         if isempty(Patientgroup.Time)
-            % use last timepoint of calibration for CR, PR, SD, PD
-            % classification
-            [~, curInterventionInd] = ismember(Patientgroup.InterventionID, allInterventionIDs);
+            % use last timepoint in recistSimFilter to classify CR, PR, SD, PD
             timeInd = length(myVPop.recistSimFilter{curInterventionInd,1}.time);
-            curDay = myVPop.recistSimFilter{curInterventionInd,1}.time(end);
-            CRIDs = find(myVPop.recistSimFilter{curInterventionInd,1}.bestResp(timeInd,:) == 0);
-            PRIDs = find(myVPop.recistSimFilter{curInterventionInd,1}.bestResp(timeInd,:) == 1);
-            SDIDs = find(myVPop.recistSimFilter{curInterventionInd,1}.bestResp(timeInd,:) == 2);
-            PDIDs = find(myVPop.recistSimFilter{curInterventionInd,1}.bestResp(timeInd,:) == 3);
+            curDay = myVPop.recistSimFilter{curInterventionInd,1}.time(timeInd);
         else
-            computeRECISTfromSLDFlag = true;
-            initDoseInd = ismember('nodose',myVPop.mnSDTable.interventionID);
-            if ~isempty(initDoseInd)
-                initDoseDay = myVPop.mnSDTable.time(initDoseInd);
-                curDay = initDoseDay + Patientgroup.Time;
+            timeInd = find(myVPop.recistSimFilter{curInterventionInd,1}.time == initDoseDay + Patientgroup.Time);
+            if ~isempty(timeInd)
+                curDay = myVPop.recistSimFilter{curInterventionInd,1}.time(timeInd);
+                disp(['Evaluating RECIST criteria at day: ' num2str(curDay-initDoseDay),newline])
             else
-                warning('No timepoint for starting dose available in provided VPop.')
+                timeInd = length(myVPop.recistSimFilter{curInterventionInd,1}.time);
+                curDay = myVPop.recistSimFilter{curInterventionInd,1}.time(end);
+                warning(['Patientgroup.Time not available in recistSimFilter.', newline, ...
+                    'Choosing last available time point: day ',num2str(curDay-initDoseDay), newline])
             end
         end
+        
+        CRIDs = find(myVPop.recistSimFilter{curInterventionInd,1}.bestResp(timeInd,:) == 0);
+        PRIDs = find(myVPop.recistSimFilter{curInterventionInd,1}.bestResp(timeInd,:) == 1);
+        SDIDs = find(myVPop.recistSimFilter{curInterventionInd,1}.bestResp(timeInd,:) == 2);
+        PDIDs = find(myVPop.recistSimFilter{curInterventionInd,1}.bestResp(timeInd,:) == 3);
         
     else
         warning('3rd input argument is not a VPop RECIST object')
@@ -69,10 +89,9 @@ if nargin > 2
 else % if no VPop provided assume that initDoseDay = 2000
     if ~isempty(Patientgroup.Time)
         computeRECISTfromSLDFlag = true;
-        initDoseDay = 2000;
         curDay = initDoseDay + Patientgroup.Time;
     else
-        warning('Patientgroup.Time is not defined.')
+        warning(['Please specify Patientgroup.Time!','newline'])
     end
     
 end
@@ -116,7 +135,7 @@ if Patientgroup.CR
         myVPIDs = [myVPIDs, CRIDs];
         nVPs(1) = length(CRIDs);
     else
-        warning('No CRs in the Worksheet')
+        warning(['No CRs in the Worksheet at day: ',num2str(curDay-initDoseDay)])
     end
 end
 
@@ -125,7 +144,7 @@ if Patientgroup.PR
         myVPIDs = [myVPIDs, PRIDs];
         nVPs(2) = length(PRIDs);
     else
-        warning('No PRs in the Worksheet')
+        warning(['No PRs in the Worksheet at day: ',num2str(curDay-initDoseDay)])
     end
 end
 
@@ -134,7 +153,7 @@ if Patientgroup.SD
         myVPIDs = [myVPIDs, SDIDs];
         nVPs(3) = length(SDIDs);
     else
-        warning('No SDs in the Worksheet')
+        warning(['No SDs in the Worksheet at day: ',num2str(curDay-initDoseDay)])
     end
 end
 
@@ -143,13 +162,13 @@ if Patientgroup.PD
         myVPIDs = [myVPIDs, PDIDs];
         nVPs(4) = length(PDIDs);
     else
-        warning('NoPDs in the Worksheet')
+        warning(['NoPDs in the Worksheet at day: ',num2str(curDay-initDoseDay)])
     end
 end
 
-fprintf(['Intervention: ',Patientgroup.InterventionID, char(10), ... 
-         'Patientgroups at day: ',num2str(curDay-2000),char(10)])
-PatientgroupTable = table(PatientGroups, nVPs)
+fprintf(['Intervention: ',Patientgroup.InterventionID, char(10), ...
+    'Patientgroups at day: ',num2str(curDay-2000),char(10)])
+PatientgroupTable = table(PatientGroups, nVPs);
 nGroup = length(find(nVPs > 0));
 
 if nGroup < 1
@@ -164,8 +183,8 @@ if nGroup < 1
     
 elseif nGroup > 3
     warning(['You have selected all 4 patientgroups!',char(10), ...
-             ' Set a true subgroup (e.g. CR, PR and SD) to TRUE.', char(10) ...
-             'Returning Worksheet and/or VPop ...'])
+        ' Set a true subgroup (e.g. CR, PR and SD) to TRUE.', char(10) ...
+        'Returning Worksheet and/or VPop ...'])
     if nargout < 2
         newWorksheet = myWorksheet;
     else
@@ -177,7 +196,22 @@ else
     if nargout < 2
         newWorksheet = keepVPs(myWorksheet, myVPIDs);
     else
-        [newWorksheet, newVPop] = keepVPs(myWorksheet, myVPIDs, myVPop);
+        if convertVPopFLAG % convert VPopRECIST to VPop
+            myVPopNoRECIST = VPop;
+            
+            FieldnamesNoRECIST = fieldnames(myVPopNoRECIST);
+            FieldnamesRECIST = fieldnames(myVPop);
+            
+            for i=1:length(FieldnamesNoRECIST)
+                if ismember(FieldnamesNoRECIST{i},FieldnamesRECIST)
+                    myVPopNoRECIST.(FieldnamesNoRECIST{i}) = myVPop.(FieldnamesNoRECIST{i});
+                end
+            end
+            
+            [newWorksheet, newVPop] = keepVPs(myWorksheet, myVPIDs, myVPopNoRECIST);
+        else
+            [newWorksheet, newVPop] = keepVPs(myWorksheet, myVPIDs, myVPop);
+        end
     end
 end
 

@@ -114,7 +114,7 @@ end
 
 commonNames = loadCommonNames();
 rTableVariableNames = [commonNames.VPOPRECISTRESPONSETABLEVARNAMESFIXED,{'weight','expN','expCR','expPR','expSD','expPD','predN','predCR','predPR','predSD','predPD'}];
-brTableVariableNames = [commonNames.VPOPRECISTRESPONSETABLEVARNAMESFIXED,{'weight','expN','expCR','expPR','expSD','expPD','predN','predCR','predPR','predSD','predPD','expNPD21LS'}]; % ,'expNMS1LS'
+brTableVariableNames = [commonNames.VPOPRECISTRESPONSETABLEVARNAMESFIXED,{'weight','expN','expCR','expPR','expSD','expPD','predN','predCR','predPR','predSD','predPD','expNPD21LS','predNPD21LS'}]; % ,'expNMS1LS'
 myBRTableRECIST = cell2table(cell(0,length(brTableVariableNames)));
 myBRTableRECIST.Properties.VariableNames = brTableVariableNames;
 myRTableRECIST = cell2table(cell(0,length(rTableVariableNames)));
@@ -187,9 +187,7 @@ if continueFlag
         
         allTimes = unique(selectData{:,timeVar});
         allTimes = sort(allTimes,'ascend');
-        if sum(allTimes == 2105) > 0
-            allTimes;
-        end
+
         % This may be redundant.  That is, we don't expect a response
         % unless we are beyond startTime anyway.
         allTimes = allTimes(find(allTimes>startTime));
@@ -202,6 +200,8 @@ if continueFlag
             lastBRSCORE = '.';
             for timeCounter = 1 : length(allTimes)
                 curTime = allTimes(timeCounter);
+				% See if we can update lastBRSCORE, if not we will propagate
+				% the last value
                 if sum(ismember(curData{:,timeVar},curTime)) > 0
                     curRow = find((ismember(curData{:,timeVar},curTime)));
                     lastBRSCORE = curData{curRow,BRSCOREVar};
@@ -229,6 +229,10 @@ if continueFlag
             curTime = allTimes(timeCounter);
             cumPD2(timeCounter) = sum(pd2Data{:,timeVar}<=curTime);
         end
+		
+		% Now we have fullCell as nTimePoints x nVP
+		% Table of best responses.  Now get the summary
+		% information to guide calibration.
         
         % Now we want to count...
         for timeCounter = 1 : length(allTimes);
@@ -240,7 +244,7 @@ if continueFlag
             expN = nCR+nPR+nSD+nPD;
             curProbs = [nCR, nPR, nSD, nPD] / expN;
             curRow = {1, allTimes(timeCounter), 'BRSCORE', interventionID, 'BRSCORE','derived',myExpDataID, timeVar,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar};
-            curRow = [curRow,{1, expN, curProbs(1), curProbs(2), curProbs(3), curProbs(4), nan, nan, nan, nan, nan,cumPD2(timeCounter)}];
+            curRow = [curRow,{1, expN, curProbs(1), curProbs(2), curProbs(3), curProbs(4), nan, nan, nan, nan, nan,cumPD2(timeCounter),nan}];
             curRow = cell2table(curRow);
             curRow.Properties.VariableNames = myBRTableRECIST.Properties.VariableNames; 
             myBRTableRECIST = [myBRTableRECIST; curRow];    

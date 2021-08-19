@@ -153,6 +153,8 @@ if continueFlag
     end
     % Also add the subpopulation number column, if needed.
 	myUpdatedObject = updateTablesWithSubpopReference(myUpdatedObject);
+    % Convert the subpopulation into cell table format, if needed.
+	myUpdatedObject = updateTablesWithSubpopformat(myUpdatedObject);
     % Also check if the new predIndices columns are added to the mnSDTable and binTable
     commonNames = loadCommonNames();
 	if isa(myUpdatedObject, 'VPopRECIST') || isa(myUpdatedObject, 'VPop') || isa(myUpdatedObject, 'mapelOptionsRECIST') || isa(myUpdatedObject, 'mapelOptions')   

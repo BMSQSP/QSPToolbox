@@ -1,4 +1,4 @@
-function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,newVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, varyMethod, gaussianStd, maxNewPerOld, unweightedParents, selectByParent, myScreenFunctionName)
+function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,newVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, varyMethod, gaussianStd, maxNewPerOld, unweightedParents, selectByParent, pwExpandCutoff, myScreenFunctionName)
 % This function expands a worksheet given a VPop.  It selected out VPs to expand around,
 % samples for new VPs, scores the "children" based on available data, and adds
 % the best children to the worksheet.
@@ -6,25 +6,27 @@ function [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,ne
 %  myWorksheet
 %  newVPop
 %  myMapelOptions
-%  suffix:             a text descriptor string that will be included in what 
-%                       will be written to file.  This is also used
-%                       in setting VP identities.
-%  wsIterCounter:      tracks the iterations through the algorithm.  Keep
-%                       incrementing to avoid issues with repeated VPIDs.
-%  maxNewPerIter:      maximum new VPs we can add per iteration.  Set to 
-%                       -1 to use the VPop effN
-%  myScreenTable:      a screen table to idenify VPs to keep
-%  expandCohortSize:   size of the cohort to generate for testing
-%  varyMethod:         method for resampling.  i.e. 'gaussian' or 'localPCA'
-%  gaussianStd:        standard deviation for the re-sampled parameters.
-%                       note this is applied across all axes in the transformed
-%                       units (i.e. within bounds normalized 0-1).
-%  maxNewPerOld:       maximum number of children per weighted parent
-%  unweightedParents:  Whether to include unweighted VPs as seeds for 
-%                       expansion if they look like they are useful.
-%  selectByParent:     a boolean variable indicating whether children
-%                       VPs are selected for inclusion each iteraction 
-%                       based on their parent, or just pooled together
+%  suffix:               a text descriptor string that will be included in what 
+%                         will be written to file.  This is also used
+%                         in setting VP identities.
+%  wsIterCounter:        tracks the iterations through the algorithm.  Keep
+%                         incrementing to avoid issues with repeated VPIDs.
+%  maxNewPerIter:        maximum new VPs we can add per iteration.  Set to 
+%                         -1 to use the VPop effN
+%  myScreenTable:        a screen table to idenify VPs to keep
+%  expandCohortSize:     size of the cohort to generate for testing
+%  varyMethod:           method for resampling.  i.e. 'gaussian' or 'localPCA'
+%  gaussianStd:        ` standard deviation for the re-sampled parameters.
+%                         note this is applied across all axes in the transformed
+%                         units (i.e. within bounds normalized 0-1).
+%  maxNewPerOld:         maximum number of children per weighted parent
+%  unweightedParents:    Whether to include unweighted VPs as seeds for 
+%                         expansion if they look like they are useful.
+%  selectByParent:       a boolean variable indicating whether children
+%                         VPs are selected for inclusion each iteraction 
+%                         based on their parent, or just pooled together
+%  pwExpandCutoff:       a cutoff on PW for whether to use a highly weighted
+%                         VP as a seed
 %  myScreenFunctionName: a string indicating a function to use for screening
 %                         VPs before simulation.  It should take two input
 %                         arguments: a worksheet and a list of VPIDs to
@@ -122,8 +124,7 @@ if continueFlag
     end  
     
     
-    % Consider VPs for inclusion as seed if they are weighted "heavily"
-    pwExpandCutoff = 0.01;
+
     allResponseTypeIDs = getResponseTypeIDs(myWorksheet);
     nResponseTypes = length(allResponseTypeIDs);
     myPWs = newVPop.pws;
