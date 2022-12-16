@@ -93,7 +93,10 @@ classdef LinearCalibrationOptions
 %                           experimental standard deviation; and (3, char
 %                           vector) description of the data group.
 %
-
+% minSubWeightConstraint:   Specify minimum subpopulation weight constraint, default = 0
+% targetEffNConstraint:     TargetEffN for linear calibration.
+% oldVPop:                  oldVPop to ensure MSE reduction, might be empty for GOF optimization. Default = []
+      
    properties
       optimizationAlgorithm = "nnls"
       method = "bestFit"
@@ -112,25 +115,33 @@ classdef LinearCalibrationOptions
       nBootstrapIterations = 1000
       fractionVPsPerBaggingIteration = 0.9
       optimizationAlgorithmOptions = []
-      expWeightFuncHandle = @(expN,expSTD,expDataGrp) sqrt(expN)
+      expWeightFuncHandle = @(expN) sqrt(expN) % original: @(expN,expSTD,expDataGrp) sqrt(expN) 
+      minSubWeightConstraint = 0 
+      targetEffNConstraint = 150 
+      oldVPop = [] 
    end
    methods
       function obj = set.optimizationAlgorithm(obj,myValue)
           if (strcmpi(myValue,"lsqlin") ||...
                strcmpi(myValue,"lsqnonneg") ||...
-               strcmpi(myValue,"nnls"))
+               strcmpi(myValue,"nnls") ||...
+               strcmpi(myValue,"quadprog") ||... 
+               strcmpi(myValue,"quadprogMaxResi") ||... 
+               strcmpi(myValue,"quadprogEffN") ||... 
+               strcmpi(myValue,"fmincon")) 
             obj.optimizationAlgorithm = myValue;
           else
-            error(['Invalid optimizationAlgorithm setting in ',mfilename,', allowed setting: "lsqlin," "lsqnonneg."'])
+            error(['Invalid optimizationAlgorithm setting in ',mfilename,', allowed setting: "lsqlin," "lsqnonneg," "nnls," "quadprog," "quadprogMaxResi," "quadprogEffN," "fmincon."'])
           end
       end	
       function obj = set.method(obj,myValue)
           if (strcmpi(myValue,"bestFit") ||...
                strcmpi(myValue,"bootstrap") ||...
-               strcmpi(myValue,"bagging"))
+               strcmpi(myValue,"bagging") ||... 
+               strcmpi(myValue,"bestFitInitials"))
             obj.method = myValue;
           else
-            error(['Invalid method setting in ',mfilename,', allowed setting: "bestFit," "bootstrap," "bagging."'])
+            error(['Invalid method setting in ',mfilename,', allowed setting: "bestFit," "bootstrap," "bagging," "bestFitInitials."'])
           end
       end	
       function obj = set.cdfProbsToFit(obj,myValue)
@@ -241,7 +252,13 @@ classdef LinearCalibrationOptions
       function obj = set.expWeightFuncHandle(obj,myValue)
           obj.expWeightFuncHandle = myValue;
       end
-                
+      function obj = set.minSubWeightConstraint(obj,myValue)
+          obj.minSubWeightConstraint = myValue;
+      end
+      function obj = set.targetEffNConstraint(obj,myValue)
+          obj.targetEffNConstraint = myValue;
+      end
+      
       function value = get(obj,propName)
           switch propName
               case 'verbose'

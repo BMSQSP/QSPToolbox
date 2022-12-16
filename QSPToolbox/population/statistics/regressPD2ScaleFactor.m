@@ -38,21 +38,22 @@ end
 
 if continueFlag
     % First find the blocks by the PD2 measures
-    testData = myMapelOptions.brTableRECIST(:,{'interventionID'});
-    [C,IA,IC] = unique(testData,'rows','stable');
-    testRows = find(~isnan(myMapelOptions.brTableRECIST{:,{'expNPD21LS'}}));
-    regRows = intersect(testRows, IA);
-    pred = table2array(myMapelOptions.brTableRECIST(regRows,{'expSD','expPD'}));
-    resp = table2array(myMapelOptions.brTableRECIST(regRows,{'expNPD21LS'})) ./ table2array(myMapelOptions.brTableRECIST(regRows,{'expN'}));
-    weights = table2array(myMapelOptions.brTableRECIST(regRows,{'expN'}))/sum(table2array(myMapelOptions.brTableRECIST(regRows,{'expN'})));
-    expSD = pred(:,1);
-    expPD = pred(:,2);
-    fitTable = table(expSD,expPD,resp);
-    lmResults = fitlm(fitTable,'resp ~ expSD + expPD','Intercept',false,'Weights',weights);
-    % Predicted expNPD21LS numbers
-    % pred*lmResults.Coefficients{:,'Estimate'}.*table2array(myMapelOptions.brTableRECIST(regRows,{'expN'}))
-    % Observed
-    % table2array(myMapelOptions.brTableRECIST(regRows,{'expNPD21LS'}))
+    % Only keep the last time point from each inidividual intervention (BOR), then train the regression model
+     testData = myMapelOptions.brTableRECIST(:,{'subpopNo','expDataID','interventionID'}); 
+     [C,IA,IC] = unique(testData,'rows','stable'); % unique(testData,'last','rows','stable');
+     LastRowindex=IA;
+     for j=1:length(IA)
+         indices=find(IC==j);
+         LastRowindex(j)=indices(end);
+     end            
+    testRows = find(~isnan(myMapelOptions.brTableRECIST{:,{'expNPD21LS'}})); 
+    regRows = intersect(testRows, LastRowindex);
+    expN = table2array(myMapelOptions.brTableRECIST(regRows,'expN'));
+    expPD=table2array(myMapelOptions.brTableRECIST(regRows,'expPD')).*expN;
+    expSD=table2array(myMapelOptions.brTableRECIST(regRows,'expSD')).*expN;
+    resp=table2array(myMapelOptions.brTableRECIST(regRows,'expNPD21LS'));
+    fitTable = table(expPD,expSD,resp);
+    lmResults = fitlm(fitTable,'resp ~ expPD + expSD','Intercept',false);
 else
     lmResults = {};
     warning(['Unable to run ',mfilename,'.  Returning an empty object.'])

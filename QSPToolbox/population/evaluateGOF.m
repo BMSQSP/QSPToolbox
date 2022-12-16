@@ -151,9 +151,17 @@ if continueFlag
         for rowCounter = 1 : nStatRows 
             % Custom KS test for weighted samples
             expW = 1./(expN(rowCounter)*ones(1,expN(rowCounter)));
-            ksPval = weightedKSPreGrid(SC{rowCounter}, expInd{rowCounter}, predInd{rowCounter}, expW, predW{rowCounter}, expN(rowCounter), predN(rowCounter));
-            ksPvals(rowCounter) = ksPval;
+            if length(SC{rowCounter} > 0) 
+                ksPval = weightedKSPreGrid(SC{rowCounter}, expInd{rowCounter}, predInd{rowCounter}, expW, predW{rowCounter}, expN(rowCounter), predN(rowCounter));
+                ksPvals(rowCounter) = ksPval;
+            else
+                ksPvals(rowCounter) = nan;
+            end
         end	
+        % set Nans to zero
+        repPos = find(isnan(ksPvals));
+		ksPvals(repPos) = 0;	
+        
         % Write these pvals to the VPop before returning it.
         myVPop.gofDist = ksPvals;
     else
@@ -203,8 +211,16 @@ if continueFlag
             quadrantCounts1s = quadrantCount(sample1, sample1);
             quadrantCounts2c = quadrantCount(curVals, sample1);
             quadrantCounts2s = quadrantCount(curVals, curVals); 
-			ksPval = weightedKS2D(sample1, curVals, quadrantCounts1c, quadrantCounts1s, quadrantCounts2c, quadrantCounts2s, expW, curPredW, sample1KeepN, sample2KeepN);
-            ksPvals2D(rowCounter) = ksPval;
+            if length(curVals) > 0
+                ksPval = weightedKS2D(sample1, curVals, quadrantCounts1c, quadrantCounts1s, quadrantCounts2c, quadrantCounts2s, expW, curPredW, sample1KeepN, sample2KeepN);
+                ksPvals2D(rowCounter) = ksPval;
+            else
+                ksPvals2D(rowCounter) = nan;
+            end
+            % set Nans to zero
+            repPos = find(isnan(ksPvals2D));
+            ksPvals2D(repPos) = 0;	
+        
         end		
         % Write these pvals to the VPop before returning it.
         myVPop.gofDist2D = ksPvals2D;

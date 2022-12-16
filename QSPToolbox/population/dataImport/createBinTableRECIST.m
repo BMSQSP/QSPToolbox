@@ -99,7 +99,8 @@ if continueFlag
 	mySimVars = reshape(mySimVars,testN,1);
 	mySimVarTypes = reshape(mySimVarTypes,testN,1);
 	myInterventionIDs = reshape(myInterventionIDs,testN,1);
-	combineRows = [mySimVars,mySimVarTypes,myInterventionIDs];
+    myExpDataIDs = reshape(myExpDataIDs,testN,1);
+	combineRows = [mySimVars,mySimVarTypes,myInterventionIDs,myExpDataIDs];
 	combineRows = cell2table(combineRows);
 	[nRows,~] = size(unique(combineRows,'rows'));
 	if nRows ~= testN

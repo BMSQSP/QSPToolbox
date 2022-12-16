@@ -12,7 +12,9 @@ classdef plotOptions
 %      flagLegend:      Boolean (true/false) indicating whether to add a
 %                       legend. Default is false.
 %      flagPD2:         Boolean (true/false) indicating whether to include
-%                       PD2 at first lesion scan in plotBRVPop.
+%                       PD2 at first lesion scan (upto last time point) in plotBRVPop. PD2 estimated from regression model.
+%      flagPD2Exp:  Boolean (true/false) indicating whether to include
+%                       PD2 at first lesion scan (upto last time point) in plotBRVPop. PD2 directly based on expPD2
 %      scale:           String indicating X/Y scale, valid strings are:
 %                       'xlinylin' (default)
 %                       'xlinylog'
@@ -50,7 +52,8 @@ classdef plotOptions
       flagSave
       fileName
       flagLegend
-      flagPD2      
+      flagPD2
+      flagPD2Exp
       scale
       xLim
       yLim
@@ -100,7 +103,14 @@ classdef plotOptions
           else
             error('Invalid flagPD2 value, expecting true/false')
           end
-      end          
+      end
+      function obj = set.flagPD2Exp(obj,flagvalue)
+          if (flagvalue == true) || (flagvalue == false)
+              obj.flagPD2Exp = flagvalue;
+          else
+            error('Invalid flagPD2Exp value, expecting true/false')
+          end
+      end
       function obj = set.scale(obj,scalevalue)
           if (strcmpi(scalevalue,'xlinylin') ||...
                strcmpi(scalevalue,'xlinylog') ||...
@@ -299,7 +309,9 @@ classdef plotOptions
               case 'flagLegend'
                   value = obj.flagLegend;
               case 'flagPD2'
-                  value = obj.flagPD2;                  
+                  value = obj.flagPD2;    
+              case 'flagPD2Exp'
+                  value = obj.flagPD2Exp;  
               case 'scale'
                   value = obj.scale;                  
               %case 'axesCor'
@@ -337,7 +349,8 @@ classdef plotOptions
             obj.flagSave = false;
             obj.fileName = '';            
             obj.flagLegend = false;
-            obj.flagPD2 = false;            
+            obj.flagPD2 = false;    
+            obj.flagPD2Exp = false; 
             obj.scale = 'xlinylin';
             obj.xLim = [];
             obj.yLim = [];

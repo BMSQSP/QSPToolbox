@@ -1,4 +1,4 @@
-function myOutputTable = convertExpDataToCorTable(myVPop,myExpVars1,myExpVars2,mySimTimepoints1,mySimTimepoints2,myInterventions1,myInterventions2)
+function myOutputTable = convertExpDataToCorTable(myVPop,myExpVars1,myExpVars2,mySimTimepoints1,mySimTimepoints2,myInterventions1,myInterventions2,myExpDataIDs1,myExpDataIDs2)
 % This function takes experimental data and converts 
 % it to a correlation table format for use in MAPEL
 %
@@ -6,43 +6,59 @@ function myOutputTable = convertExpDataToCorTable(myVPop,myExpVars1,myExpVars2,m
 %  myVPop:                            A VPop object with a populated expData field.  A
 %                                      mapelOptions structure is also OK.
 %  myExpVars1,myExpVars2:             Two paired cell arrays of length N 
-%                                      (number of correlations to calibrate to)
+%                                      (number of 2D distributions to calibrate to)
 %                                      with the experimental/data variable
 %                                      names.
 %  mySimTimepoints1,mySimTimepoints2: Two paired cell arrays of length N 
-%                                      (number of correlations to calibrate to)
+%                                      (number of 2D distributions to calibrate to)
 %                                      with the simulation timepoints.
 %  myInterventions1,myInterventions2: Two paired cell arrays of length N 
-%                                      (number of correlations to calibrate to)
+%                                      (number of 2D distributions to calibrate to)
 %                                      with the interventions.
+%  myExpDataIDs1,myExpDataIDs2:       Optional: Two paired cell arrays of length N 
+%                                      (number of 2D distributions to calibrate to)
+%                                      with the ExpDataIDs.
 %
 %
 % RETURNS
 %  convertExpDataToCorTable
 %
 
+
+Length_2D_calib = size(myExpVars1,2);
+% myExpDataIDs1 and myExpDataIDs2 are optional
+% If they do not exist, we default them to a value
+if ~ismember('myExpDataIDs1',who)
+    myExpDataIDs1 = cell(1,Length_2D_calib);
+end
+if ~ismember('myExpDataIDs2',who)
+    myExpDataIDs2 = cell(1,Length_2D_calib);
+end
+
+
 continueFlag = true;
-if nargin > 7
-    continueFlag = false;
-    warning(['Too many input arguments for ',mfilename,'. Should provide: myVPop (or mapelOptions),myExpVars1,myExpVars2,mySimTimepoints1,mySimTimepoints2,myInterventions1,myInterventions2.'])
+
+if nargin > 9
+    warning(['Too many input arguments for ',mfilename,'. Should provide: myVPop (or mapelOptions),myExpVars1,myExpVars2,mySimTimepoints1,mySimTimepoints2,myInterventions1,myInterventions2 with myExpDataIDs1 and myExpDataIDs2 optional.'])
     continueFlag = false;
 elseif nargin < 7
-    warning(['Insufficient input arguments for ',mfilename,'. Should provide: myVPop (or mapelOptions),myExpVars1,myExpVars2,mySimTimepoints1,mySimTimepoints2,myInterventions1,myInterventions2.'])
+    warning(['Insufficient input arguments for ',mfilename,'. Should provide: myVPop (or mapelOptions),myExpVars1,myExpVars2,mySimTimepoints1,mySimTimepoints2,myInterventions1,myInterventions2 with myExpDataIDs1 and myExpDataIDs2 optional.'])
     continueFlag = false;
 else
     continueFlag = true;
 end
 
+
 if continueFlag
-    if sum(ismember({'VPop','VPopRECIST','mapelOptions','mapelOptionsRECIST'},class(myVPop))) < 1
-        warning(['Wrong input arguments for ',mfilename,'. Should provide a VPop or mapelOptions object (or RECIST version).'])
+    if sum(ismember({'VPop','VPopRECIST','VPopRECISTnoBin','mapelOptions','mapelOptionsRECIST','mapelOptionsRECISTnoBin'},class(myVPop))) < 1
+        warning(['Wrong input arguments for ',mfilename,'. Should provide a RECIST type myVPop (or mapelOptions).'])
         continueFlag = false;
     end
 end
         
 if continueFlag
     if sum(ismember({'table'},class(myVPop.expData))) < 1
-        warning(['Wrong input arguments for ',mfilename,'. Should provide a VPop or mapelOptions object (or RECIST version) with a populated expData property.'])
+        warning(['Wrong input arguments for ',mfilename,'. Should provide: myVPop (or mapelOptions) with a populated expData property.'])
         continueFlag = false;
     end
 end
@@ -59,6 +75,9 @@ if continueFlag
         mySimTimepoints2Cur = mySimTimepoints2(rowCounter);
         myInterventions1Cur = myInterventions1{rowCounter};
         myInterventions2Cur = myInterventions2{rowCounter};
+        myExpDataIDs1Cur = myExpDataIDs1{rowCounter};
+        myExpDataIDs2Cur = myExpDataIDs2{rowCounter};
+        
         if rowCounter == 1
             % The new headers will be a little different since we are
             % 2 measures on each row
@@ -79,8 +98,25 @@ if continueFlag
             myOutputTable = cell2table(cell(0,length(tableVariableNames)));
             myOutputTable.Properties.VariableNames = tableVariableNames;
         end
-        sourceRow1 = find(ismember(myVPop.expData.('expVarID'),myExpVars1Cur) & ismember(myVPop.expData.('time'),mySimTimepoints1Cur) & ismember(myVPop.expData.('interventionID'),myInterventions1Cur));
-        sourceRow2 = find(ismember(myVPop.expData.('expVarID'),myExpVars2Cur) & ismember(myVPop.expData.('time'),mySimTimepoints2Cur) & ismember(myVPop.expData.('interventionID'),myInterventions2Cur));
+        
+        if isempty(myExpDataIDs1{1})
+            sourceRow1 = find(ismember(myVPop.expData.('expVarID'),myExpVars1Cur) ...
+                            & ismember(myVPop.expData.('time'),mySimTimepoints1Cur) ...
+                            & ismember(myVPop.expData.('interventionID'),myInterventions1Cur));                    
+            sourceRow2 = find(ismember(myVPop.expData.('expVarID'),myExpVars2Cur) ... 
+                            & ismember(myVPop.expData.('time'),mySimTimepoints2Cur) ...
+                            & ismember(myVPop.expData.('interventionID'),myInterventions2Cur));
+        else            
+            sourceRow1 = find(ismember(myVPop.expData.('expVarID'),myExpVars1Cur) ...
+                            & ismember(myVPop.expData.('time'),mySimTimepoints1Cur) ...
+                            & ismember(myVPop.expData.('interventionID'),myInterventions1Cur) ...
+                            & ismember(myVPop.expData.('expDataID'),myExpDataIDs1Cur));                    
+            sourceRow2 = find(ismember(myVPop.expData.('expVarID'),myExpVars2Cur) ... 
+                            & ismember(myVPop.expData.('time'),mySimTimepoints2Cur) ...
+                            & ismember(myVPop.expData.('interventionID'),myInterventions2Cur) ...
+                            & ismember(myVPop.expData.('expDataID'),myExpDataIDs2Cur));
+        end
+        
         curData = myVPop.expData{[sourceRow1,sourceRow2],nOldDataHeaderCols+1:end};
         curData = curData(:,find(min(~isnan(curData),[],1)));
         %[~,idx] = sort(curData(1,:),'ascend');

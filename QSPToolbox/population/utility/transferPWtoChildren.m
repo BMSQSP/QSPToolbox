@@ -42,6 +42,7 @@ for index = 1 : nEnd
     % The parent index should not be > 1.
 end
 uniqueIndices = unique(parentIndices);
+uniqueIndices = uniqueIndices(~isnan(uniqueIndices));
 newPWs = zeros(1,nEnd);
 oldPWsMod = myVPop.pws(1:(nPWs-nEnd));
 

@@ -87,7 +87,7 @@ if continueFlag
 	myAxisIDs = getAxisDefIDs(myWorksheet);
 	nAxis = length(myAxisIDs);
 	for responseTypeCounter = 1: length(myResponseTypeIDs)
-		curTableResponseTypeElementIDs = (getResponseTypeElementIDs(myWorksheet,myResponseTypeIDs{responseTypeCounter}))';	
+        curTableResponseTypeElementIDs = (getResponseTypeElementIDs(myWorksheet,myResponseTypeIDs{responseTypeCounter}))';	
 		nResponseTypeElementIDs = length(curTableResponseTypeElementIDs);
 		curTableResponseTypeIDs = cell(nResponseTypeElementIDs+1,1);		
 		curTableResponseTypeElementTypes = cell(nResponseTypeElementIDs+1,1);
@@ -106,7 +106,7 @@ if continueFlag
 			curTableWeights(responseTypeElementCounter) = myWorksheet.responseTypes{responseTypeCounter}.elements{responseTypeElementCounter}.weight;
 		end
 		% Append an element for the sum.
-		curTableResponseTypeElementIDs{nResponseTypeElementIDs+1} = 'vpValues';
+		curTableResponseTypeElementIDs{nResponseTypeElementIDs+1,1} = 'vpValues';
 		curTableResponseTypeElementTypes{nResponseTypeElementIDs+1} = '';
 		curTableResponseTypeIDs{nResponseTypeElementIDs+1} = myResponseTypeIDs{responseTypeCounter};
 		curTableInterventionIDs{nResponseTypeElementIDs+1} = '';		

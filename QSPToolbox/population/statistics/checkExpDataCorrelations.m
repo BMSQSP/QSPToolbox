@@ -42,6 +42,8 @@ elementID1 = {};
 elementID2 = {};
 expVarID1 = {};
 expVarID2 = {};
+expDataID1 = {};
+expDataID2 = {};
 data1 = {};
 data2 = {};
 corCoeff = [];
@@ -74,7 +76,9 @@ if continueFlag
     elementID1 = cell(nRows*(nRows-1),1);
     elementID2 = cell(nRows*(nRows-1),1);
     expVarID1 = cell(nRows*(nRows-1),1);
-    expVarID2 = cell(nRows*(nRows-1),1);    
+    expVarID2 = cell(nRows*(nRows-1),1); 
+    expDataID1 = cell(nRows*(nRows-1),1);
+    expDataID2 = cell(nRows*(nRows-1),1);
     data1 = cell(nRows*(nRows-1),1);
     data2 = cell(nRows*(nRows-1),1);
     corCoeff = nan(nRows*(nRows-1),1);
@@ -99,7 +103,9 @@ if continueFlag
 					elementID1{outputRowCounter} = expDataTable{rowCounter1,'elementID'};
 					elementID2{outputRowCounter} = expDataTable{rowCounter2,'elementID'};
 					expVarID1{outputRowCounter} = expDataTable{rowCounter1,'expVarID'};
-					expVarID2{outputRowCounter} = expDataTable{rowCounter2,'expVarID'};                    
+					expVarID2{outputRowCounter} = expDataTable{rowCounter2,'expVarID'};   
+                    expDataID1{outputRowCounter} = expDataTable{rowCounter1,'expDataID'};
+                    expDataID2{outputRowCounter} = expDataTable{rowCounter2,'expDataID'};
 					corCoeff(outputRowCounter) = R(1,2);
 					pVal(outputRowCounter) = P(1,2);
 					data1{outputRowCounter} = row1Data(keepCols)';
@@ -115,8 +121,8 @@ if continueFlag
         lastIndex = find(sortP<=0.05);
         if length(lastIndex) > 0
             sortIndices = sortIndices(1:length(lastIndex));
-            myCorrelations = table(pVal(sortIndices),corCoeff(sortIndices),expN(sortIndices),rowNumber1(sortIndices),rowNumber2(sortIndices),time1(sortIndices),interventionID1(sortIndices),elementID1(sortIndices),expVarID1(sortIndices),time2(sortIndices),interventionID2(sortIndices),elementID2(sortIndices),expVarID2(sortIndices),data1(sortIndices),data2(sortIndices));
-            myCorrelations.Properties.VariableNames = {'pVal','corCoeff','expN','rowNumber1','rowNumber2','time1','interventionID1','elementID1','expVarID1','time2','interventionID2','elementID2','expVarID2','data1','data2'};
+            myCorrelations = table(pVal(sortIndices),corCoeff(sortIndices),expN(sortIndices),rowNumber1(sortIndices),rowNumber2(sortIndices),time1(sortIndices),interventionID1(sortIndices),elementID1(sortIndices),expVarID1(sortIndices),expDataID1(sortIndices),time2(sortIndices),interventionID2(sortIndices),elementID2(sortIndices),expVarID2(sortIndices),expDataID2(sortIndices),data1(sortIndices),data2(sortIndices));
+            myCorrelations.Properties.VariableNames = {'pVal','corCoeff','expN','rowNumber1','rowNumber2','time1','interventionID1','elementID1','expVarID1','expDataID1','time2','interventionID2','elementID2','expVarID2','expDataID2','data1','data2'};
             %myAutoRows = (myCorrelations{:,'elementID1'}==myCorrelations{:,'elementID2'});
             myAutoRows = cellfun(@isequal, myCorrelations{:,'elementID1'}, myCorrelations{:,'elementID2'});
             myCorrelationsAuto = myCorrelations(myAutoRows,:);
@@ -137,8 +143,8 @@ if continueFlag
             data2 = {};
             corCoeff = [];
             pVal = [];
-            myCorrelations = table(pVal,corCoeff,expN,rowNumber1,rowNumber2,time1,interventionID1,elementID1,expVarID1,time2,interventionID2,elementID2,expVarID2,data1,data2);
-            myCorrelations.Properties.VariableNames = {'pVal','corCoeff','expN','rowNumber1','rowNumber2','time1','interventionID1','elementID1','expVarID1','time2','interventionID2','elementID2','expVarID2','data1','data2'};
+            myCorrelations = table(pVal,corCoeff,expN,rowNumber1,rowNumber2,time1,interventionID1,elementID1,expVarID1,expDataID1,time2,interventionID2,elementID2,expVarID2,expDataID2,data1,data2);
+            myCorrelations.Properties.VariableNames = {'pVal','corCoeff','expN','rowNumber1','rowNumber2','time1','interventionID1','elementID1','expVarID1','expDataID1','time2','interventionID2','elementID2','expVarID2','expDataID2','data1','data2'};
             myCorrelationsCross = myCorrelations;
             myCorrelationsAuto = myCorrelations;
             warning(['Unable to find substantial correlations in ',mfilename,'.  Returning an empty myCorrelations.'])
@@ -159,8 +165,8 @@ if continueFlag
         data2 = {};
         corCoeff = [];
         pVal = [];
-        myCorrelations = table(pVal,corCoeff,expN,rowNumber1,rowNumber2,time1,interventionID1,elementID1,expVarID1,time2,interventionID2,elementID2,expVarID2,data1,data2);
-        myCorrelations.Properties.VariableNames = {'pVal','corCoeff','expN','rowNumber1','rowNumber2','time1','interventionID1','elementID1','expVarID1','time2','interventionID2','elementID2','expVarID2','data1','data2'};
+        myCorrelations = table(pVal,corCoeff,expN,rowNumber1,rowNumber2,time1,interventionID1,elementID1,expVarID1,expDataID1,time2,interventionID2,elementID2,expVarID2,expDataID2,data1,data2);
+        myCorrelations.Properties.VariableNames = {'pVal','corCoeff','expN','rowNumber1','rowNumber2','time1','interventionID1','elementID1','expVarID1','expDataID1','time2','interventionID2','elementID2','expVarID2','expDataID2','data1','data2'};
         myCorrelationsCross = myCorrelations;
         myCorrelationsAuto = myCorrelations;
         warning(['Unable to find substantial correlations in ',mfilename,'.  Returning empty outputs.'])
@@ -182,8 +188,8 @@ else
     data2 = {};
     corCoeff = [];
     pVal = [];
-    myCorrelations = table(pVal,corCoeff,expN,rowNumber1,rowNumber2,time1,interventionID1,elementID1,expVarID1,time2,interventionID2,elementID2,expVarID2,data1,data2);
-    myCorrelations.Properties.VariableNames = {'pVal','corCoeff','expN','rowNumber1','rowNumber2','time1','interventionID1','elementID1','expVarID1','time2','interventionID2','elementID2','expVarID2','data1','data2'};
+    myCorrelations = table(pVal,corCoeff,expN,rowNumber1,rowNumber2,time1,interventionID1,elementID1,expVarID1,expDataID1,time2,interventionID2,elementID2,expVarID2,expDataID2,data1,data2);
+    myCorrelations.Properties.VariableNames = {'pVal','corCoeff','expN','rowNumber1','rowNumber2','time1','interventionID1','elementID1','expVarID1','expDataID1','time2','interventionID2','elementID2','expVarID2','expDataID2','data1','data2'};
     myCorrelationsCross = myCorrelations;
     myCorrelationsAuto = myCorrelations;
 

@@ -151,6 +151,7 @@ if continueFlag
     
 else
     warning(['Unable to complete ',mfilename,'.  Exiting.'])
+    myWorksheet = [];
 end
 
 end

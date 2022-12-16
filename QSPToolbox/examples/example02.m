@@ -22,10 +22,10 @@ myWorksheet = addAxisDef(myWorksheet,'axisLabelExport',{'par_payload_secretion_r
 
 % We can also adjust tolerances as needed
 myWorksheet.simProps.relativeTolerance = 1E-6;
-% Even more strict tolerances can be used, commented out here
-% myWorksheet.simProps.absoluteTolerance = 1.0000e-20;
-% myWorksheet.simProps.relativeTolerance = 1.0000e-12;
-% myWorksheet.simProps.absoluteToleranceScaling = false;
+myWorksheet.simProps.absoluteTolerance = 1E-10;
+myWorksheet.simProps.absoluteToleranceScaling = true;
+myWorksheet.simProps.absoluteToleranceStepSize = 1E-10;
+myWorksheet.simProps.solverType = 'ode15s';
 
 % Pick a VP to vary - we only have one in the worksheet
 myVaryAxesOptions = varyAxesOptions();

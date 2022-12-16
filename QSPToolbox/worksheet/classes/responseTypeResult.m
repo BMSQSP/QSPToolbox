@@ -110,8 +110,7 @@ classdef responseTypeResult
                 error('Too few arguments, provide a worksheet to verify against and possibly self depending on how method is called syntactically.')
             end            
             
-            passCheck = true;
-            myId = obj.id;
+            passCheck = true;            
             myResponseTypeID = obj.responseTypeID;
             myVPids = obj.vpIDs;
             myRTEids = obj.rteIDs;
@@ -125,7 +124,7 @@ classdef responseTypeResult
                 warning(['Failed check: ',myResponseTypeID,' degenerate in worksheet response type IDs.'])
                 passCheck = false;
             else
-                if length(myRTEids) > 0
+                if ~isempty(myRTEids)
                     existingRTEID = getResponseTypeElementIDs(myWorksheet, myResponseTypeID);
                     if sum(ismember(existingRTEID, myRTEids)) ~= length(existingRTEID)
                         warning(['Failed check: ',myRTEids,' mismatched with worksheet response type elements ',existingRTEID,'.'])
@@ -134,7 +133,7 @@ classdef responseTypeResult
                 end
             end
             
-            if length(myVPids) > 0
+            if ~isempty(myVPids)
                 existingVPIDs = getVPIDs(myWorksheet);
                 if sum(ismember(existingVPIDs, myVPids)) ~= length(existingVPIDs)
                     warning(['Failed check: ',myVPids,' mismatched with worksheet VPs ',existingVPIDs,'.'])
@@ -142,9 +141,9 @@ classdef responseTypeResult
                 end
             end
             
-            if length(myValues) > 0
+            if ~isempty(myValues)
                 existingVPIDs = getVPIDs(myWorksheet);
-                [dummy, nValues] = size(myVPvalues);
+                [~, nValues] = size(myVPvalues);
                 if length(existingVPIDs) ~= nValues
                     warning(['Failed check: vpValues length mismatched with worksheet VPs ',existingVPIDs,'.'])
                     passCheck = false;
@@ -189,8 +188,8 @@ classdef responseTypeResult
           myResponseType = getResponseType(myWorksheet, myResponseTypeID);
           myVPids = getVPIDs(myWorksheet);
           myRTEids = getResponseTypeElementIDs(myWorksheet, myResponseTypeID);
-          [dummy, nVPs] = size(myVPids);
-          [dummy, nRTEs] = size(myRTEids);
+          [~, nVPs] = size(myVPids);
+          [~, nRTEs] = size(myRTEids);
           myValues = nan(nRTEs, nVPs);
           for rteCounter = 1 : nRTEs
             myRTE = myResponseType.elements{rteCounter, 1};

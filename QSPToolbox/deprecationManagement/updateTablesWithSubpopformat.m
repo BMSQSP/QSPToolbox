@@ -43,25 +43,77 @@ if continueFlag
     updateTables = myInputObject.subpopTable;
     [nRow, nCol] = size(updateTables);
     colnames = updateTables.Properties.VariableNames;
+    curComparator = updateTables.comparator; %% this is to check if the format spells comparators out
+    nComparator = size(curComparator,2);
+    
+    updateComparator = cell(nRow,1);
+   for rowi = 2:nRow
+       curRowcurCol = curComparator(rowi,:);
+       for coli = 1:nComparator
+            if(strcmp(' ',curRowcurCol{coli}))
+                 curRowcurCol(:,coli) = [];
+            end
+       end
+       updateComparator{rowi} = curRowcurCol;
+   end
+                        
     for colCounter = 1:length(colnames)
         if ismember(colnames{colCounter},{'time','interventionID','elementID','elementType','comparator','value'})
             curCol = updateTables.(colnames{colCounter}); 
             updateCol = cell(nRow,1);
+            ncurCol = size(curCol,2);
             if isequal(colnames{colCounter},'time') || isequal(colnames{colCounter},'value')
                 if isnumeric(curCol)
                     updateCol{1} = num2cell(curCol(1));
+                    updateFlag = true;
+                elseif iscell(curCol) & ncurCol>1
+                    updateCol{1} = curCol(1,1);
                     updateFlag = true;
                 end        
             end
             if nRow>1 
                 if isequal(colnames{colCounter},'time') || isequal(colnames{colCounter},'value')
-                    for rowi = 2:nRow
-                        updateCol{rowi} = num2cell(curCol(rowi));
+                    if nComparator==1
+                        for rowi = 2:nRow
+                            updateCol{rowi} = num2cell(curCol(rowi));
+                        end
+                    elseif nComparator>1  %% this is to make it compatible with Lu's local subpopluation format
+                            for rowi = 2:nRow
+                                curRowcurCol = curCol(rowi,:);
+                                for coli = 1:ncurCol
+                                    if(isnan(curRowcurCol{coli}) || strcmp(' ',curRowcurCol{coli}))
+                                        curRowcurCol(:,coli) = [];
+                                    end
+                                end
+                                updateCol{rowi} = curRowcurCol;
+                            end
                     end
                 else
-                    for rowi = 2:nRow
-                        updateCol(rowi) = num2cell(curCol(rowi));
-                    end                    
+                    if nComparator==1
+                        for rowi = 2:nRow
+                            updateCol(rowi) = num2cell(curCol(rowi));
+                        end     
+                    elseif nComparator>1  %% this is to make it compatible with Lu's local subpopluation format
+                        if isequal(colnames{colCounter},'interventionID')
+                            for rowi = 2:nRow
+                                curRowcurCol = curCol(rowi,:);
+                                if(length(curRowcurCol)<length(updateComparator{rowi}))
+                                    curRowcurCol = [curRowcurCol,repmat(curRowcurCol(:,end),1,length(updateComparator{rowi})-length(curRowcurCol))];
+                                end
+                                updateCol{rowi} = curRowcurCol;
+                            end                            
+                        else
+                            for rowi = 2:nRow
+                                curRowcurCol = curCol(rowi,:);
+                                for coli = 1:ncurCol
+                                    if(strcmp(' ',curRowcurCol{coli}))
+                                        curRowcurCol(:,coli) = [];
+                                    end
+                                end
+                                updateCol{rowi} = curRowcurCol;
+                            end  
+                        end
+                    end
                 end
             end
             if updateFlag == true

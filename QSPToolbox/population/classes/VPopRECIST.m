@@ -101,15 +101,16 @@ classdef VPopRECIST
 %                apply a large penalty if any of the individual pvalues.
 %                fall below the target.
 %  optimizeTimeLimit:   Time limit for optimizing the VPop in s.
-%  optimizeType:        Type of optimization algorithm to employ: "pso,"
-%                       "ga," "gapso," "simplex," or "surrogate."  Default is
-%                       "pso".
-%						 "ga" - MATLAB's GA
-%						 "pso" - MATLAB's PSO
-%						 "gapso" - MATLAB's GA, polished by MATLAB's PSO
-%						 "simplex" - MATLAB's simplex
-%						 "surrogate" - a short run of MATLAB's surrogate,
-%                                      polished by MATLAB's PSO
+%  optimizeType:     	Type of optimization algorithm to employ.  Default is
+%                    	"pso".  Options:
+%							"ga" - MATLAB's GA
+%							"pso" - MATLAB's PSO
+%							"papso" - MATLAB's PAPSO
+%							"gapso" - MATLAB's GA, polished by MATLAB's PSO
+%							"gapapso" - MATLAB's GA, polished by MATLAB's PAPSO
+%							"simplex" - MATLAB's simplex
+%							"surrogate" - a short run of MATLAB's surrogate,
+%                                     polished by MATLAB's PSO
 %  optimizePopSize:     Number of solutions to try in each optimization
 %                       generation.  Most directly impacts GA and PSO steps.  This 
 %                       is the population size to use in the optimization 
@@ -125,17 +126,22 @@ classdef VPopRECIST
 %                      simplex: number of iterations
 %                      ga,gapso: maximum number of generations
 %                      ignored for other optimizeType options.
-%   minEffN:             Minimum effective N.  A large penalty is applied
+%  minEffN:             Minimum effective N.  A large penalty is applied
 %                       if the effN drops below this N during optimization,
 %                       better ensuring solutions that weight multiple VPs.
 %                       The minEffN setting operates independently of 
 %                       useEffN, and often works better than modifying 
 %                       spreadOut.  The default is 0.
-% relSLDvar:         a variable name that will be used for RECIST classification
-% absALDVar:         a variable to indicate lesion size, used for CR cutoff
-% crCutoff:          numeric value for diameter to use for CR cutoff
-% recistSimFilter:   A structure with data on which simulated patients are
+%  relSLDvar:         a variable name that will be used for RECIST classification
+%  absALDVar:         a variable to indicate lesion size, used for CR cutoff
+%  crCutoff:          numeric value for diameter to use for CR cutoff
+%  recistSimFilter:   A structure with data on which simulated patients are
 %                    on therapy
+%  MSE:                  mean sum of residuals from linear calibration (subpopulation/dropouts weighted)
+%  LinearProblemMatrices:  the linearMatrix made from oldVPop linearCalibrationObject, actually this will be the reduced matrix for the rescaled oldVPop with only nVPmax columns. This is for the next iteration MSE minimization
+%  LinearProblemMatricesSubgroupSumWeights: the subweight directly recorded fom oldVPop linearCalibrationObject
+%  LinearProblemMatricesobservationDescriptions: the subweightDescription directly fom oldVPop linearCalibrationObject, to keep track of biomarkers during cohort expansion
+%  lambda:            the inequality constraint from linearCalibration "fmincon" or the regularization parameter used during linearCalibration "quadprogEffN" 
 
 properties
 	coeffsTable
@@ -183,6 +189,11 @@ properties
     absALDVar
     crCutoff    
     recistSimFilter    
+    MSE
+    LinearProblemMatrices
+    LinearProblemMatricesSubgroupSumWeights
+    LinearProblemMatricesobservationDescriptions
+    lambda
 end
 
 methods
@@ -338,12 +349,24 @@ methods
       end  
       
       function obj = set.optimizeType(obj,myOptimizeType)
-          if sum(ismember({'pso','ga','gapso','simplex','surrogate'},lower(myOptimizeType))) == 1
-              obj.optimizeType = lower(myOptimizeType);
+          if sum(ismember({'pso','papso','ga','gapso','gapapso','simplex','surrogate'},lower(myOptimizeType))) == 1
+              if sum(ismember({'papso','gapapso'},lower(myOptimizeType))) == 1
+				opts = optimoptions('particleswarm');
+				if ~isprop(opts,'UseAsync')
+					if isequal('papso',lower(myOptimizeType))
+						disp(['Parallel asynchronous mode not available for ',lower(myOptimizeType),' in ',mfilename,'.  Using pso.'])
+						myOptimizeType = 'pso';
+					else
+						disp(['Parallel asynchronous mode not available for ',lower(myOptimizeType),' in ',mfilename,'.  Using gapso.'])
+						myOptimizeType = 'gapso';
+					end
+				end
+              end
+			  obj.optimizeType = lower(myOptimizeType);
           else
-              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," "gapso," "simplex," or "surrogate."'])
+              error(['Property optimizeType in ',mfilename,' must be "ga," "pso," "gapso," "simplex," or "surrogate.  Parallel asynchronous options may also be available, "papso" and "gapapso."'])
           end
-      end         
+      end
       
       function obj = set.optimizePopSize(obj,myPopulationSize)
           if ((isnumeric(myPopulationSize) == true) && (myPopulationSize >= 0))
@@ -912,8 +935,8 @@ methods
            end                
 		   
            [nrows,ncols] = size(myDataSource);
-           if nrows < 1
-               warning(['No mnSDTable, binTable, distTable, distTable2D, or corTable assigned before calling getSimData in ',mfilename,'. The data to get is not known. Exiting.'])
+           if (nrows < 1) && ~brDataFlag && ~rDataFlag
+               warning(['No mnSDTable, binTable, distTable, distTable2D, corTable, brTableRECIST, or rTableRECIST assigned before calling getSimData in ',mfilename,'. The data to get is not known. Exiting.'])
                continueFlag = false;
            end
            
@@ -928,13 +951,15 @@ methods
            end
            
            if continueFlag
-               myCheckVars = myDataSource.('elementID');
-               % If the length is 0, all variables should be written.
-               if length(myWorksheet.simProps.saveElementResultIDs) > 0
-                   myMissingVars = ~ismember(myCheckVars,myWorksheet.simProps.saveElementResultIDs);
-                   myMissingVars = myCheckVars(myMissingVars);
-                   if length(myMissingVars) > 0
-                       disp(['Missing needed variables for ',mfilename,' in myWorksheet.simProps.saveElementResultIDs.  They are: ',strjoin(myMissingVars,', '),'.  Attempting to continue...'])
+               if ~isempty(myDataSource)
+                   myCheckVars = myDataSource.('elementID');
+                   % If the length is 0, all variables should be written.
+                   if length(myWorksheet.simProps.saveElementResultIDs) > 0
+                       myMissingVars = ~ismember(myCheckVars,myWorksheet.simProps.saveElementResultIDs);
+                       myMissingVars = myCheckVars(myMissingVars);
+                       if length(myMissingVars) > 0
+                           disp(['Missing needed variables for ',mfilename,' in myWorksheet.simProps.saveElementResultIDs.  They are: ',strjoin(myMissingVars,', '),'.  Attempting to continue...'])
+                       end
                    end
                end
            end
@@ -991,12 +1016,12 @@ methods
                                  & (ismember(myMnSdData{:,'elementID'},elementID)) ...
                                  & (ismember(myMnSdData{:,'elementType'},elementType) ...
                                  & (ismember(myMnSdData{:,'expDataID'},expDataID))));
-                        if ~isempty(temp)
+						if ~isempty(temp)
                             mnSDRows(rowCounter) = temp;
                         end
                     end
                     if binDataFlag
-                        temp = find((ismember(myBinTable{:,'interventionID'},interventionID)) ...
+                       temp = find((ismember(myBinTable{:,'interventionID'},interventionID)) ...
                                  & ((myBinTable{:,'time'})==expTime) ...
                                  & (ismember(myBinTable{:,'elementID'},elementID)) ...
                                  & (ismember(myBinTable{:,'elementType'},elementType)) ...
@@ -1006,7 +1031,7 @@ methods
                         end
                     end
                     if distDataFlag
-                        temp = find((ismember(myDistTable{:,'interventionID'},interventionID)) ...
+                       temp = find((ismember(myDistTable{:,'interventionID'},interventionID)) ...
                                  & ((myDistTable{:,'time'})==expTime) ...
                                  & (ismember(myDistTable{:,'elementID'},elementID)) ...
                                  & (ismember(myDistTable{:,'elementType'},elementType)) ...
@@ -1116,6 +1141,7 @@ methods
                    expTimeIndex = find(ismember(rowInfoNames,'time'));
                    expDataIDIndex = find(ismember(rowInfoNames,'expDataID'));
                    rData.Data = dataValues;
+
                    interventionIDs = getInterventionIDs(myWorksheet);
                    brRows = nan(nEntries,1);
 
@@ -1193,7 +1219,7 @@ methods
                        interventionID = rRowInfo{rowCounter,interventionIDIndex};
                        wshInterventionIndex = find(ismember(interventionIDs,interventionID));
                        expTime = rRowInfo{rowCounter,expTimeIndex};
-                       expDataID = brRowInfo{rowCounter,expDataIDIndex};
+                       expDataID = rRowInfo{rowCounter,expDataIDIndex};
                        temp = find((ismember(myRTableRECIST{:,'interventionID'},interventionID)) ... 
                                 & ((myRTableRECIST{:,'time'})==expTime) ...
                                 & ismember(myRTableRECIST{:,'expDataID'},expDataID));
@@ -1365,10 +1391,10 @@ methods
               curSimValues = nan(nRows,  size(mySimData,2));
               curSimValues(rowsTarget,:) = (mySimData(rowsSource, :));              
               for rowCounter = 1 : nRows
-                  
-				  subpopIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};			
-                  % Should account for subpops
-                  keepIndices = find(~isnan(curSimValues(rowCounter,:)));
+
+
+
+
 				  
                   subpopIndices = vpIndicesSubpop{mySubpopNo(rowCounter)};		
                   rowSimValues = curSimValues(rowCounter,:);
@@ -1381,10 +1407,16 @@ methods
 				  
                   % Also get the indices to align the exp and sim samples
                   sample1 = myTable.('expSample'){rowCounter};
-                  [sample1Ind, sample2Ind, SC] = alignSamples(sample1, curVals);
-                  myTable.('expCombinedIndices'){rowCounter} = sample1Ind;
-                  myTable.('simCombinedIndices'){rowCounter} = sample2Ind;
-                  myTable.('combinedPoints'){rowCounter} = SC;				  
+                  if length(sample1 > 0) && length(curVals > 0)
+                      [sample1Ind, sample2Ind, SC] = alignSamples(sample1, curVals);
+                      myTable.('expCombinedIndices'){rowCounter} = sample1Ind;
+                      myTable.('simCombinedIndices'){rowCounter} = sample2Ind;
+                      myTable.('combinedPoints'){rowCounter} = SC;
+                  else
+                      myTable.('expCombinedIndices'){rowCounter} = [];
+                      myTable.('simCombinedIndices'){rowCounter} = [];
+                      myTable.('combinedPoints'){rowCounter} = [];
+                  end
 
               end
               obj.distTable = myTable;												
@@ -1505,7 +1537,7 @@ methods
           %                distTable
           %                distTable2D
           %                corTable	
-		  %				   brTableRECIST		  
+		  %				   brTableRECIST	 % add 8 columns:expCRPD2,expPRPD2, ...	  
 		  %				   rTableRECIST
 		  %                subpopTable			  
           
@@ -1552,7 +1584,7 @@ methods
           rInterventionIDCol = find(ismember(mySimColNames, 'interventionID'));
           rTimeCol = find(ismember(mySimColNames, 'time'));          
 
-          if ~isempty(mnSDRowsSource)
+          if ~isempty(myMnSdData) % (mnSDRowsSource)
               mnSDRowsTarget = mnSDRowsTarget(mnSDRowsSource);
           
               mnSDRows = obj.simData.mnSDRows;
@@ -1570,21 +1602,23 @@ methods
               curSimValues(mnSDRowsTarget,:) = (mySimData(mnSDRowsSource, :));
               keepIndices = myMnSdData.('predIndices');
               for rowCounter = 1 : nMnSdRows
-                   curPWs = myPWs(keepIndices{rowCounter}) / sum(myPWs(keepIndices{rowCounter}));
-                   if obj.useEffN
-                           curN = 1/sum(curPWs.^2);
-                   else
-                          % We could use the PW cutoff here, but it seems this  
-                          % encourages the optimizer to try to push the weight onto a 
-                          % few VPs to decrease N.  Instead, let's use the number of 
+                  if length(keepIndices{rowCounter}) > 1
+                      curPWs = myPWs(keepIndices{rowCounter}) / sum(myPWs(keepIndices{rowCounter}));
+                      if obj.useEffN
+                          curN = 1/sum(curPWs.^2);
+                      else
+                          % We could use the PW cutoff here, but it seems this
+                          % encourages the optimizer to try to push the weight onto a
+                          % few VPs to decrease N.  Instead, let's use the number of
                           % VPs for the purpose of statistical comparison, especially
                           % during optimization.
                           % curN = sum(myPWs >= obj.pwCutoff);
                           curN = length(myPWs);
-                   end                          
-                   curPredN(rowCounter) = curN;   
-                   curMean(rowCounter) = wtdMean(curSimValues(rowCounter,keepIndices{rowCounter}),curPWs);
-                   curSD(rowCounter) = wtdStd(curSimValues(rowCounter,keepIndices{rowCounter}),curPWs);
+                      end
+                      curPredN(rowCounter) = curN;
+                      curMean(rowCounter) = wtdMean(curSimValues(rowCounter,keepIndices{rowCounter}),curPWs);
+                      curSD(rowCounter) = wtdStd(curSimValues(rowCounter,keepIndices{rowCounter}),curPWs);
+                  end
               end
 
               myMnSdData.('predN') = (curPredN);
@@ -1593,7 +1627,7 @@ methods
               obj.mnSDTable = myMnSdData;
           end
 		  
-          if ~isempty(binRowsSource)
+          if ~isempty(myBinTable) %Lu changed from (binRowsSource)
               binRowsTarget = binRowsTarget(binRowsSource);
           
               % 2 step assignment to speed execution
@@ -1628,7 +1662,7 @@ methods
               obj.binTable = myBinTable;
           end
 		  
-         if ~isempty(distRowsSource)
+         if ~isempty(myDistTable)
 			  [nDistRows, nDistCols] = size(myDistTable); 
 			  assignPWs = cell(nDistRows,1);
               assignN = nan(nDistRows,1);
@@ -1734,7 +1768,7 @@ methods
               obj.corTable = myCorTable;								
           end 			  
 		  
-          if ~isempty(brRowsSource)
+          if ~isempty(myBRTableRECIST)
               brRowsTarget = brRowsTarget(brRowsSource);      
               [nBRRows, nBinCols] = size(myBRTableRECIST);          
               curProbs = nan(nBRRows,4);     
@@ -1761,11 +1795,11 @@ methods
               myBRTableRECIST.('predCR') = (curProbs(:,1));
               myBRTableRECIST.('predPR') = (curProbs(:,2));
               myBRTableRECIST.('predSD') = (curProbs(:,3));
-              myBRTableRECIST.('predPD') = (curProbs(:,4));     
+              myBRTableRECIST.('predPD') = (curProbs(:,4));
               obj.brTableRECIST = myBRTableRECIST;
           end          
 
-          if ~isempty(rRowsSource)
+          if ~isempty(myRTableRECIST) %(rRowsSource)
               rRowsTarget = rRowsTarget(rRowsSource);      
               [nRRows, nBinCols] = size(myRTableRECIST);          
               curProbs = nan(nRRows,4);     
@@ -1859,6 +1893,11 @@ methods
           obj.absALDVar = [];
           obj.crCutoff = nan;            
           obj.recistSimFilter = [];
+          obj.MSE = [];
+          obj.LinearProblemMatrices = [];
+          obj.LinearProblemMatricesSubgroupSumWeights = [];
+          obj.LinearProblemMatricesobservationDescriptions = [];
+          obj.lambda = [];
       end
 
 end

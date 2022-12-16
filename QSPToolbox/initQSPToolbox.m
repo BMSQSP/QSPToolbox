@@ -16,4 +16,6 @@ QSPTDIR = rootPath(1:end-(length('initQSPToolbox.m')+1));
 % Add QSP toolbox paths
 path(path,[QSPTDIR, filesep, 'external',filesep,'genpath_exclude']);
 myPaths = genpath_exclude(QSPTDIR,{'docs','\.svn'});
-addpath(myPaths);
+if (~isdeployed)
+    addpath(myPaths);
+end

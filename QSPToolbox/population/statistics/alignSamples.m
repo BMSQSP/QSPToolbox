@@ -47,7 +47,7 @@ function [sample1Ind, sample2Ind, SC] = alignSamples(sample1, sample2)
         t = 1:numel(sample1Ind);
         sample1Ind = interp1(t(~isnan(sample1Ind)),sample1Ind(~isnan(sample1Ind)),t,'previous','extrap');    
     end
-    if sum(isnan(sample2Ind)) > 0
+    if sum(isnan(sample2Ind)) > 0 && sum(~isnan(sample2Ind)) > 1 %need > 2 points for interpolating
         t = 1:numel(sample2Ind);
         sample2Ind = interp1(t(~isnan(sample2Ind)),sample2Ind(~isnan(sample2Ind)),t,'previous','extrap');    
     end   

@@ -1,4 +1,4 @@
-function [myBRTableRECIST, myRTableRECIST] = createResponseTablesRECIST(myWorksheet,myExpDataIDs,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar,timeVar,startTime,myInterventionIDs, prefixStopPairs)
+function [myCBRTableRECIST, myBRTableRECIST, myRTableRECIST] = createResponseTablesRECIST(myWorksheet,myExpDataIDs,PatientIDVar,TRTVar,CBRSCOREVar,BRSCOREVar,RSCOREVar,timeVar,startTime,myInterventionIDs, prefixStopPairs)
 % This function takes experimental data embedded in a worksheet and
 % converts it to bin tables with BRSCORE and RSCORE data
 %
@@ -9,6 +9,7 @@ function [myBRTableRECIST, myRTableRECIST] = createResponseTablesRECIST(myWorksh
 %  PatientIDVar:      ID for the variable with the patient IDs
 %  TRTVar:            ID for the binary variable indicating whether 
 %                      a patient is on treatment
+%  CBRSCOREVar:        ID for the confirmed best overall response to date variable.
 %  BRSCOREVar:        ID for the best overall response to date variable.
 %  RSCOREVar:         ID for the current response variable.
 %  RSCOREVar:         variable with current response.
@@ -26,6 +27,7 @@ function [myBRTableRECIST, myRTableRECIST] = createResponseTablesRECIST(myWorksh
 %                      generally matches a trial, i.e. CAXXXYYYY.
 %  
 % RETURNS
+%  myCBRTableRECIST   Will be empty if there is no CBRSCORE information in input data file
 %  myBRTableRECIST
 %  myRTableRECIST
 %
@@ -33,12 +35,12 @@ function [myBRTableRECIST, myRTableRECIST] = createResponseTablesRECIST(myWorksh
 % TODO: might want to add more proofing for prefixStopPairs
 
 continueFlag = false;
-if nargin > 10
+if nargin > 11
     warning(['Too many input arguments to ',mfilename, '. Arguments should be: myWorksheet,myExpDataIDs,PatientIDVar,TRTVar,BRSCOREVar,RSCOREVar,timeVar,startTime,myInterventionIDs, optionally prefixStopPairs.'])
     continueFlag = false;
-elseif nargin > 9
+elseif nargin > 10
     continueFlag = true;
-elseif nargin > 8
+elseif nargin > 9
     prefixStopPairs = cell(1,0);
     continueFlag = true; 
 else
@@ -119,6 +121,7 @@ myBRTableRECIST = cell2table(cell(0,length(brTableVariableNames)));
 myBRTableRECIST.Properties.VariableNames = brTableVariableNames;
 myRTableRECIST = cell2table(cell(0,length(rTableVariableNames)));
 myRTableRECIST.Properties.VariableNames = rTableVariableNames;
+myCBRTableRECIST = myBRTableRECIST;
 
 if continueFlag
 
@@ -129,18 +132,24 @@ if continueFlag
         
         curIndex = find(ismember(allExpDataIDs,myExpDataID));
         curData = myWorksheet.expData{curIndex}.data;
+        
         % First remove off treatment rows
         curData = curData(find(curData{:,TRTVar}==1),:);
         % Need to make all table vars into string for this to work
         new_variable = arrayfun(@(value) cast(value{1}, 'char'), curData.(BRSCOREVar), 'uniform', 0);
         curData.(BRSCOREVar) = new_variable;
         new_variable = arrayfun(@(value) cast(value{1}, 'char'), curData.(RSCOREVar), 'uniform', 0);
-        curData.(RSCOREVar) = new_variable;  
-        % We are just looking for BR, so this filter makes sense
-        curData = curData(find(ismember(curData{:,BRSCOREVar},{'PD','SD','PR','CR','PD2'})),:);
-        
-        
-        
+        curData.(RSCOREVar) = new_variable; 
+        if ismember(CBRSCOREVar,curData.Properties.VariableNames)
+            new_variable = arrayfun(@(value) cast(value{1}, 'char'), curData.(CBRSCOREVar), 'uniform', 0);
+            curData.(CBRSCOREVar) = new_variable;
+            % We use CBR to filter
+            curData = curData(find(ismember(curData{:,CBRSCOREVar},{'PD','SD','PR','CR','PD2'})),:); 
+        else
+            % We are just looking for BR, so this filter makes sense
+            curData = curData(find(ismember(curData{:,BRSCOREVar},{'PD','SD','PR','CR','PD2'})),:); 
+        end
+                
         % Now also filter once a patient hits CR, PD
         curPatientIDs = unique(curData{:,PatientIDVar},'stable');
         nPatients = length(curPatientIDs);
@@ -151,9 +160,13 @@ if continueFlag
             %lastRows = find(ismember(curData{curRows,BRSCOREVar},{'PD','CR'}) | ismember(curData{curRows,RSCOREVar},{'PD','CR'}));
             % First filter out PD2 and subsequent time points
 			% We will exclude all data with PD2 for now
-			lastRows = find(ismember(curData{curRows,BRSCOREVar},{'PD2'}) | ismember(curData{curRows,RSCOREVar},{'PD2'}));
+            if ismember(CBRSCOREVar,curData.Properties.VariableNames)
+                lastRows = find(ismember(curData{curRows,CBRSCOREVar},{'PD2'}) | ismember(curData{curRows,BRSCOREVar},{'PD2'}) | ismember(curData{curRows,RSCOREVar},{'PD2'}));
+            else
+                lastRows = find(ismember(curData{curRows,BRSCOREVar},{'PD2'}) | ismember(curData{curRows,RSCOREVar},{'PD2'}));
+            end
 			if ~isempty(lastRows)
-                if lastRows == 1
+                if ismember(1,lastRows) % corrected from lastRows == 1  % look for PD2 patients (at least PD2 at first lesion scan)
                     PD2onlyRows = [PD2onlyRows;curRows(1:lastRows)];
                     lastRows = lastRows(1)-1;
                 else
@@ -178,7 +191,11 @@ if continueFlag
         new_variable = arrayfun(@(value) cast(value{1}, 'char'), selectData.(BRSCOREVar), 'uniform', 0);
         selectData.(BRSCOREVar) = new_variable;  
         new_variable = arrayfun(@(value) cast(value{1}, 'char'), selectData.(RSCOREVar), 'uniform', 0);
-        selectData.(RSCOREVar) = new_variable;          
+        selectData.(RSCOREVar) = new_variable;   
+        if ismember(CBRSCOREVar,selectData.Properties.VariableNames)
+            new_variable = arrayfun(@(value) cast(value{1}, 'char'), selectData.(CBRSCOREVar), 'uniform', 0);
+            selectData.(CBRSCOREVar) = new_variable;   
+        end
 
         % We want a full matrix with nTimePoint x nVP with the BRSCORE.
         % We also want to remove times that are missing a RSCORE measure
@@ -235,7 +252,7 @@ if continueFlag
 		% information to guide calibration.
         
         % Now we want to count...
-        for timeCounter = 1 : length(allTimes);
+        for timeCounter = 1 : length(allTimes)
             curData = fullCell(timeCounter,:);
             nCR = sum(ismember(curData,'CR'));
             nPR = sum(ismember(curData,'PR'));
@@ -248,6 +265,77 @@ if continueFlag
             curRow = cell2table(curRow);
             curRow.Properties.VariableNames = myBRTableRECIST.Properties.VariableNames; 
             myBRTableRECIST = [myBRTableRECIST; curRow];    
+        end
+        
+        % %% CBRTableRECIST
+        % We want a full matrix with nTimePoint x nVP with the BRSCORE.
+        % We also want to remove times that are missing a RSCORE measure
+        % Sometimes missing values are entered as blanks
+        if ismember(CBRSCOREVar,selectData.Properties.VariableNames)
+            allTimes = unique(selectData{:,timeVar});
+            allTimes = sort(allTimes,'ascend');
+
+            % This may be redundant.  That is, we don't expect a response
+            % unless we are beyond startTime anyway.
+            allTimes = allTimes(find(allTimes>startTime));
+            fullCell = cell(length(allTimes),nPatients);
+            cumPD2 = zeros(length(allTimes),1);
+            for patientCounter = 1 :nPatients
+                patientID = curPatientIDs{patientCounter};
+                curRows = find(ismember(selectData{:,PatientIDVar},patientID));
+                curData = selectData(curRows,:);
+                lastCBRSCORE = '.';
+                for timeCounter = 1 : length(allTimes)
+                    curTime = allTimes(timeCounter);
+                    % See if we can update lastCBRSCORE, if not we will propagate
+                    % the last value
+                    if sum(ismember(curData{:,timeVar},curTime)) > 0
+                        curRow = find((ismember(curData{:,timeVar},curTime)));
+                        lastCBRSCORE = curData{curRow,CBRSCOREVar};
+                        lastCBRSCORE = lastCBRSCORE{1};
+                    end
+                    % We need to add a check in case the trial has stopped
+                    passCheck = true;
+                    if length(prefixes) > 0
+                        for prefixCounter = 1:length(prefixes)
+                            if startsWith(patientID,prefixes{prefixCounter},'IgnoreCase',true) && (curTime > stopTimes(prefixCounter))
+                                passCheck = false;
+                            end
+                        end
+                    end
+                    if ~passCheck
+                        lastCBRSCORE = '.';
+                    end
+                    fullCell{timeCounter,patientCounter} = lastCBRSCORE;
+
+                end
+
+            end
+
+            for timeCounter = 1 : length(allTimes)
+                curTime = allTimes(timeCounter);
+                cumPD2(timeCounter) = sum(pd2Data{:,timeVar}<=curTime);
+            end
+
+            % Now we have fullCell as nTimePoints x nVP
+            % Table of best responses.  Now get the summary
+            % information to guide calibration.
+
+            % Now we want to count...
+            for timeCounter = 1 : length(allTimes)
+                curData = fullCell(timeCounter,:);
+                nCR = sum(ismember(curData,'CR'));
+                nPR = sum(ismember(curData,'PR'));
+                nSD = sum(ismember(curData,'SD'));
+                nPD = sum(ismember(curData,'PD'));
+                expN = nCR+nPR+nSD+nPD;
+                curProbs = [nCR, nPR, nSD, nPD] / expN;
+                curRow = {1, allTimes(timeCounter), 'CBRSCORE', interventionID, 'CBRSCORE','derived',myExpDataID, timeVar,PatientIDVar,TRTVar,CBRSCOREVar,RSCOREVar};
+                curRow = [curRow,{1, expN, curProbs(1), curProbs(2), curProbs(3), curProbs(4), nan, nan, nan, nan, nan,cumPD2(timeCounter),nan}];
+                curRow = cell2table(curRow);
+                curRow.Properties.VariableNames = myCBRTableRECIST.Properties.VariableNames; 
+                myCBRTableRECIST = [myCBRTableRECIST; curRow];    
+            end      
         end
         
         % Repeat for the RSCORE
@@ -309,7 +397,7 @@ if continueFlag
             end
         end
         % Now we want to count...
-        for timeCounter = 1 : length(allTimes);
+        for timeCounter = 1 : length(allTimes)
             curData = fullCell(timeCounter,:);
             nCR = sum(ismember(curData,'CR'));
             nPR = sum(ismember(curData,'PR'));
@@ -322,8 +410,8 @@ if continueFlag
             curRow = cell2table(curRow);
             curRow.Properties.VariableNames = myRTableRECIST.Properties.VariableNames; 
             myRTableRECIST = [myRTableRECIST; curRow];    
-        end        
-        
+        end   
+          
     end
         
 end

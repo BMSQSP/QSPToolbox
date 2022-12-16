@@ -170,6 +170,9 @@ if continueFlag
                     if length(find(ismember(variantTypes,variantType))) == 1
                         curIndices = find(ismember(variantTypes,variantType));
                         arrangedCurrentVariants{curIndices} = variantName;
+                        if length(find(ismember(variantName,variantNames))) < 1
+                            disp(['Unable to find VARIANTNAME ',variantName,' from intervention file in model.'])
+                        end
                     else
                         currentPass = false;
                     end

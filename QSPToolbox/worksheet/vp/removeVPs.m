@@ -56,6 +56,9 @@ if ~isempty(curIndices)
         myVPop_new_pws=myVPop.pws/sum(myVPop.pws);
         myVPop.pws = myVPop_new_pws;
         
+        % update VPIDs and VPindices in subpopulations
+        myVPop.subpopTable = updateSubpopTableVPs(myVPop.subpopTable, myWorksheet);
+        
         % create new RECIST SimFilter (has to come before getSimData)
         myVPop.recistSimFilter = createRECISTSimFilter(myWorksheet, myVPop);
         

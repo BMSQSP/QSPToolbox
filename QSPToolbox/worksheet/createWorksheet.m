@@ -47,13 +47,13 @@ myWorksheet.responseTypes = cell(0,1);
 % simProps will include specifications for the simulation run 
 myWorksheet.simProps = struct();
 myWorksheet.simProps.sampleTimes = [0:0.25:100]';
-myWorksheet.simProps.absoluteTolerance = 1e-8;
-myWorksheet.simProps.absoluteToleranceStepSize = [];%myWorksheet.simProps.absoluteTolerance * myWorksheet.simProps.simTime * 0.1;
-myWorksheet.simProps.relativeTolerance = 1e-3;
+myWorksheet.simProps.absoluteTolerance = 1e-10;
+myWorksheet.simProps.absoluteToleranceStepSize = 1.0E-8;
+myWorksheet.simProps.relativeTolerance = 1e-6;
 myWorksheet.simProps.absoluteToleranceScaling = true;
 myWorksheet.simProps.maximumWallClock = 5*60;
 myWorksheet.simProps.maxStep = [];
-myWorksheet.simProps.solverType = 'sundials';
+myWorksheet.simProps.solverType = 'ode15s';
 myWorksheet.simProps.saveElementResultIDs = {};
 
 % We will initialize results to an empty cell

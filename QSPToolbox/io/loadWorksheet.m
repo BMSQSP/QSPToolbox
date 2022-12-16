@@ -1,33 +1,38 @@
-function myWorksheet = loadWorksheet(myFileName, myPath, myFormat)
+function myWorksheet = loadWorksheet(myFileName, myPath, myFormat, opts)
 % Load a worksheet to file.
 %
-% ARGUMENTS
-% fileName:    a filename, suffix will be appended based on format
-% path:        (optional) save file path
-% format:      (optional)save file format, currently only support 'mat'
+% ARGUMENTS 
+%   fileName:    (optional) a filename, suffix will be appended
+%   based on format 
+%   path:        (optional) save file path 
+%   format:      (optional) save file format, currently only support 'mat' 
+%   fullPath:    (optional, keyword) full path to the worksheet file, including file
+%   extension.
 %
 % RETURNS
 % myWorksheet
 %
 
+arguments
+    myFileName (1,:) char='';
+    myPath (1,:) char='';
+    myFormat (1,:) char='mat';
+    opts.fullPath (1,:) {mustBeFileOrEmpty}='';
+end
+
 % Perform initial checks on the provided arguments
 flagContinue = true;
-if nargin > 3
-    warning(['Too many arguments provided to ',mfilename,', require: fileName, and optionally path, format.'])
-    flagContinue = false;
-elseif nargin > 2
-    flagContinue = true;
-elseif nargin > 1
-    myFormat = 'mat';
-    flagContinue = true;
-elseif nargin > 0
-    myPath = '';
-    flagContinue = true;  
-    myFormat = 'mat';
-else
-    warning(['Insufficient arguments provided to ',mfilename,', require: fileName, and optionally path, format.'])
+if isempty(myFileName) && isempty(opts.fullPath)
+    warning("File not specified. Either the first positional argument " + ...
+            "is specified with" + ...
+            "the name of the worksheet file (without extension) or " + ...
+            "the optional keyword argument " + ...
+            "fullPath " + ...
+            "must be specified " + ...
+            "with the full path to the worksheet file (inclding extension).");
     flagContinue = false;
 end
+
 myWorksheet = createWorksheet();
 
 if flagContinue
@@ -42,7 +47,11 @@ end
 
 if flagContinue
     if strcmp('mat', myFormat)
-        fullFileName = [myPath,myFileName,'.',myFormat];
+        if ~isempty(myFileName)
+            fullFileName = [myPath,myFileName,'.',myFormat];
+        else
+            fullFileName = opts.fullPath;
+        end
         myWorksheet = load(fullFileName, '-mat');
         % We allow for loading from the simple save or the more 
         % disk space and MATLAB IO conscious save here
@@ -106,4 +115,12 @@ if flagContinue
 else
     warning(['Unable to load in ',mfilename,'. Returning an empty worksheet.'])
 end
+end
+
+function mustBeFileOrEmpty(str)
+    if isempty(str)
+        return
+    end
+
+    mustBeFile(str)
 end

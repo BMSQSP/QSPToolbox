@@ -238,29 +238,31 @@ classdef simulateOptions
 				addCounter = addCounter + 1;
 				axisDefs(addCounter,:) = {axisCounter,axisDef.id,axisDef.elementNames{elementCounter},axisDef.elementTypes{elementCounter}};
 			end
-		  end
+          end
 		  
-		  for interventionCounter = 1: nInterventions
-			curIntervention = myWorksheet.interventions{interventionCounter};
-			variantRows = find(ismember(curIntervention.definition(:,1),{'VARIANT'}));
-			nVariantRows = length(variantRows);
-			for rowCounter = 1:length(variantRows)
-				%curVariant = getvariant(myWorksheet.model,'antibody_ADCC___ipi_free_cellbinding')
-				curVariant = getvariant(myWorksheet.model,curIntervention.definition{variantRows(rowCounter),2});
-				[nElements, ~] = size(curVariant.Content);
-				for elementCounter = 1 : nElements
-					curRow = find(ismember(axisDefs(:,4),curVariant.Content{elementCounter}(1)) & ismember(axisDefs(:,3),curVariant.Content{elementCounter}(2)));
-					if length(curRow) > 0
-						disp(['Overwriting an axis specification for element ',axisDefs{curRow,3},', a ',axisDefs{curRow,4},'.  Element is in axis ',num2str(axisDefs{curRow,1}),', named ',axisDefs{curRow,2},' and being overwritten by intervention: ',allInterventionIDs{interventionCounter},', variant ',curVariant.Name,'.  This may be the intent, just issuing a notice in case not.'])
-                        % Additional quantiative information could be
-                        % returned, for example the default value
-                        % and bounds.
-                        % myWorksheet.axisProps.axisDef{axisDefs{curRow,1}}
-                        % curVariant.Content{elementCounter}
-					end
-				end
-			end
-		end
+        for interventionCounter = 1: nInterventions
+            curIntervention = myWorksheet.interventions{interventionCounter};
+            variantRows = find(ismember(curIntervention.definition(:,1),{'VARIANT'}));
+            nVariantRows = length(variantRows);
+            if (~isdeployed)
+                for rowCounter = 1:length(variantRows)
+                    %curVariant = getvariant(myWorksheet.model,'antibody_ADCC___ipi_free_cellbinding')
+                    curVariant = getvariant(myWorksheet.model,curIntervention.definition{variantRows(rowCounter),2});
+                    [nElements, ~] = size(curVariant.Content);
+                    for elementCounter = 1 : nElements
+                        curRow = find(ismember(axisDefs(:,4),curVariant.Content{elementCounter}(1)) & ismember(axisDefs(:,3),curVariant.Content{elementCounter}(2)));
+                        if length(curRow) > 0
+                            disp(['Overwriting an axis specification for element ',axisDefs{curRow,3},', a ',axisDefs{curRow,4},'.  Element is in axis ',num2str(axisDefs{curRow,1}),', named ',axisDefs{curRow,2},' and being overwritten by intervention: ',allInterventionIDs{interventionCounter},', variant ',curVariant.Name,'.  This may be the intent, just issuing a notice in case not.'])
+                            % Additional quantiative information could be
+                            % returned, for example the default value
+                            % and bounds.
+                            % myWorksheet.axisProps.axisDef{axisDefs{curRow,1}}
+                            % curVariant.Content{elementCounter}
+                        end
+                    end
+                end
+            end
+        end
 		  
           if strcmp(obj.optimizeType,'none')
               if length(obj.optimizeAxisIDs) < 1

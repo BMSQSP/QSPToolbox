@@ -105,6 +105,10 @@ if continueFlag
     end      
     allWeights = [weightsMn;weightsSD;weightsBin;weightsDist;weightsDist2D;weightsCor;weightsBR;weightsR];
     pVals = [myVPop.gofMn(indicesMn);myVPop.gofSD(indicesSD);myVPop.gofBin(indicesBin);myVPop.gofDist(indicesDist);myVPop.gofDist2D(indicesDist2D);myVPop.gofCor(indicesCor);myVPop.gofBR(indicesBR);myVPop.gofR(indicesR)];
+        
+    pValsZeroIDX = find(pVals ==0);
+    pVals(pValsZeroIDX) = [];
+    allWeights(pValsZeroIDX) = [];
     if max(allWeights) == min(allWeights)    
         dof = 2*length(pVals);
         fisherStat = -2*sum(log(pVals));

@@ -179,7 +179,10 @@ if continueFlag
             pvalueabs = zeros(size(myParamsOrdered,2),size(myDataOrdered,2));
             pvaluew = zeros(size(myParamsOrdered,2),size(myDataOrdered,2));
             pvaluewabs= zeros(size(myParamsOrdered,2),size(myDataOrdered,2));
-            
+            PRCCMatrixregr = PRCCMatrixabs;
+            pvalueregr = pvalueabs;
+            PRCCMatrixwregr = PRCCMatrixabs;
+            pvaluewregr = pvalueabs;
 
             
             for j=1:nTimes % for all time points
@@ -222,7 +225,17 @@ if continueFlag
                     pvalueabs(k,j)= myPRCCSensitivityOptions.pvaluePRCC(nSample,dparams, ccvalue, true);
                     %pvalueabs(k,j)= myPRCCSensitivityOptions.pvaluePRCC(nSample,dparams, ccvalue, false);
                     
-                    PRCCMatrixabsw(k,j)= myPRCCSensitivityOptions.weightedCorr(abs(myParamsOrderedRes), abs(myDataOrderedRes), w, false);
+                    %PRCC matrix abs weighted
+                    % weighted linear regression + weighted correlation
+                    W = diag(w);
+                    betaParams = (W*curParamsOrderedReduced)\(w.*curParamsOrderedCol); % nParams x 1
+                    betaData = (W*curParamsOrderedReduced)\(w.*curDataOrderedCol); % nParams x 1
+                    curParamsOrderedRegw = curParamsOrderedReduced*betaParams; % nVPs x 1
+                    curDataOrderedRegw = curParamsOrderedReduced*betaData; % nVPs x 1
+                    % compute residuals
+                    myParamsOrderedResw = curParamsOrderedCol - curParamsOrderedRegw;
+                    myDataOrderedResw = curDataOrderedCol - curDataOrderedRegw;
+                    PRCCMatrixabsw(k,j)= myPRCCSensitivityOptions.weightedCorr(abs(myParamsOrderedResw), abs(myDataOrderedResw), w, false);
                     %PRCCMatrixabsw(k,j)= myPRCCSensitivityOptions.weightedCorr(abs(myParamsOrderedRes), abs(myDataOrderedRes), w, false);
                     ccvalue=   PRCCMatrixabsw(k,j);
                     pvaluewabs(k,j)= myPRCCSensitivityOptions.pvaluePRCC(nSample,dparams, ccvalue, true);
@@ -234,12 +247,32 @@ if continueFlag
                     pvalue(k,j)= myPRCCSensitivityOptions.pvaluePRCC(nSample,dparams, ccvalue, false);
 
                     %PRCC matrix w
-                    PRCCMatrixw(k,j)= myPRCCSensitivityOptions.weightedCorr(myParamsOrderedRes, myDataOrderedRes, w, false);
+                    % weighted linear regression + weighted correlation
+                    PRCCMatrixw(k,j)= myPRCCSensitivityOptions.weightedCorr(myParamsOrderedResw, myDataOrderedResw, w, false);
                     ccvalue=   PRCCMatrix(k,j);
                     pvaluew(k,j)= myPRCCSensitivityOptions.pvaluePRCC(nSample,dparams, ccvalue, false);
                     
                     
+                    % nonlinear regression-based PRCC 
+                    x = myParamsOrderedRes;
+                    y = myDataOrderedRes;
+                    modelfun = @(b,x)b(1) + b(2)*x + b(3)*x.^2; % not sure if we need to go for higher degree, so far a simple quadratic polynomial seems enough
+                    beta0 = [0 1 1];
+                    mdl = fitnlm(x,y,modelfun,beta0);                    
+                    PRCCMatrixregr(k,j)= sqrt(mdl.Rsquared.Ordinary);
+                    ccvalue= PRCCMatrixregr(k,j);
+                    pvalueregr(k,j)= myPRCCSensitivityOptions.pvaluePRCC(nSample,dparams, ccvalue, true);
                     
+                    
+                    % nonlinear regression-based weighted PRCC 
+                    x = myParamsOrderedResw;
+                    y = myDataOrderedResw;
+                    modelfun = @(b,x)b(1) + b(2)*x + b(3)*x.^2;
+                    beta0 = [0 1 1];
+                    mdl = fitnlm(x,y,modelfun,beta0,'Weights',w);                    
+                    PRCCMatrixwregr(k,j)= sqrt(mdl.Rsquared.Ordinary);
+                    ccvalue= PRCCMatrixwregr(k,j);
+                    pvaluewregr(k,j)= myPRCCSensitivityOptions.pvaluePRCC(nSample,dparams, ccvalue, true);
                 end
             end
 
@@ -251,7 +284,11 @@ if continueFlag
             myCorrCoefs{i,n}.pvaluew=pvaluew;
             myCorrCoefs{i,n}.PRCCwabs=    PRCCMatrixabsw';
             myCorrCoefs{i,n}.pvaluewabs= pvaluewabs;
-            
+
+            myCorrCoefs{i,n}.PRCCregr = PRCCMatrixregr';
+            myCorrCoefs{i,n}.pvalueregr= pvalueregr;
+            myCorrCoefs{i,n}.PRCCwregr = PRCCMatrixwregr';
+            myCorrCoefs{i,n}.pvaluewregr= pvaluewregr;
 
         end
     end

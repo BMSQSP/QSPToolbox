@@ -31,26 +31,16 @@ end
 
 
 if continueFlag
-    lmResults = regressPD2ScaleFactor(myVPop);
+    lmResults = regressPD2ScaleFactor(myVPop); % updated: use PD, SD as dependent variable, intercept=0
     % Update the values for the 
     % First find the blocks by the PD2 measures
-    testRows = find(sum(isnan(myVPop.brTableRECIST{:,{'predN','predCR','predPR','predSD','predPD'}}),2)==0);
-    % Just use the first time point for the PD2
-    testData = myVPop.brTableRECIST(:,{'interventionID'});
-    [C,IA,IC] = unique(testData,'rows','stable');    
-    predRows = intersect(testRows, IA);
-    predVals = myVPop.brTableRECIST{predRows,{'predSD','predPD'}};
+    predRows = find(sum(isnan(myVPop.brTableRECIST{:,{'predN','predCR','predPR','predSD','predPD'}}),2)==0);
     predN = myVPop.brTableRECIST{predRows,{'predN'}};
-    res = predVals*lmResults.Coefficients{:,'Estimate'}.*predN;
-    % Maybe there is a faster assignment, but scan through the
-    % the rows for now.
-    for rowCounter = 1:length(testRows)
-        curRow = testRows(rowCounter);
-        if ismember(curRow,testRows) > 0
-            sourcePred = max(find(IA<=curRow));
-            myVPop.brTableRECIST{rowCounter,'predNPD21LS'}=res(sourcePred);
-        end
-    end
+    predPD = myVPop.brTableRECIST{predRows,{'predPD'}}.*predN;
+    predSD = myVPop.brTableRECIST{predRows,{'predSD'}}.*predN;
+
+    res = predPD.*lmResults.Coefficients{1,'Estimate'} + predSD.*lmResults.Coefficients{2,'Estimate'};
+    myVPop.brTableRECIST{predRows,'predNPD21LS'}=res;
 else
     lmResults = {};
     warning(['Unable to run ',mfilename,'.'])

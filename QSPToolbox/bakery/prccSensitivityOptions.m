@@ -31,11 +31,11 @@ classdef prccSensitivityOptions
     %  cohortSize:              number of VPs per sample
     %
     %  figstoPlot:              a cell array indicating the type of PRCC to plot
-    %                           options: prcc , prccw, prccabs , prccwabs
+    %                           options: prcc , prccw, prccabs , prccwabs, prccregr, prccwregr
     %
     %  doseresponsetoPlot:      a cell array indicating in which order
     %                           dose-reseponse curves are to be plotted,
-    %                  options: prccorder, prccabsorder, prccworder, prccwabsorder
+    %                  options: prccorder, prccabsorder, prccregrorder, prccworder, prccwabsorder, prccwregrorder
     %
     %  whiskerPlot:            '1' plots PRCCs as whisker plots instead of bar plots
     %
@@ -101,7 +101,13 @@ classdef prccSensitivityOptions
             std_x_weight =  sqrt(variance_x_weight);
             std_y_weight= sqrt(variance_y_weight);
             corre_xy_weight= (n/(n-1))*((sum(w.*residual_x_weight.*residual_y_weight))/(std_x_weight*std_y_weight));
-            
+            % if there is one biomarker data, this might cause numerical issues 
+            % so we put a logic here, to force corr within (-1,1)
+            if corre_xy_weight>0
+                corre_xy_weight = min(corre_xy_weight,1);
+            elseif corre_xy_weight<0
+                corre_xy_weight=max(corre_xy_weight,-1);
+            end      
         end
         
         
@@ -195,7 +201,7 @@ classdef prccSensitivityOptions
             [PickedWeights, PickedVP]= prccSensitivityOptions.samplefromWeights(newWorksheet_input, myPRCCSensitivityOptions);
             if myPRCCSensitivityOptions.poolRestart
                 if ~isempty(gcp('nocreate'))
-                    delete(gcp);
+%                     delete(gcp); % commented this to not restart everytime
                 else
                     % First check the default number of workers, if needed
                     myPRCCSensitivityOptions = checkNWorkers(myPRCCSensitivityOptions);
@@ -252,51 +258,66 @@ classdef prccSensitivityOptions
             PRCCabsMatrix = zeros(nSample, nAxes);
             PRCCwMatrix = zeros(nSample, nAxes);
             PRCCMatrix = zeros(nSample, nAxes);
+            PRCCwregrMatrix = zeros(nSample, nAxes);
+            PRCCregrMatrix = zeros(nSample, nAxes);
             for i=1:nSample
                 PRCCwabsMatrix(i,:)=myPRCC.myPRCCSample{i}{1}.PRCCwabs;
                 PRCCabsMatrix(i,:)=myPRCC.myPRCCSample{i}{1}.PRCCabs;
                 PRCCwMatrix(i,:)=myPRCC.myPRCCSample{i}{1}.PRCCw;
                 PRCCMatrix(i,:)=myPRCC.myPRCCSample{i}{1}.PRCC;
-                
+                PRCCwregrMatrix(i,:)=myPRCC.myPRCCSample{i}{1}.PRCCwregr;
+                PRCCregrMatrix(i,:)=myPRCC.myPRCCSample{i}{1}.PRCCregr;
             end
             
             PRCCwabsMean = mean(PRCCwabsMatrix);
             PRCCabsMean = mean(PRCCabsMatrix);
             PRCCwMean = mean(PRCCwMatrix);
             PRCCMean = mean(PRCCMatrix);
+            PRCCwregrMean = mean(PRCCwregrMatrix);
+            PRCCregrMean = mean(PRCCregrMatrix);
             
             PRCCwabsMedian = median(PRCCwabsMatrix);
             PRCCabsMedian = median(PRCCabsMatrix);
             PRCCwMedian = median(PRCCwMatrix);
             PRCCMedian = median(PRCCMatrix);
+            PRCCwregrMedian = median(PRCCwregrMatrix);
+            PRCCregrMedian = median(PRCCregrMatrix);
             
             PRCCwabsPrct = prctile(PRCCwabsMatrix,[2.5 97.5]);
             PRCCabsPrct = prctile(PRCCabsMatrix,[2.5 97.5]);
             PRCCwPrct = prctile(PRCCwMatrix,[2.5 97.5]);
             PRCCPrct = prctile(PRCCMatrix,[2.5 97.5]);
-            
+            PRCCwregrPrct = prctile(PRCCwregrMatrix,[2.5 97.5]);
+            PRCCregrPrct = prctile(PRCCregrMatrix,[2.5 97.5]);
             
             
             myPRCC.myPRCCavg.PRCCMean = PRCCMean;
             myPRCC.myPRCCavg.PRCCwMean =PRCCwMean;
             myPRCC.myPRCCavg.PRCCabsMean = PRCCabsMean ;
             myPRCC.myPRCCavg.PRCCwabsMean = PRCCwabsMean ;
+            myPRCC.myPRCCavg.PRCCregrMean = PRCCregrMean ;
+            myPRCC.myPRCCavg.PRCCwregrMean = PRCCwregrMean ;
             
             myPRCC.myPRCCavg.PRCCMedian = PRCCMedian;
             myPRCC.myPRCCavg.PRCCwMedian = PRCCwMedian;
             myPRCC.myPRCCavg.PRCCabsMedian = PRCCabsMedian ;
             myPRCC.myPRCCavg.PRCCwabsMedian = PRCCwabsMedian ;
+            myPRCC.myPRCCavg.PRCCregrMedian = PRCCregrMedian ;
+            myPRCC.myPRCCavg.PRCCwregrMedian = PRCCwregrMedian ;
             
             myPRCC.myPRCCavg.cf = PRCCPrct;
             myPRCC.myPRCCavg.cfw = PRCCwPrct;
             myPRCC.myPRCCavg.cfabs = PRCCabsPrct;
             myPRCC.myPRCCavg.cfwabs = PRCCwabsPrct;
+            myPRCC.myPRCCavg.cfregr = PRCCregrPrct;
+            myPRCC.myPRCCavg.cfwregr = PRCCwregrPrct;
             
             myPRCC.myPRCCavg.PRCCMatrix = PRCCMatrix;
             myPRCC.myPRCCavg.PRCCwMatrix = PRCCwMatrix;
             myPRCC.myPRCCavg.PRCCabsMatrix = PRCCabsMatrix ;
             myPRCC.myPRCCavg.PRCCwabsMatrix = PRCCwabsMatrix ;
-            
+            myPRCC.myPRCCavg.PRCCregrMatrix = PRCCregrMatrix ;
+            myPRCC.myPRCCavg.PRCCwregrMatrix = PRCCwregrMatrix ;
             
             
             %myPRCC.myPRCCavg.Names= myPRCC.myPRCCSample{i}{1}.Names;
@@ -314,7 +335,7 @@ classdef prccSensitivityOptions
                 
                 data_attime= myData;
                 
-                for outputix=1:size(myParams, 2)
+%                 for outputix=1:size(myParams, 2) % this for-loop over outputix can be completely removed
                     final_per_axis =[];
                     std_per_axis = [];
                     cihalfa =[];
@@ -356,7 +377,7 @@ classdef prccSensitivityOptions
                     final(intervation, ix).sizebin= sizebin;
                     output= final(intervation, ix).output;
                     
-                end
+%                 end
             end
         end
         
@@ -398,13 +419,13 @@ classdef prccSensitivityOptions
             curERIdx= eval(ntoPlot);
             if ismember('prcc',figstoPlot) % section of PRCC
                 if confidenceinterval==1 && whisker==0
-                    Y = myPRCC{curERIdx}.myPRCCavg.PRCCMean;
+                    Y = myPRCC{curERIdx}.myPRCCavg.PRCCMean; %% Caution: this is actually weighted mean?
                     Name='PRCC';
                 elseif confidenceinterval==0
                     Y = myPRCC{curERIdx}.myPRCCWorksheet{1}.PRCC;
                     Name='PRCC';
                 elseif whisker==1 && confidenceinterval==1
-                    Y = myPRCC{curERIdx}.myPRCCavg.PRCCMedian;
+                    Y = myPRCC{curERIdx}.myPRCCavg.PRCCMedian; %% Caution: this is actually weighted median?
                     Name='PRCC (whisker)';
                     
                 end
@@ -421,23 +442,8 @@ classdef prccSensitivityOptions
                     plotcounter= plotcounter +1;
                     PRCCfigs(plotcounter)= figure('Name',Name);
                     axa=gca;
-                    if nCC >20
-                        if ll==1
-                            n_start=1;
-                            n_end=20;
-                            
-                        elseif ll==2
-                            n_start= 21;
-                            n_end= min( nCC ,40);
-                            
-                        elseif ll==3
-                            n_start=41;
-                            n_end= min(nCC, 60);
-                        end
-                    else
-                        n_start=1;
-                        n_end= nCC;
-                    end
+                    n_start = 1+(ll-1)*20;
+                    n_end = min(20+(ll-1)*20,nCC);
                     Yfinal= Y_sorted(n_start:n_end);
                     Xfinal= X_sorted(n_start:n_end);
                     nCCt= length(Yfinal);
@@ -504,23 +510,8 @@ classdef prccSensitivityOptions
                     Yabs_sorted = Yabs(PRCC_ABSInd);
                     Xsorted=categorical(myPRCC{curERIdx}.myPRCCWorksheet{1}.Names(PRCC_ABSInd));
                     axa=gca;
-                    if nCC >20
-                        if ll==1
-                            n_start=1;
-                            n_end=20;
-                            
-                        elseif ll==2
-                            n_start= 21;
-                            n_end= min( nCC ,40);
-                            
-                        elseif ll==3
-                            n_start=41;
-                            n_end= min(nCC, 60);
-                        end
-                    else
-                        n_start=1;
-                        n_end= nCC;
-                    end
+                    n_start = 1+(ll-1)*20;
+                    n_end = min(20+(ll-1)*20,nCC);
                     Yabs_final = Yabs_sorted(n_start:n_end);
                     Xabs_final = Xsorted(n_start:n_end);
                     %pvaluencc= myPRCC{i}{1}.pvalueabs(PRCC_ABSIndabs);
@@ -571,9 +562,93 @@ classdef prccSensitivityOptions
                     
                 end
             end
+            
+            %Type of PRCC
+            if ismember('prccregr',figstoPlot)
+                if confidenceinterval==1 && whisker==0
+                    Y = myPRCC{curERIdx}.myPRCCavg.PRCCMean;
+                    Yregr = myPRCC{curERIdx}.myPRCCavg.PRCCregrMean;
+                    Name='regr PRCC';
+                elseif confidenceinterval==0
+                    Y = myPRCC{curERIdx}.myPRCCWorksheet{1}.PRCC;
+                    Yregr = myPRCC{curERIdx}.myPRCCWorksheet{1}.PRCCregr;
+                    Name='regr PRCC';
+                elseif whisker==1 && confidenceinterval==1
+                    Name='regr PRCC (whisker)';
+                    Y = myPRCC{curERIdx}.myPRCCavg.PRCCMedian;
+                    Yregr = myPRCC{curERIdx}.myPRCCavg.PRCCregrMedian;
+                    
+                end
+                X=categorical(myPRCC{curERIdx}.myPRCCWorksheet{1}.Names);
+                isneg= find(Y<0);
+                isnegnames= X(isneg);
+                loopb=1;
+                if nCC > 20
+                    loopb= ceil(nCC/20);
+                end
+                for ll= 1:loopb
+                    plotcounter=plotcounter +1;
+                    PRCCfigs(plotcounter)= figure('Name',Name);
+                    [~, PRCC_regrInd] = sort(Yregr,'descend');
+                    Yregr_sorted = Yregr(PRCC_regrInd);
+                    Xsorted=categorical(myPRCC{curERIdx}.myPRCCWorksheet{1}.Names(PRCC_regrInd));
+                    axa=gca;
+                    n_start = 1+(ll-1)*20;
+                    n_end = min(20+(ll-1)*20,nCC);
+                    Yregr_final = Yregr_sorted(n_start:n_end);
+                    Xregr_final = Xsorted(n_start:n_end);
+                    %pvaluencc= myPRCC{i}{1}.pvalueregr(PRCC_regrIndregr);
+                    %pvaluencc=pvaluencc(1:nCC);
+                    
+                    nCCt= length(Yregr_final');
+                    if whisker == 0 || (whisker == 1 && confidenceinterval ==0)
+                        bregr=barh(Yregr_final');
+                        bregr.FaceColor = 'flat';
+                        
+                        hold on
+                        if confidenceinterval==1
+                            cf =myPRCC{curERIdx}.myPRCCavg.cfregr(:,PRCC_regrInd);
+                            cf= cf(:,n_start:n_end);
+                            errorbar(Yregr_final',1:nCCt,Yregr_final-cf(1,:),cf(2,:)-Yregr_final,'.', 'horizontal','LineWidth',1.5);
+                        end
+                        % Setting Colors
+                        blue= [0 0 1];
+                        red= [1 .0 0];
+                        index= ismember(Xregr_final,isnegnames );
+                        for icolor=1:nCCt
+                            redorblue= index(icolor);
+                            if redorblue ==1
+                                bregr.CData(icolor,:)= red;
+                            else
+                                bregr.CData(icolor,:)= blue;
+                                
+                            end
+                        end
+                        %Probably needs to be min aspects _ focus
+                        set(gca, 'Xtick', 0:0.2:1, 'YTick',1:nCCt,  'YTickLabels',Xregr_final);
+                        set(gca,'TickLabelInterpreter','none')
+                        axis([0 1 0.5 (nCCt+0.5)]);
+                        title([{myInterventions{1}, ...
+                            myElementResultIDs{1}, ...
+                            ['day ', num2str(myTimes)]}],'Interpreter','none')
+                        xlabel('PRCCregr')
+                        set(gcf,'Position',[1300 300 600 500])
+                        hold off
+                    elseif whisker==1 && confidenceinterval==1
+                        PRCCregrMatrix= myPRCC{curERIdx}.myPRCCavg.PRCCregrMatrix(:,PRCC_regrInd);
+                        fitaxis=PRCCregrMatrix(:, n_start:n_end);
+                        boxplot(fitaxis, 'orientation', 'horizontal')
+                        hold on
+                        set(gca, 'YTickLabels',Xregr_final);
+                        set(gca,'TickLabelInterpreter','none')
+                    end
+                    
+                end
+            end
+            
             if ismember('prccw',figstoPlot)
                 if confidenceinterval==1 && whisker==0
-                    Yw = myPRCC{curERIdx}.myPRCCavg.PRCCwMean;
+                    Yw = myPRCC{curERIdx}.myPRCCavg.PRCCwMean; % Lu: incorrect! weighted PRCC mean should be just myPRCCavg.PRCCMean
                     Name='Weighted PRCC';
                     
                 elseif confidenceinterval==0
@@ -596,23 +671,8 @@ classdef prccSensitivityOptions
                     loopb= ceil(nCC/20);
                 end
                 for ll= 1:loopb
-                    if nCC >20
-                        if ll==1
-                            n_start=1;
-                            n_end=20;
-                            
-                        elseif ll==2
-                            n_start= 21;
-                            n_end= min( nCC ,40);
-                            
-                        elseif ll==3
-                            n_start=41;
-                            n_end= min(nCC, 60);
-                        end
-                    else
-                        n_start=1;
-                        n_end= nCC;
-                    end
+                    n_start = 1+(ll-1)*20;
+                    n_end = min(20+(ll-1)*20,nCC);
                     Yfinalw= Y_sorted(n_start:n_end);
                     Xfinalw= X_sorted(n_start:n_end);
                     plotcounter=plotcounter +1;
@@ -649,8 +709,8 @@ classdef prccSensitivityOptions
             end
             if ismember('prccwabs',figstoPlot)
                 if confidenceinterval==1 && whisker==0
-                    Yw = myPRCC{curERIdx}.myPRCCavg.PRCCwMean;
-                    Ywabs = myPRCC{curERIdx}.myPRCCavg.PRCCwabsMean; %PRCC w values
+                    Yw = myPRCC{curERIdx}.myPRCCavg.PRCCwMean; % Lu: incorrect! weighted PRCC mean should be just myPRCCavg.PRCCMean
+                    Ywabs = myPRCC{curERIdx}.myPRCCavg.PRCCwabsMean; %PRCC w values % Lu: incorrect! weighted PRCCabs mean should be just myPRCCavg.PRCCabsMean
                     Name='Absolute Weighted PRCC';
                     
                 elseif confidenceinterval==0
@@ -672,23 +732,8 @@ classdef prccSensitivityOptions
                     loopb= ceil(nCC/20);
                 end
                 for ll= 1:loopb
-                    if nCC >20
-                        if ll==1
-                            n_start=1;
-                            n_end=20;
-                            
-                        elseif ll==2
-                            n_start= 21;
-                            n_end= min( nCC ,40);
-                            
-                        elseif ll==3
-                            n_start=41;
-                            n_end= min(nCC, 60);
-                        end
-                    else
-                        n_start=1;
-                        n_end= nCC;
-                    end
+                    n_start = 1+(ll-1)*20;
+                    n_end = min(20+(ll-1)*20,nCC);
                     plotcounter=plotcounter +1;
                     PRCCfigs(plotcounter)= figure('Name',Name); %title
                     [~, PRCC_ABSIndw] = sort(Ywabs,'descend');
@@ -730,7 +775,7 @@ classdef prccSensitivityOptions
                         title([{myInterventions{1}, ...
                             myElementResultIDs{1}, ...
                             ['day ', num2str(myTimes)]}],'Interpreter','none')
-                        xlabel('PRCCweighted')
+                        xlabel('PRCCabsweighted')
                         hold off
                         
                         
@@ -746,30 +791,113 @@ classdef prccSensitivityOptions
                     
                 end
             end
-            
+            if ismember('prccwregr',figstoPlot)
+                if confidenceinterval==1 && whisker==0
+                    Yw = myPRCC{curERIdx}.myPRCCavg.PRCCwMean; % Lu: incorrect! weighted PRCC mean should be just myPRCCavg.PRCCMean
+                    Ywregr = myPRCC{curERIdx}.myPRCCavg.PRCCwregrMean; %PRCC w values % Lu: incorrect! weighted PRCCregr mean should be just myPRCCavg.PRCCregrMean
+                    Name='regr Weighted PRCC';
+                    
+                elseif confidenceinterval==0
+                    Yw = myPRCC{curERIdx}.myPRCCWorksheet{1}.PRCCw;
+                    Ywregr = myPRCC{curERIdx}.myPRCCWorksheet{1}.PRCCwregr; %PRCC w values
+                    Name='regr Weighted PRCC';
+                elseif whisker==1 && confidenceinterval==1
+                    Name='regr Weighted PRCC (whisker)';
+                    Yw = myPRCC{curERIdx}.myPRCCavg.PRCCwMedian;
+                    Ywregr = myPRCC{curERIdx}.myPRCCavg.PRCCwregrMedian; %PRCC w values
+                    
+                end
+                % Weighted PRCC
+                X=categorical(myPRCC{curERIdx}.myPRCCWorksheet{1}.Names); %Names
+                isneg= find(Yw<0); %Record which ones are negative
+                isnegnames = X(isneg); %Of the one's that are negative save name.
+                loopb=1;
+                if nCC > 20
+                    loopb= ceil(nCC/20);
+                end
+                for ll= 1:loopb
+                    n_start = 1+(ll-1)*20;
+                    n_end = min(20+(ll-1)*20,nCC);
+                    plotcounter=plotcounter +1;
+                    PRCCfigs(plotcounter)= figure('Name',Name); %title
+                    [~, PRCC_regrIndw] = sort(Ywregr,'descend');
+                    Ywregr_sorted = Ywregr(PRCC_regrIndw);
+                    Xsorted=categorical(myPRCC{curERIdx}.myPRCCWorksheet{1}.Names(PRCC_regrIndw));% Names Ywregr sorted
+                    Ywregr_final= Ywregr_sorted(n_start:n_end); %values of PRCCwregr sorted
+                    Xwregr_final= Xsorted(n_start:n_end); %Most important one's
+                    nCCt=length(Ywregr_final);
+                    if whisker ==0 || (whisker == 1 && confidenceinterval ==0)
+                        bwregr=barh(Ywregr_final');
+                        bwregr.FaceColor = 'flat';
+                        hold on
+                        if confidenceinterval==1
+                            cf= myPRCC{curERIdx}.myPRCCavg.cfwregr(:,PRCC_regrIndw);
+                            cf = cf(:,n_start:n_end);
+                            errorbar(Ywregr_final',1:nCCt,Ywregr_final-cf(1,:),cf(2,:)-Ywregr_final,'.', 'horizontal','LineWidth',1.5);
+                            
+                        end
+                        % Setting Colors
+                        blue= [0 0 1];
+                        red= [1 .0 0];
+                        index= ismember(Xwregr_final,isnegnames );
+                        for icolor=1:nCCt
+                            redorblue= index(icolor);
+                            if redorblue ==1
+                                bwregr.CData(icolor,:)= red;
+                            else
+                                bwregr.CData(icolor,:)= blue;
+                                
+                            end
+                        end
+                        
+                        set(gca, 'Xtick', 0:0.2:1,'YTick',1:nCCt,  'YTickLabels',Xwregr_final );
+                        set(gca,'TickLabelInterpreter','none')
+                        %pwregr p value
+                        %labels=strcat('p:',num2str(pvaluewncc, '%0.3f'));
+                        %text((Yfinalw +0.05), bwregr.XData',labels,'VerticalAlignment','middle')
+                        axis([0 1 0.5 (nCCt+0.5)]);
+                        title([{myInterventions{1}, ...
+                            myElementResultIDs{1}, ...
+                            ['day ', num2str(myTimes)]}],'Interpreter','none')
+                        xlabel('PRCCregrweighted')
+                        hold off
+                        
+                        
+                    elseif whisker==1 && confidenceinterval==1
+                        PRCCwregrMatrix= myPRCC{curERIdx}.myPRCCavg.PRCCwregrMatrix(:,PRCC_regrIndw);
+                        fitaxis=PRCCwregrMatrix(:, n_start:n_end);
+                        boxplot(fitaxis, 'orientation', 'horizontal')
+                        hold on
+                        set(gca, 'YTickLabels',Xwregr_final);
+                        set(gca,'TickLabelInterpreter','none')
+                        
+                    end
+                    
+                end
+            end            
             %Dose Function
             if confidenceinterval==1
                 Y = myPRCC{curERIdx}.myPRCCavg.PRCCMean;
                 Yw = myPRCC{curERIdx}.myPRCCavg.PRCCwMean;
-                Yabs = myPRCC{curERIdx}.myPRCCavg.PRCCabsMean;
-                Ywabs = myPRCC{curERIdx}.myPRCCavg.PRCCwabsMean;
+                Yregr = myPRCC{curERIdx}.myPRCCavg.PRCCregrMean;
+                Ywregr = myPRCC{curERIdx}.myPRCCavg.PRCCwregrMean;
                 [~, PRCC_Ind] = sort(abs(Y),'descend');
                 [~, PRCC_Indw] = sort(abs(Yw),'descend');
-                [~, PRCC_Indabs] = sort(abs(Yabs),'descend');
-                [~, PRCC_Indwabs] = sort(abs(Ywabs),'descend');
+                [~, PRCC_Indregr] = sort(abs(Yregr),'descend');
+                [~, PRCC_Indwregr] = sort(abs(Ywregr),'descend');
             else
                 Y = myPRCC{curERIdx}.myPRCCWorksheet{1}.PRCC;
                 Yw = myPRCC{curERIdx}.myPRCCWorksheet{1}.PRCCw;
-                Yabs = myPRCC{curERIdx}.myPRCCWorksheet{1}.PRCCabs;
-                Ywabs = myPRCC{curERIdx}.myPRCCWorksheet{1}.PRCCwabs;
+                Yregr = myPRCC{curERIdx}.myPRCCWorksheet{1}.PRCCregr;
+                Ywregr = myPRCC{curERIdx}.myPRCCWorksheet{1}.PRCCwregr;
                 
                 [~, PRCC_Ind] = sort(abs(Y),'descend');
                 
                 [~, PRCC_Indw] = sort(abs(Yw),'descend');
                 
-                [~, PRCC_Indabs] = sort(abs(Yabs),'descend');
+                [~, PRCC_Indregr] = sort(abs(Yregr),'descend');
                 
-                [~, PRCC_Indwabs] = sort(abs(Ywabs),'descend');
+                [~, PRCC_Indwregr] = sort(abs(Ywregr),'descend');
                 
                 
             end
@@ -801,30 +929,18 @@ classdef prccSensitivityOptions
                 loop=1;
                 
             elseif nCC >20
-                dimensionsncclist= {[5,4] , [5,4] , [5,4]};
+               % dimensionsncclist= {[5,4] , [5,4] , [5,4]};
                 loop= ceil(nCC/20);
-                
+                dimensionsncclist= repmat({[5,4]},1,loop);
             end
             
             for nccl= 1:loop
                 dimensionsncc= dimensionsncclist{nccl};
                 doser= dimensionsncc(1);
                 dosec= dimensionsncc(2);
-                if nccl==1
-                    ncc_start=1;
-                    ncc_end=min(nCC, 20);
-                    net= ncc_end -ncc_start +1;
-                elseif nccl==2
-                    ncc_start=21;
-                    ncc_end= min(40, nCC);
-                    net= ncc_end -ncc_start +1;
-                    
-                elseif nccl==3
-                    ncc_start= 41;
-                    ncc_end=min(60, nCC);
-                    net= ncc_end -ncc_start +1;
-                    
-                end
+                ncc_start = 1+(nccl-1)*20;
+                ncc_end = min(20+(nccl-1)*20,nCC);
+                net= ncc_end -ncc_start +1;
                 %if ~isempty(doseresponsetoPlot)
                 nDoseResponsePlots = length(doseresponsetoPlot);
                 doseresponseFigs = gobjects(nDoseResponsePlots,1);
@@ -837,13 +953,18 @@ classdef prccSensitivityOptions
                     elseif ismember('prccabsorder', dosestoplot_i)
                         order=PRCC_Indabs(ncc_start:ncc_end);
                         FigName = 'Absolute PRCC';
+                    elseif ismember('prccregrorder', dosestoplot_i)
+                        order=PRCC_Indregr(ncc_start:ncc_end);
+                        FigName = 'regr PRCC';
                     elseif ismember('prccwabsorder', dosestoplot_i)
                         order= PRCC_Indwabs(ncc_start:ncc_end);
                         FigName = 'Absolute Weighted PRCC';
                     elseif ismember('prccworder', dosestoplot_i)
                         order= PRCC_Indw(ncc_start:ncc_end);
                         FigName = 'Weighted PRCC';
-                        
+                    elseif ismember('prccwregrorder', dosestoplot_i)
+                        order=PRCC_Indwregr(ncc_start:ncc_end);
+                        FigName = 'regr Weighted PRCC';    
                     end
                     
                     %weighted end , starting dose response.
@@ -931,33 +1052,24 @@ classdef prccSensitivityOptions
                     plotcounter= plotcounter +1;
                     Cvfigs(plotcounter)= figure('Name',Name);
                     axa=gca;
-                    if nCC >20
-                        if ll==1
-                            n_start=1;
-                            n_end=20;
-                            
-                        elseif ll==2
-                            n_start= 21;
-                            n_end= min( nCC ,40);
-                            
-                        elseif ll==3
-                            n_start=41;
-                            n_end= min(nCC, 60);
-                        end
-                    else
-                        n_start=1;
-                        n_end= nCC;
-                    end
+                    n_start = 1+(ll-1)*20;
+                    n_end = min(20+(ll-1)*20,nCC);
                     Yfinal= Y_sorted(n_start:n_end);
                     Xfinal= X_sorted(n_start:n_end);
                     nCCt= length(Yfinal);
                     b=barh(Yfinal');
-                    
                     Xfinalt= Xfinal';
+                    
+                    xplotmax = ceil(max(abs(Yfinal')));
                     hold on
-                    set(axa, 'Xtick', -1:0.5:1,'YTick',1:nCCt,  'YTickLabels',Xfinalt);
+                    if xplotmax <=1
+                        set(axa, 'Xtick', -1:0.5:1,'YTick',1:nCCt,  'YTickLabels',Xfinalt);
+                        axis([-1 1 0.5 (nCCt+0.5)]);
+                    else
+                        set(axa, 'Xtick', -xplotmax:xplotmax/2:xplotmax,'YTick',1:nCCt,  'YTickLabels',Xfinalt);
+                        axis([-xplotmax xplotmax 0.5 (nCCt+0.5)]);
+                    end
                     set(axa,'TickLabelInterpreter','none')
-                    axis([-1 1 0.5 (nCCt+0.5)]);
                     title([{myInterventions{1}, myElementResultIDs{1},['day ', num2str(myTimes)]}],'Interpreter','none')
                     %title([{myInterventions, myElementResultIDs,['day ', num2str(myTimes)]}],'Interpreter','none')
                     xlabel('Cv')
@@ -1013,6 +1125,12 @@ classdef prccSensitivityOptions
                 %PRCC  abs
                 PRCCabsMean= myPRCCnew.myPRCCavg.PRCCabsMean;
                 cfabs= myPRCCnew.myPRCCavg.cfabs;
+                %PRCC Weighted regr
+                PRCCwregrMean= myPRCCnew.myPRCCavg.PRCCwregrMean;
+                cfwregr= myPRCCnew.myPRCCavg.cfwregr;
+                %PRCC  regr
+                PRCCregrMean= myPRCCnew.myPRCCavg.PRCCregrMean;
+                cfregr= myPRCCnew.myPRCCavg.cfregr;
                 
                 %PRCC Weighted
                 PRCCwMean = myPRCCnew.myPRCCavg. PRCCwMean;
@@ -1035,15 +1153,20 @@ classdef prccSensitivityOptions
                 cfwabscombined= string(cfwabs(1,:)) + ' ' + string(cfwabs(2, :));
                 cfwabsS= cellstr(cfwabscombined');
                 
-                
-                
                 cfabscombined= string(cfabs(1,:)) + ' ' + string(cfabs(2, :));
                 cfabsS= cellstr(cfabscombined');
                 
+                cfwregrcombined= string(cfwregr(1,:)) + ' ' + string(cfwregr(2, :));
+                cfwregrS= cellstr(cfwregrcombined');
+                
+                cfregrcombined= string(cfregr(1,:)) + ' ' + string(cfregr(2, :));
+                cfregrS= cellstr(cfregrcombined');               
                 
                 
                 PRCCwabsMedian= myPRCCnew.myPRCCavg.PRCCwabsMedian;
                 PRCCabsMedian= myPRCCnew.myPRCCavg.PRCCabsMedian;
+                PRCCwregrMedian= myPRCCnew.myPRCCavg.PRCCwregrMedian;
+                PRCCregrMedian= myPRCCnew.myPRCCavg.PRCCregrMedian;
                 
                 PRCCwMedian = myPRCCnew.myPRCCavg.PRCCwMedian;
                 PRCCMedian = myPRCCnew.myPRCCavg.PRCCMedian;
@@ -1051,6 +1174,8 @@ classdef prccSensitivityOptions
                 
                 PRCCwabsMatrix= myPRCCnew.myPRCCavg.PRCCwabsMatrix;
                 PRCCabsMatrix= myPRCCnew.myPRCCavg.PRCCabsMatrix;
+                PRCCwregrMatrix= myPRCCnew.myPRCCavg.PRCCwregrMatrix;
+                PRCCregrMatrix= myPRCCnew.myPRCCavg.PRCCregrMatrix;
                 
                 PRCCwMatrix = myPRCCnew.myPRCCavg.PRCCwMatrix;
                 PRCCMatrix = myPRCCnew.myPRCCavg.PRCCMatrix;
@@ -1073,6 +1198,8 @@ classdef prccSensitivityOptions
                 
                 PRCCwabssample= {};
                 PRCCabssample= {};
+                PRCCwregrsample= {};
+                PRCCregrsample= {};
                 PRCCwsample= {};
                 PRCCsample= {};
                 axisS={};
@@ -1081,16 +1208,22 @@ classdef prccSensitivityOptions
                 PRCCwMeanSf=      { };
                 PRCCabsMeanSf=      { };
                 PRCCwabsMeanSf=      { };
+                PRCCregrMeanSf=      { };
+                PRCCwregrMeanSf=      { };
                 
                 PRCCMedianSf=      { };
                 PRCCwMedianSf=      { };
                 PRCCabsMedianSf=      { };
                 PRCCwabsMedianSf=      { };
+                PRCCregrMedianSf=      { };
+                PRCCwregrMedianSf=      { };
                 
                 for ix =1:nAxis
                     
                     PRCCwabssample= [PRCCwabssample; num2cell(PRCCwabsMatrix(:,ix))] ;
                     PRCCabssample= [PRCCabssample; num2cell(PRCCabsMatrix(:,ix))] ;
+                    PRCCwregrsample= [PRCCwregrsample; num2cell(PRCCwregrMatrix(:,ix))] ;
+                    PRCCregrsample= [PRCCregrsample; num2cell(PRCCregrMatrix(:,ix))] ;
                     PRCCwsample= [PRCCwsample; num2cell(PRCCwMatrix(:,ix))] ;
                     PRCCsample= [PRCCsample; num2cell(PRCCMatrix(:,ix))] ;
                     axis_sampletemp = [axis_sample{ix}];
@@ -1107,43 +1240,55 @@ classdef prccSensitivityOptions
                     PRCCwMeantemp  = [PRCCwMean(ix)];
                     PRCCabsMeantemp = [PRCCabsMean(ix)];
                     PRCCwabsMeantemp = [PRCCwabsMean(ix)];
-                    
+                    PRCCregrMeantemp = [PRCCregrMean(ix)];
+                    PRCCwregrMeantemp = [PRCCwregrMean(ix)];
                     
                     PRCCMediantemp = [PRCCMedian(ix)];
                     PRCCwMediantemp = [PRCCwMedian(ix)];
                     PRCCabsMediantemp = [PRCCabsMedian(ix)];
                     PRCCwabsMediantemp = [PRCCwabsMedian(ix)];
-                    
+                    PRCCregrMediantemp = [PRCCregrMedian(ix)];
+                    PRCCwregrMediantemp = [PRCCwregrMedian(ix)];
                     
                     PRCCMeanS     = repmat({PRCCMeantemp},nsample,1);
                     PRCCwMeanS= repmat({PRCCwMeantemp},nsample,1);
                     PRCCabsMeanS= repmat({PRCCabsMeantemp},nsample,1);
                     PRCCwabsMeanS= repmat({PRCCwabsMeantemp},nsample,1);
+                    PRCCregrMeanS= repmat({PRCCregrMeantemp},nsample,1);
+                    PRCCwregrMeanS= repmat({PRCCwregrMeantemp},nsample,1);
                     
                     PRCCMedianS= repmat({PRCCMediantemp},nsample,1);
                     PRCCwMedianS= repmat({PRCCwMediantemp},nsample,1);
                     PRCCabsMedianS= repmat({PRCCabsMediantemp},nsample,1);
                     PRCCwabsMedianS= repmat({PRCCwabsMediantemp},nsample,1);
+                    PRCCregrMedianS= repmat({PRCCregrMediantemp},nsample,1);
+                    PRCCwregrMedianS= repmat({PRCCwregrMediantemp},nsample,1);
                     PRCCMeanSf=  [ PRCCMeanSf ; PRCCMeanS ];
                     PRCCwMeanSf=  [ PRCCwMeanSf ; PRCCwMeanS ];
                     PRCCabsMeanSf=  [ PRCCabsMeanSf ; PRCCabsMeanS ];
                     PRCCwabsMeanSf=  [PRCCwabsMeanSf  ; PRCCwabsMeanS ];
+                    PRCCregrMeanSf=  [ PRCCregrMeanSf ; PRCCregrMeanS ];
+                    PRCCwregrMeanSf=  [PRCCwregrMeanSf  ; PRCCwregrMeanS ];
                     
                     PRCCMedianSf=  [ PRCCMedianSf ; PRCCMedianS ];
                     PRCCwMedianSf=  [ PRCCwMedianSf ; PRCCwMedianS ];
                     PRCCabsMedianSf=  [ PRCCabsMedianSf ; PRCCabsMedianS ];
                     PRCCwabsMedianSf=  [ PRCCwabsMedianSf ; PRCCwabsMedianS ];
-                    
+                    PRCCregrMedianSf=  [ PRCCregrMedianSf ; PRCCregrMedianS ];
+                    PRCCwregrMedianSf=  [ PRCCwregrMedianSf ; PRCCwregrMedianS ];
                     
                     
                 end
                 
                 
                 tablesample= table(interventionS, Outputc_sample, analyzeTimeS, axisS, samplenumberall, PRCCsample,PRCCMeanSf, PRCCMedianSf, PRCCwsample, PRCCwMeanSf, ...
-                    PRCCwMedianSf,  PRCCabssample, PRCCabsMeanSf, PRCCabsMedianSf,  PRCCwabssample, PRCCwabsMeanSf, PRCCwabsMedianSf, sizebinS);
+                    PRCCwMedianSf,  PRCCabssample, PRCCabsMeanSf, PRCCabsMedianSf,  PRCCwabssample, PRCCwabsMeanSf, PRCCwabsMedianSf, ...
+                    PRCCregrsample, PRCCregrMeanSf, PRCCregrMedianSf,  PRCCwregrsample, PRCCwregrMeanSf, PRCCwregrMedianSf, sizebinS);
                 
                 PRCCwabsMeanc= num2cell(PRCCwabsMean');
                 PRCCabsMeanc= num2cell(PRCCabsMean');
+                PRCCwregrMeanc= num2cell(PRCCwregrMean');
+                PRCCregrMeanc= num2cell(PRCCregrMean');
                 
                 PRCCwMeanc = num2cell(PRCCwMean');
                 PRCCMeanc = num2cell(PRCCMean');
@@ -1151,29 +1296,38 @@ classdef prccSensitivityOptions
                 
                 PRCCwabsMedianc= num2cell(PRCCwabsMedian');
                 PRCCabsMedianc= num2cell(PRCCabsMedian');
+                PRCCwregrMedianc= num2cell(PRCCwregrMedian');
+                PRCCregrMedianc= num2cell(PRCCregrMedian');
                 
                 PRCCwMedianc = num2cell(PRCCwMedian');
                 PRCCMedianc = num2cell(PRCCMedian');
                 
                 
                 tablePRCCs= table(interventionsc, Outputc, analyzeTimesc,  axisf, PRCCMeanc,cfS,  PRCCwMeanc, cfwS,  PRCCabsMeanc, cfabsS,  PRCCwabsMeanc, cfwabsS, ...
-                    PRCCMedianc, PRCCwMedianc,  PRCCabsMedianc, PRCCwabsMedianc, sizebinc);
+                    PRCCregrMeanc, cfregrS,  PRCCwregrMeanc, cfwregrS, ...
+                    PRCCMedianc, PRCCwMedianc,  PRCCabsMedianc, PRCCwabsMedianc, PRCCregrMedianc, PRCCwregrMedianc, sizebinc);
                 
             else
                 
                 PRCCwabs= myPRCCnew.myPRCCWorksheet{1}.PRCCwabs;
                 PRCCabs= myPRCCnew.myPRCCWorksheet{1}.PRCCabs;
+                PRCCwregr= myPRCCnew.myPRCCWorksheet{1}.PRCCwregr;
+                PRCCregr= myPRCCnew.myPRCCWorksheet{1}.PRCCregr;
                 PRCCw = myPRCCnew.myPRCCWorksheet{1}.PRCCw;
                 PRCC = myPRCCnew.myPRCCWorksheet{1}.PRCC;
+                CV = [myPRCCnew.doseresponses.cv];
                 
                 
                 PRCCwabsf= num2cell(PRCCwabs');
                 PRCCabsf= num2cell(PRCCabs');
+                PRCCwregrf= num2cell(PRCCwregr');
+                PRCCregrf= num2cell(PRCCregr');
                 PRCCwf = num2cell(PRCCw');
                 PRCCf = num2cell(PRCC');
+                CVf = num2cell(CV');
                 
                 tablePRCCs= table(interventionsc, Outputc, analyzeTimesc, ...
-                    axisf, PRCCf, PRCCwf,  PRCCabsf, PRCCwabsf, sizebinc);
+                    axisf, PRCCf, PRCCwf,  PRCCabsf, PRCCwabsf, PRCCregrf, PRCCwregrf, CVf, sizebinc);
                 
                 tablesample= {};
                 

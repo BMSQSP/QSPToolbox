@@ -17,7 +17,13 @@ if isnan(mySimulateOptions.nWorkers)
     if isnumeric(mySettings.Pool.PreferredNumWorkers)
         % First try getting the value from parallel.settings, but cap in
         % case a silly value was entered.
-        mySimulateOptions.nWorkers = min(clusterCheck.NumWorkers,mySettings.Pool.PreferredNumWorkers);
+        if isa(clusterCheck, 'parallel.cluster.Local')
+            mySimulateOptions.nWorkers = min(clusterCheck.NumWorkers, ...
+            mySettings.Pool.PreferredNumWorkers);
+        else
+            mySimulateOptions.nWorkers = min(clusterCheck.MaxNumWorkers, ...
+            mySettings.Pool.PreferredNumWorkers);
+        end        
     else
         mySimulateOptions.nWorkers = clusterCheck.NumWorkers;
     end
@@ -32,9 +38,16 @@ else
     if isnumeric(mySettings.Pool.PreferredNumWorkers)
         % First try getting the value from parallel.settings, but cap in
         % case a silly value was entered.
-        mySimulateOptions.nWorkers = min(mySimulateOptions.nWorkers,min(clusterCheck.NumWorkers,mySettings.Pool.PreferredNumWorkers));
+        if isa(clusterCheck, 'parallel.cluster.Local')
+            mySimulateOptions.nWorkers = min(mySimulateOptions.nWorkers, min(clusterCheck.NumWorkers, mySettings.Pool.PreferredNumWorkers));
+        else
+            mySimulateOptions.nWorkers = min(mySimulateOptions.nWorkers, min(clusterCheck.MaxNumWorkers, mySettings.Pool.PreferredNumWorkers));
+        end        
     else
-        mySimulateOptions.nWorkers = min(mySimulateOptions.nWorkers,clusterCheck.NumWorkers);
-    end    
-    
+        if isa(clusterCheck, 'parallel.cluster.Local')
+            mySimulateOptions.nWorkers = min(mySimulateOptions.nWorkers, clusterCheck.NumWorkers);
+        else
+            mySimulateOptions.nWorkers = min(mySimulateOptions.nWorkers, clusterCheck.MaxNumWorkers);
+        end
+    end       
 end

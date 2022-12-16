@@ -34,99 +34,80 @@ function initialPWs = getInitialPWs(myVPop,initialPWs, nAdd, nBootstrapIteration
 % with alternate assumptions for
 % simulated data weight
 testVPop=myVPop;
-if nAdd >= 1
+ nInitials=min(max(round(nAdd/20),100),round(nAdd/2));
+%  curEffN = myVPop.minEffN;
+% scanEffN=linspace(curEffN*0.9,curEffN*1.1,nInitials);
+% scanEffN = sort(unique([scanEffN,curEffN]));
+% nInitials=length(scanEffN);
+% linearCalibrationPWs = zeros(nInitials,size(initialPWs,2));
+
+ curEffN = myVPop.minEffN;
+ if (isempty(testVPop.lambda))
+     testVPop.lambda = 0; % give a very small penalty to avoid exact zero weights
+ end
+ 
+ tic;
+ testVPop = adjustLambda(testVPop,curEffN);
+% toc;
+ curLambda = testVPop.lambda;
+ if curLambda > 0
+    scanLambda=linspace(curLambda*0.5,curLambda*1.5,nInitials);
+ else
+    scanLambda=linspace(curLambda,curEffN*1.5,nInitials);   % just to get some initial guesses, use curEffN as the upper bound for lambda 
+ end
+scanLambda = sort(unique([scanLambda,curLambda]));
+nInitials=length(scanLambda);
+linearCalibrationPWs = zeros(nInitials,size(initialPWs,2));
+
+% tic;
+%% use current data group weighting. scan lambda around the effNlambda
+parfor i=1:nInitials
+%  %  testVPop=myVPop;
+%    myOptimOptions = LinearCalibrationOptions();
+%    myOptimOptions.cdfProbsToFit = 0.05:0.05:0.95;
+%    myOptimOptions.pdf2DProbsToFitN = 5;
+%    myOptimOptions.responseValTransformation='none';
+%    myOptimOptions.optimizationAlgorithm = "fmincon";				
+%    myOptimOptions.priorPrevalenceWeightAssumption = 'specified';                
+%    myOptimOptions.targetEffNConstraint = scanEffN(i);
+%    myOptimOptions.minSubWeightConstraint = 0;      
+%    myOptimOptions.method = "bestFitInitials";
+   
    myOptimOptions = LinearCalibrationOptions();
    myOptimOptions.cdfProbsToFit = 0.05:0.05:0.95;
    myOptimOptions.pdf2DProbsToFitN = 5;
-   myOptimOptions.optimizationAlgorithm = "nnls";
-   myOptimOptions.optimizationAlgorithmOptions.Accy = 0;
-   myOptimOptions.priorPrevalenceWeightAssumption = "uniform";
-   myOptimOptions.nBootstrapIterations = nBootstrapIterations;
-   myOptimOptions.fractionVPsPerBaggingIteration=.5;
-   myOptimOptions.method = "bagging";
-   simN = 4;
-   myOptimOptions.expWeightFuncHandle = @(expN, expSTD, dataGroupDescription) calculateExpWeight(expN, expSTD, dataGroupDescription, simN);
+   myOptimOptions.responseValTransformation='none';
+   myOptimOptions.optimizationAlgorithm = "quadprogEffN";				
+   myOptimOptions.priorPrevalenceWeightAssumption = 'specified';
+   myOptimOptions.method = "bestFit";
+
+%     testVPop.lambda = scanLambda(i);
+    if ~any(isnan(testVPop.pws))   
+        myOptimOptions.oldVPop = testVPop; 
+    else
+        myOptimOptions.oldVPop = [];
+    end
+   
+   myOptimOptions.expWeightFuncHandle = @(expN) sqrt(expN);
    linearCalibrationObject = LinearCalibration(testVPop,'optimOptions',myOptimOptions);
-   try
-      linearCalibrationObject = linearCalibrationObject.run('closeParallelPoolWhenFinished',false);
-      if isnumeric(linearCalibrationObject.OptimizedVPop.pws) && (min(linearCalibrationObject.OptimizedVPop.pws)>=0)
-		 testVPop = linearCalibrationObject.OptimizedVPop;
-		 myOptimOptions.priorPrevalenceWeightAssumption = "specified";
-         linearCalibrationPWs = linearCalibrationObject.OptimizedVPop.pws;
-		 initialPWs = [initialPWs;linearCalibrationPWs];
-		 nAdd = nAdd - 1;
-       else
-         linearCalibrationPWs = '';
-       end
+   linearCalibrationObject.lambda = scanLambda(i);
+   linearCalibrationObject.LinearProblemMatrices = testVPop.LinearProblemMatrices;
+  try
+       linearCalibrationObject = linearCalibrationObject.run('closeParallelPoolWhenFinished',false);
+       linearCalibrationPWs(i,:) = linearCalibrationObject.OptimizationResults.optimalPrevalenceWeightsNormalized; % linearCalibrationObject.OptimizedVPop.pws;
    catch
-       % This will sometimes fail if all of the bagged
-       % trials don't run.
-       linearCalibrationPWs = '';
-   end	   
+       linearCalibrationPWs(i,:) = nan*ones(1,size(initialPWs,2)); % assign NaN weights to failed ones
+   end
 end
-if nAdd >= 1
-   simN = 10;
-   myOptimOptions.expWeightFuncHandle = @(expN, expSTD, dataGroupDescription) calculateExpWeight(expN, expSTD, dataGroupDescription, simN);
-   linearCalibrationObject = LinearCalibration(testVPop,'optimOptions',myOptimOptions);
-   try
-      linearCalibrationObject = linearCalibrationObject.run('closeParallelPoolWhenFinished',false);
-      if isnumeric(linearCalibrationObject.OptimizedVPop.pws) && (min(linearCalibrationObject.OptimizedVPop.pws)>=0)
-		 testVPop = linearCalibrationObject.OptimizedVPop;
-		 myOptimOptions.priorPrevalenceWeightAssumption = "specified";
-         linearCalibrationPWs = linearCalibrationObject.OptimizedVPop.pws;
-		 initialPWs = [initialPWs;linearCalibrationPWs];
-		 nAdd = nAdd - 1;
-       else
-         linearCalibrationPWs = '';
-       end
-   catch
-       % This will sometimes fail if all of the bagged
-       % trials don't run.
-       linearCalibrationPWs = '';
-   end	   
-end
-if nAdd >= 1
-   simN = 100;
-   myOptimOptions.expWeightFuncHandle = @(expN, expSTD, dataGroupDescription) calculateExpWeight(expN, expSTD, dataGroupDescription, simN);
-   linearCalibrationObject = LinearCalibration(testVPop,'optimOptions',myOptimOptions);
-   try
-      linearCalibrationObject = linearCalibrationObject.run('closeParallelPoolWhenFinished',false);
-      if isnumeric(linearCalibrationObject.OptimizedVPop.pws) && (min(linearCalibrationObject.OptimizedVPop.pws)>=0)
-		 testVPop = linearCalibrationObject.OptimizedVPop;
-		 myOptimOptions.priorPrevalenceWeightAssumption = "specified";
-         linearCalibrationPWs = linearCalibrationObject.OptimizedVPop.pws;
-		 initialPWs = [initialPWs;linearCalibrationPWs];
-		 nAdd = nAdd - 1;
-       else
-         linearCalibrationPWs = '';
-       end
-   catch
-       % This will sometimes fail if all of the bagged
-       % trials don't run.
-       linearCalibrationPWs = '';
-   end	   
-end
-if nAdd >= 1
-   simN = 1000;
-   myOptimOptions.expWeightFuncHandle = @(expN, expSTD, dataGroupDescription) calculateExpWeight(expN, expSTD, dataGroupDescription, simN);
-   linearCalibrationObject = LinearCalibration(testVPop,'optimOptions',myOptimOptions);
-   try
-      linearCalibrationObject = linearCalibrationObject.run('closeParallelPoolWhenFinished',false);
-      if isnumeric(linearCalibrationObject.OptimizedVPop.pws) && (min(linearCalibrationObject.OptimizedVPop.pws)>=0)
-		 testVPop = linearCalibrationObject.OptimizedVPop;
-		 myOptimOptions.priorPrevalenceWeightAssumption = "specified";
-         linearCalibrationPWs = linearCalibrationObject.OptimizedVPop.pws;
-		 initialPWs = [initialPWs;linearCalibrationPWs];
-		 nAdd = nAdd - 1;
-       else
-         linearCalibrationPWs = '';
-       end
-   catch
-       % This will sometimes fail if all of the bagged
-       % trials don't run.
-       linearCalibrationPWs = '';
-   end	   
-end
+toc;
+
+
+% remove NaN pws
+countNaNs = sum(isnan(linearCalibrationPWs),2);
+nanindices = countNaNs>0;
+linearCalibrationPWs(nanindices,:)=[];
+initialPWs = [initialPWs;linearCalibrationPWs];
+nAdd = nAdd-size(initialPWs,1);
 
 if nAdd > 0
 	[nTest, ~] = size(initialPWs);

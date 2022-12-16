@@ -50,7 +50,13 @@ if continueFlag
     if isempty(gcp('nocreate'))
         % First check the default number of workers, if needed
         myClusterPickOptions = checkNWorkers(myClusterPickOptions);
-        myPool = parpool(myClusterPickOptions.clusterID,myClusterPickOptions.nWorkers,'SpmdEnabled',false);
+        if ~isnan(myClusterPickOptions.nWorkers)
+            myPool = parpool(myClusterPickOptions.clusterID,...
+                myClusterPickOptions.nWorkers,'SpmdEnabled',false);
+        else
+            myPool = parpool(myClusterPickOptions.clusterID,...
+                'SpmdEnabled',false);
+        end
     end    
     
     

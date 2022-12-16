@@ -38,6 +38,11 @@ end
 if flagContinue
 	vpIDsAll = getVPIDs(myWorksheet);
 	iMaskVPIDsKeep = ismember(vpIDsAll,myVPIDs);
+    if (~isempty(myVPop.LinearProblemMatrices))
+        myVPop.LinearProblemMatrices.vpIsInSubgroup = myVPop.LinearProblemMatrices.vpIsInSubgroup(:,iMaskVPIDsKeep);
+        myVPop.LinearProblemMatrices.independentVarValsWeighted = myVPop.LinearProblemMatrices.independentVarValsWeighted(:,iMaskVPIDsKeep);
+        myVPop.LinearProblemMatrices.independentVarVals = myVPop.LinearProblemMatrices.independentVarVals(:,iMaskVPIDsKeep);
+    end
 	vpIDsKeep = vpIDsAll(iMaskVPIDsKeep);
 	myWorksheet = copyWorksheet(myWorksheet,vpIDsKeep);
 	if isa(myVPop,'VPopRECIST')
@@ -66,9 +71,7 @@ if flagContinue
 	myVPop = myVPop.addTableSimVals();  
 	myVPop = myVPop.addPredTableVals();
     myVPop = evaluateGOF(myVPop);
-
-
-
+    myVPop = evaluateMSE(myVPop);
 else
 	warning(['Could not complete ',mfilename,'. Returning original worksheet, VPop.'])
 end

@@ -17,7 +17,7 @@ try
     simData = simulate(exportedModel, currentModelValues, curDoses);
     simData = convertSimData(simData);
     % Reformat results into the desired data format
-    if length(mySaveElementResultIDs) > 0
+    if ~isempty(mySaveElementResultIDs)
         keepIndices = find(ismember(simData.Names,['time',mySaveElementResultIDs]));
         simData.Names = simData.Names(keepIndices);
         simData.Data = simData.Data(:,keepIndices);

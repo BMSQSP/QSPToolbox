@@ -29,8 +29,8 @@ brDataFlag = false;
 rDataFlag = false;	
 
 subpopInterventions = cell(1,0);
-for cellCounter = 1:numel(myMapelOptions.subpopTable{:,'interventionID'})
-	subpopInterventions = [subpopInterventions, myMapelOptions.subpopTable{cellCounter,'interventionID'}{1}];
+for cellCounter = 1:numel(myVPop.subpopTable{:,'interventionID'})
+	subpopInterventions = [subpopInterventions, myVPop.subpopTable{cellCounter,'interventionID'}{1}];
 end
 
 if sum(ismember(myInterventionIDs, subpopInterventions)) > 0

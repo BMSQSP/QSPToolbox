@@ -161,43 +161,38 @@ if continueFlag
             myVPop = myVPop.assignPWs();
         end
     else 
-		[nAxis, nVP] = size(myVPop.coeffsTable);
+		 [nAxis, nVP] = size(myVPop.coeffsTable);
         
-		myInitialPWs = myMapelOptions.initialPWs;
-		myRandomStart = myMapelOptions.randomStart;
-		
-		if isequal(1, length(myInitialPWs))
-			if myInitialPWs < 0
-				% This implies we want to try starting from near an
-				% optimal solution to the linearized problem
-				myOptimOptions = LinearCalibrationOptions();
-				myOptimOptions.cdfProbsToFit = 0.05:0.05:0.95;
-                myOptimOptions.pdf2DProbsToFitN =5;
-				myOptimOptions.optimizationAlgorithm = "nnls";
-				myOptimOptions.optimizationAlgorithmOptions.Accy = 0;
-				myOptimOptions.priorPrevalenceWeightAssumption = 'specified';
-                % Need to add predTableVals to run.
-                myVPop = myVPop.startPWs(myWorksheet,0);
-                myVPop = myVPop.addPredTableVals();
-				
-				linearCalibrationObject = LinearCalibration(myVPop,'optimOptions',myOptimOptions);
-				linearCalibrationObject = linearCalibrationObject.run('closeParallelPoolWhenFinished',false);
-				
-				if linearCalibrationObject.OptimizationResults.exitFlag == 1
-                    % Run 2x as results are sensitive to prior PW
-                    % assumption
-					linearCalibrationObject = LinearCalibration(linearCalibrationObject.OptimizedVPop,'optimOptions',myOptimOptions);
-					linearCalibrationObject = linearCalibrationObject.run('closeParallelPoolWhenFinished',false);					
-					myInitialPWs = linearCalibrationObject.OptimizedVPop.pws;
-					if linearCalibrationObject.OptimizationResults.exitFlag == 1
-						myInitialPWs = linearCalibrationObject.OptimizedVPop.pws;
-					end
-				else
-					warning(['Unable to find optimal solution to linear problem in ',mfilename,'.  Proceeding with default options.'])
-					myInitialPWs = [];
-				end
-			end
-		end
+		 myInitialPWs = myMapelOptions.initialPWs;
+		 myRandomStart = myMapelOptions.randomStart;
+		 curEffN = myMapelOptions.minEffN;
+        if isequal(1, length(myInitialPWs))
+			if myInitialPWs < 0     
+                    myOptimOptions = LinearCalibrationOptions();
+                    myOptimOptions.cdfProbsToFit = 0.05:0.05:0.95;
+                    myOptimOptions.pdf2DProbsToFitN = 5;
+                    myOptimOptions.responseValTransformation='none';
+                    myOptimOptions.optimizationAlgorithm = "quadprogEffN";				
+                    myOptimOptions.priorPrevalenceWeightAssumption = 'specified';
+                    myOptimOptions.oldVPop = []; 
+                    
+                    myVPop = myVPop.startPWs(myWorksheet,0);  
+                    myVPop = myVPop.addPredTableVals(); 
+                    
+                    linearCalibrationObject = LinearCalibration(myVPop,'optimOptions',myOptimOptions);
+                    linearCalibrationObject.lambda = 0;
+                    tic;
+                    linearCalibrationObject = linearCalibrationObject.run('closeParallelPoolWhenFinished',false);
+                    toc;
+
+                    if linearCalibrationObject.OptimizationResults.exitFlag == 1
+                        myInitialPWs = linearCalibrationObject.OptimizedVPop.pws;
+                    else
+                        warning(['Unable to find optimal solution to linear problem in ',mfilename,'.  Proceeding with default options.'])
+                        myInitialPWs = [];
+                    end  
+             end
+         end
         [nInitialGuess,nInitialPW] = size(myInitialPWs);
 		if isequal(nVP, nInitialPW)
 			if myRandomStart > 0
@@ -212,26 +207,27 @@ if continueFlag
             if nInitialGuess > 1
                 extraPWs = myInitialPWs(2:end,:);
             end
-		else
-			myVPop = myVPop.startPWs(myWorksheet,myRandomStart>0);   
-		end
-		
-    end    
+        else
+			myVPop = myVPop.startPWs(myWorksheet,myRandomStart>0);
+        end 
+    end
 
     % Update table values.  Not strictly necessary but a nice
     % step to diagnose and does have much computational cost            
-    myVPop = myVPop.addPredTableVals();    
-    myVPop = findFit(myVPop, extraPWs);
-	
+    myVPop = myVPop.addPredTableVals();  
+    myVPop = findFit(myVPop, extraPWs); 
+    
+    % Next update the MSE statistics
+    if (~isempty(myVPop.LinearProblemMatrices))
+        myVPop = evaluateMSE(myVPop);
+    end
+    
 	% Clean up the pool, if needed
 	if myVPop.poolClose
 		if ~isempty(gcp('nocreate'))
 			delete(gcp);
 		end
-	end
-
-	
-	
+    end
 else
     myVPop = VPop;
     warning(['Unable to run ',mfilename,'.  Returning an empty VPop.'])

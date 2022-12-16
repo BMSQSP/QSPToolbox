@@ -92,6 +92,13 @@ classdef expandVPopEffNOptions
 %                       pick them based on their scores.
 %  verbose:            (Optional) report progress to screen
 %                       Default = true;
+%  linearExpandFlag:   (Optional) Whether or not expand through linear calibration workflow first. Default = true
+%  minPVallinear:      (Optional) Minimum p-value to terminate linear expansion phase 
+%                       and enter pso optimization phase. Default = 0.5
+%  maxIterlinearExpand: (Optional) Maximum iteration number to terminate linear expansion phase 
+%                       and enter pso optimization phase. Default = 200
+%  minEffNlinearflag:   (Optional) Whether or not start with effN determined from a linear calibration first. Default = true
+%  linearExpandCohortSize: (Optional) expandCohortSize during linearExpansion phase. Default = 1500
 
    properties
 		suffix
@@ -117,6 +124,11 @@ classdef expandVPopEffNOptions
         screenFunctionName
 		selectByParent
 		verbose
+        linearExpandFlag 
+        minPVallinear
+        maxIterlinearExpand
+        minEffNlinearflag
+        linearExpandCohortSize
    end
 
    methods     
@@ -583,6 +595,11 @@ classdef expandVPopEffNOptions
           obj.screenFunctionName = '';
 		  obj.selectByParent = true;
 		  obj.verbose = true;	
+          obj.linearExpandFlag = true;
+          obj.minPVallinear = 0.5;
+          obj.maxIterlinearExpand = 200;
+          obj.minEffNlinearflag = true;
+          obj.linearExpandCohortSize = 1500;
       end
    end
 end
