@@ -51,7 +51,6 @@ myMapelOptions.spreadOut = 1;
 myMapelOptions.minEffN = 30;
 myMapelOptions.optimizePopSize = 1000;
 
-%%
 % We may want to run a short optimization to create a VPop object
 % just to see how well our experimental and simulated data ranges agree
 myMapelOptions.optimizeTimeLimit = 10;
@@ -117,7 +116,7 @@ for myTestCounter = 1 : 1
         myVPop.mnSDTable{1,'predN'}    
         myVPop.gof
 end
-%%
+
 % This is an additional diagnostic table for the places where we have
 % experimental and simulation data.  Note that these can become
 % rather crowded when we have a lot of distinct
@@ -152,7 +151,7 @@ for myTestCounter = 1 : 1
     newVPop.mnSDTable{1,'predN'}
     newVPop.gof
 end
-%%
+
 % These additional sections were not in the AAPS 2017 publication but
 % highlight additional algorithms implemented since then.  For the first
 % example, we run "MAPEL" without imposing the binned axis
@@ -231,10 +230,6 @@ myExpandVPopEffNOptions.varyMethod = 'gaussian';
 myExpandVPopEffNOptions.resampleStd = 0.05;
 myExpandVPopEffNOptions.expandEdgeVPs=true;
 myExpandVPopEffNOptions.maxNewPerOld = 3;
-
-myExpandVPopEffNOptions.linearExpandFlag = false;
-myExpandVPopEffNOptions.minEffNlinearflag = false;
-
 % Here, we enforce any checks on sampled VPs,
 % before simulation and adjust VPs if needed.
 myExpandVPopEffNOptions.screenFunctionName = '';
@@ -245,5 +240,4 @@ myExpandVPopEffNOptions.screenFunctionName = '';
 % You can delete intermediate iterations between your start file and
 % stopping point.  They are included to allow you to more easily
 % track progress.
-%%
 [newWorksheet, newVPop] = expandVPopEffN(myWorksheet,myExpandVPopEffNOptions,myMapelOptions,myVPop);

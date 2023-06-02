@@ -50,16 +50,9 @@ if continueFlag
     if isempty(gcp('nocreate'))
         % First check the default number of workers, if needed
         myClusterPickOptions = checkNWorkers(myClusterPickOptions);
-        if ~isnan(myClusterPickOptions.nWorkers)
-            myPool = parpool(myClusterPickOptions.clusterID,...
-                myClusterPickOptions.nWorkers,'SpmdEnabled',false);
-        else
-            myPool = parpool(myClusterPickOptions.clusterID,...
-                'SpmdEnabled',false);
-        end
+        myPool = parpool(myClusterPickOptions.clusterID, myClusterPickOptions.nWorkers,'SpmdEnabled',false);        
     end    
-    
-    
+   
     if myClusterPickOptions.intSeed > -1
         rng(myClusterPickOptions.intSeed, 'twister');
     end
@@ -169,7 +162,11 @@ if continueFlag
     
     medoidIndices = nan(myNClusters-length(edgeIndices),1);
     if sum(isnan(myIndices)) > 0
-        opts = statset('MaxIter',myClusterPickOptions.maxIter,'UseParallel',1);
+       % opts = statset('MaxIter',myClusterPickOptions.maxIter,'UseParallel',1);
+           if myClusterPickOptions.intSeed > -1
+                s = RandStream('mlfg6331_64','Seed',myClusterPickOptions.intSeed);  % Random number stream
+                opts = statset('MaxIter',myClusterPickOptions.maxIter,'UseParallel',1,'UseSubstreams',1,'Streams',s);
+           end
         if sum(ismember(myClusterPickOptions.algorithm,'auto')) > 0
             if nVP <= 3000
                  myAlgorithm = 'pam';
@@ -182,8 +179,8 @@ if continueFlag
             myAlgorithm = myClusterPickOptions.algorithm;
         end                
         
-        [idx,theMedoids,sumd,D,midx,info] = kmedoids(theMatrixToCluster, (myNClusters - nVPFromEdges), 'Algorithm', myAlgorithm, 'Distance', myClusterPickOptions.distance, 'Start','plus', 'Replicates', myClusterPickOptions.replicates, 'Options',opts);     
 
+        [idx,theMedoids,sumd,D,midx,info] = kmedoids(theMatrixToCluster, (myNClusters - nVPFromEdges), 'Algorithm', myAlgorithm, 'Distance', myClusterPickOptions.distance, 'Start','plus', 'Replicates', myClusterPickOptions.replicates, 'Options',opts);     
         
         for medoidCounter = 1 : (myNClusters - nVPFromEdges)
             curIndices = find(ismember(theMatrixToCluster,theMedoids(medoidCounter,:),'rows'));

@@ -292,13 +292,14 @@ elseif sum(ismember({'surrogate'},optimizeType)) > 0
 elseif sum(ismember({'ga','gapso','gapapso'},optimizeType)) > 0
     optimOptions = optimoptions('ga');
     optimOptions.Display = 'iter';
-    optimOptions.MaxTime = myVPop.optimizeTimeLimit;
+    optimOptions.MaxTime = Inf; % myVPop.optimizeTimeLimit; 
     optimOptions.TolFun = myVPop.tol;
     optimOptions.UseParallel = true;
     optimOptions.PopulationSize = myVPop.optimizePopSize;
     optimOptions.PopInitRange = cat(1,ones(1,lProbs)*-pi/2,ones(1,lProbs)*pi/2);
     optimOptions.MutationFcn = {@mutationuniform, 1.5/lProbs};
-    optimOptions.Generations = myVPop.nIters;
+%     optimOptions.Generations = myVPop.nIters;
+    optimOptions.MaxGenerations = myVPop.nIters; % 400;
     if strcmp(myVPop.pwStrategy, 'bin')
         optimOptions.InitialPopulation = transProbVect;
         [optTransProbVect,fVal,exitFlag,output] = ga(anonymousFunction,lProbs,[],[],[],[],[],[],[],optimOptions);
@@ -316,11 +317,12 @@ end
 if sum(ismember({'pso','papso','gapso','gapapso'},optimizeType)) > 0
     optimOptions = optimoptions('particleswarm');
     optimOptions.Display = 'iter';
-    optimOptions.MaxTime = myVPop.optimizeTimeLimit;
+    optimOptions.MaxTime = Inf; % myVPop.optimizeTimeLimit; 
     optimOptions.TolFun = myVPop.tol;
     optimOptions.UseParallel = true;
     optimOptions.SwarmSize = myVPop.optimizePopSize;
     optimOptions.ObjectiveLimit = myVPop.objectiveLimit;
+    optimOptions.MaxIterations = myVPop.nIters; % 400;
     if isprop(optimOptions,'UseAsync')
         if sum(ismember({'papso','gapapso'},optimizeType)) > 0
             optimOptions.UseAsync = true;

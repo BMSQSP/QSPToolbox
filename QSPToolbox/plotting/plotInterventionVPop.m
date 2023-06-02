@@ -153,7 +153,7 @@ if flagContinue
             currentValues = curData(indicesFirst(dataPointCounter):indicesLast(dataPointCounter));
             filteredData(dataPointCounter) = median(currentValues);
         end
-        intervalsToPlot(timePointCounter,:) = interp1(curPWs,filteredData,[0.05,0.50,0.95],'linear');
+        intervalsToPlot(timePointCounter,:) = interp1(curPWs,filteredData,[0.05,0.50,0.95],'linear','extrap');
     end
     % Carry last observation forward to patch NaN.  This will fail if first
     % value is nan

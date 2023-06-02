@@ -60,12 +60,6 @@ myWorksheet.simProps.sampleTimes = [0:.025:35]';
 % the model is accelerated or not.  If not, it will and will re-do 
 % the gathering of model elements and export but will also add the 
 % acceleration.
-% Starting from R2022a, we need to re-adjust simulation tolerances to accomodate
-% changes in the new SimBiology version
-myWorksheet.simProps.relativeTolerance = 1E-6;
-myWorksheet.simProps.absoluteTolerance = 1E-10;
-myWorksheet.simProps.absoluteToleranceScaling = true;
-myWorksheet.simProps.absoluteToleranceStepSize = 1E-10;
 % Also note that simulateWorksheet will prepare the jobs to run
 % in parallel on all available cores.
 myWorksheet = simulateWorksheet(myWorksheet);

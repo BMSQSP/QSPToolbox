@@ -54,12 +54,10 @@ function simResults = runSimulations(exportedModel, updateValues, updateIndices,
     end
     %%
     [~, nSimulations] = size(flagRunSim);
-    nInterventions = length(updateDoses);
+    nInterventions = length(updateDoses);    
     % disp(nInterventions)  % Added by Amir, but not denoted here ..., commented by Lu 220518: but can we delete this? or just show in ~isdeployed?
-
     simResults = cell(1,nSimulations);
-
-    %parfor simulationCounter = 1:nSimulations
+    
     if (~isdeployed)
         parfor simulationCounter = 1:nSimulations
             % for simulationCounter = 1 : nSimulations
@@ -81,10 +79,8 @@ function simResults = runSimulations(exportedModel, updateValues, updateIndices,
                 simResults{simulationCounter} = [];
             end
         end
-
     else
-        for simulationCounter = 1:nSimulations
-            % for simulationCounter = 1 : nSimulations
+        for simulationCounter = 1:nSimulations            
             if flagRunSim(simulationCounter) > 0
                 % increment intervention first, then VP
                 % so we can complete simulations for a given VP
@@ -131,12 +127,10 @@ function simResults = runSimulations(exportedModel, updateValues, updateIndices,
     %     simResults{parfevalIndices(completedIdx)} = simResult;
     % end
 
-
     % Clean up the pool, if needed
     if mySimulateOptions.poolClose
     	if ~isempty(gcp('nocreate'))
     		delete(gcp);
     	end
     end
-
 end

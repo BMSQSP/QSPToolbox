@@ -1,4 +1,4 @@
-function plotHandle = plotDistCDFVPop(myVPop, myPlotOptions)
+function plotHandle = plotDist2DVPop(myVPop, myPlotOptions)
 % This function takes the 2D distribution data in a VPop distribution table
 % to plot the experimental data side-by-side with the population
 % to facilitate diagnosing fitting during

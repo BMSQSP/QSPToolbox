@@ -95,7 +95,8 @@ if continueFlag
 	myMapelOptions.poolClose = myVPop.poolClose; 
 	myMapelOptions.poolRestart = myVPop.poolRestart; 
     myMapelOptions.intSeed = myVPop.intSeed;
-    myMapelOptions.minEffN = myVPop.minEffN;	
+    myMapelOptions.minEffN = myVPop.minEffN;
+    myMapelOptions.nIters = myVPop.nIters; 
 	if isa(myVPop,'VPopRECIST') 
 		myMapelOptions.brTableRECIST = myVPop.brTableRECIST;
 		myMapelOptions.rTableRECIST = myVPop.rTableRECIST;        

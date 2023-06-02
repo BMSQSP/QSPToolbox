@@ -35,7 +35,7 @@ if flagContinue
         flagContinue = false;
         warning('Invalid plotOptions for ',mfilename,'.')
     end    
-    if ~strcmp(class(myVPop),'VPop')
+    if ~isa(myVPop,'VPop') && ~isa(myVPop, 'VPopRECIST')
         flagContinue = false;
         warning('Invalid VPop for ',mfilename,'.')
     end 

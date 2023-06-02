@@ -18,7 +18,7 @@ try
     simData = convertSimData(simData);
     % Reformat results into the desired data format
     if ~isempty(mySaveElementResultIDs)
-        keepIndices = find(ismember(simData.Names,['time',mySaveElementResultIDs]));
+        [~, keepIndices] = ismember(['time',mySaveElementResultIDs], simData.Names);
         simData.Names = simData.Names(keepIndices);
         simData.Data = simData.Data(:,keepIndices);
     end

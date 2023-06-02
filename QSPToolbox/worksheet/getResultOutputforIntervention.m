@@ -11,8 +11,15 @@ function myOutputStruct = getResultOutputforIntervention(myWorksheet, myInterven
 %                                       variable (string).
 %
 % RETURNS
-%  myOutputStruct:                      A struct with the desired data,
-%                                       very similar to a result struct.
+%  myOutputStruct:                      A struct with the desired data with
+%                                       two fields:
+%                                       - myOutputStruct.Data is 
+%                                       nTimeOutputs x (nVPs+1) contains
+%                                       numerical data. The first column
+%                                       stores the simulated times.
+%                                       - myOutputStruct.Names is a 
+%                                       1 x (nVPs+1) cell array containing 
+%                                       names of the columns in myOutputStruct.Data.
 %
 
 % Perform initial checks on the provided arguments
@@ -49,16 +56,16 @@ if flagContinue
     interventionResults = myWorksheet.results(interventionIndex,:);
     flagResultCheck = strcmp(cellfun(@class,interventionResults, 'UniformOutput', false),'struct');
     testIndex = find(flagResultCheck);
-    if length(testIndex > 0)
+    if ~isempty(testIndex > 0)
         testIndex = testIndex(1);
         testResult = interventionResults{testIndex};
-        [myNTimePt,myNVars] = size(testResult.Data);
+        [myNTimePt,~] = size(testResult.Data);
         myOutputStruct.Data = nan(myNTimePt,length(myOutputStruct.Names));
         % The first column should be "time"
         if strcmp(testResult.Names{1},'time')
             myOutputStruct.Data(:,1) = testResult.Data(:,1);
             myDataIndex = find(ismember(testResult.Names,myOutputVar));
-            if length(myDataIndex > 0)
+            if ~isempty(myDataIndex > 0)
                 % There should be no redundancy but just take the first
                 myDataIndex = myDataIndex(1);
                 for vpCounter = 1 : (length(myOutputStruct.Names)-1)
@@ -70,7 +77,8 @@ if flagContinue
                         if strcmp(testResult.Names{myDataIndex},myOutputVar)
                             myOutputStruct.Data(:,vpCounter+1) = testResult.Data(:,myDataIndex);
                         else
-                            warning(['Results format for VP ',myVPIDs{vpCounter},' not aligned with others, reporting NaN for the results.'])
+                            warning(['Results format for VP ',myVPIDs{vpCounter}, ...
+                                ' not aligned with others, reporting NaN for the results.'])
                         end
                     end
                 end

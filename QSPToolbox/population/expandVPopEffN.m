@@ -208,6 +208,7 @@ if continueFlag
         
         wsIterCounter0 = wsIterCounter;
         maxIterlinearExpand = maxIterlinearExpand+wsIterCounter0;
+
     if linearExpandFlag
         disp('Start linear expansion ...');
         while ~((bestPVal >= minPVallinear && curVPopEffN >= targetEffN) || wsIterCounter >= maxIterlinearExpand)
@@ -219,12 +220,16 @@ if continueFlag
                 myTestCounter = myTestCounter + 1;
                 % We check whether to reseed with myTestCounter
                 % for repeatability of the sequence
-                intSeedTarget = intSeedTarget+1;
-                myMapelOptions.intSeed=intSeedTarget;
+                
+                % to initialize the seed properly at the starting iteration
+                if wsIterCounter==wsIterCounter0
+                    intSeedTarget = intSeedTarget+1;
+                    myMapelOptions.intSeed=intSeedTarget;
+                end
 
                 % read oldVPop or worksheet
                 if (myTestCounter == 1) && (nVPopsFound > 0)                    
-                  %  newVPop = oldVPop;
+                    newVPop = oldVPop;
                 else
                     % For consistency, on the first iteration
                     % if a VPop isn't provided we will use the
@@ -234,28 +239,30 @@ if continueFlag
                     if (myTestCounter == 1) 
                         curMapelOptions.randomStart = myExpandVPopEffNOptions.expandRandomStart;
                     end
-                    oldVPop = mapelLinearExpand(myWorksheet, curMapelOptions, []);
+                    newVPop = mapelLinearExpand(myWorksheet, curMapelOptions, []);
                     
-                    curVPopEffN = 1/sum(oldVPop.pws.^2);
-                    curMSE = oldVPop.MSE;
+                    curVPopEffN = 1/sum(newVPop.pws.^2);
+                    curMSE = newVPop.MSE;
 %                     allVPIDs = getVPIDs(myWorksheet);
 %                     nVPs = length(allVPIDs);  
                   %   if nVPs <= nVPMax
-                  mySaveName = ['vpop_',suffix,'_iter',num2str(wsIterCounter),'_effN',num2str(round(curVPopEffN,0)),'_pvalue',num2str(round(oldVPop.gof,4)),'_MSE',num2str(round(curMSE,4)),'_curBest'];
-%                  mySaveName = ['vpop_',suffix,'_iter',num2str(wsIterCounter),'_lambda',num2str(round(oldVPop.lambda,2)),'_effN',num2str(round(curVPopEffN,0)),'_pvalue',num2str(round(oldVPop.gof,4)),'_MSE',num2str(round(curMSE,4)),'_curBest'];
-                        saveVPop(oldVPop, mySaveName); % save iter0, size is different from nVPmax. modify in the future
+                    mySaveName = ['vpop_',suffix,'_iter',num2str(wsIterCounter),'_effN',num2str(round(curVPopEffN,0)),'_pvalue',num2str(round(newVPop.gof,4)),'_MSE',num2str(round(curMSE,4)),'_curBest'];
+                    saveVPop(newVPop, mySaveName); % TODO: save iter0, size is different from nVPmax. modify in the future
                   %   end
                 end
+
+                oldVPop = newVPop;
 
                 % We will sample for more VPs if we hove not finished
                 % expanding or we want to resample for more past
                 % completion of the expansion
                 if linearExpandCohortSize > 0
+
                     % Get ready to expand VPs
                     wsIterCounter = wsIterCounter+1;
                     % There should be no -1 intseeds.
                     rng(oldVPop.intSeed, 'twister');
-               %     lastWorksheet = myWorksheet;
+                    lastWorksheet = myWorksheet;
 
                     allVPIDs = getVPIDs(myWorksheet);
                     nVPs = length(allVPIDs);
@@ -277,6 +284,9 @@ if continueFlag
                     saveWorksheetAutoSplit(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);
                 end
              
+                intSeedTarget = intSeedTarget+1;
+                myMapelOptions.intSeed=intSeedTarget;
+
                 % now do a linear MSE optimization, then remove extra VPs and renormalize the pws to sum=1 again
                 myExtraPWs = [];                
                 % This is the first iteration with the current effN
@@ -301,12 +311,6 @@ if continueFlag
                         [~,nVP_nobin]=size(newVPop.coeffsTable);
                         nVP_diff=nVP_nobin-length(oldVPop.pws);
                         if nVP_diff > 0
-%                             % provide a initial guess, it is not as critical for linear optimization
-%                             newVPop.pws = [oldVPop.pws,zeros(1,nVP_diff)]; 
-%                             myExtraPWs = [];
-%                           %  newVPop.pws = ones(1,nVP_nobin).*1/nVP_nobin;
-%                           %  myExtraPWs = [oldVPop.pws*0.8,ones(1,nVP_diff).*0.2/nVP_diff];  
-%                           
                             % If we have more VPs to calibrate in this
                             % VPop than the last, we can provide an
                             % intelligent guess on spreading the PWs
@@ -349,11 +353,6 @@ if continueFlag
               %  curMSE = oldVPop.MSE;
                 curVPopEffN = 1/sum(newVPop.pws.^2);
                 oldMSE = newVPop.MSE;
-%                 if verbose
-% %                     disp(['--------------- after expansion -----------'])
-%                     disp(['Previous best pvalue ',num2str(max(0,bestPVal)),' with effN ',num2str(round(oldVPopEffN,0)), ' with lambda ', num2str(oldVPop.lambda),'.'])
-% %                     disp(['Current solution effN ', num2str(curVPopEffN), ' with pvalue ',num2str(newVPop.gof),' with MSE ',num2str(newVPop.MSE), ' with lambda ', num2str(newVPop.lambda), ' in ',mfilename,'.'])
-%                 end
 
                 %% remove the lowest weighted VPs from this new fit if exceed nVPMax:
                 nVPs = length(newVPop.pws);  
@@ -390,7 +389,8 @@ if continueFlag
                         end  
                     else
                         disp(['Number of VPs, ',num2str(nVPs),', exceeds nVPMax, ',num2str(nVPMax),', allowed for a worksheet in ',mfilename,'.  Reducing to the max allowed based on clustering and pws.'])
-                        lastVPIDs = getVPIDs(myWorksheet);
+                        lastVPIDs = getVPIDs(lastWorksheet);
+                        allVPIDs = getVPIDs(myWorksheet); % Lu ADD on 4/21/2023
                         nVPover = nVPs - nVPMax;
                         % Remove the old, low weighted ones that would not
                         % be kept by clustering a reasonable minimum set.
@@ -412,13 +412,14 @@ if continueFlag
                         myClusterPickOptions.verbose = false;
                         myMedoidResult = pickClusterVPs(myWorksheet,myClusterPickOptions);
                         clusterVPIDs = myMedoidResult.('pickedVPIDs');                        
-                        %% Lu add : % keep the 1 VPs with highest weight from each subpopulation
+                        
+                        % keep the top VPs with highest weight from each subpopulation
                         vpIsInSubgroup=newVPop.LinearProblemMatrices.vpIsInSubgroup;
                         [uniqueSubpop,ia,ic]=unique(vpIsInSubgroup,'rows');
                         keepsubpopVPIDs = [];
                         for i = 1:size(uniqueSubpop,1)
                              SubpopVPIndices = find(uniqueSubpop(i,:)==1); % find the VPs belongs to each Subpop
-                             SubpopVPIDs = lastVPIDs(SubpopVPIndices);
+                             SubpopVPIDs = allVPIDs(SubpopVPIndices);
                             [~,idx] = sort(newVPop.pws(SubpopVPIndices),'descend');
                             if ~isempty(idx)
                                 keepsubpopVPIDs = [keepsubpopVPIDs, SubpopVPIDs(idx(1:min(1,length(idx))))];
@@ -426,14 +427,14 @@ if continueFlag
                         end
 
                         ClusterSubpopIDs=unique([clusterVPIDs,keepsubpopVPIDs]);
-                        nonClusterIdx = find(~ismember(lastVPIDs,ClusterSubpopIDs));                       
+                        nonClusterIdx = find(~ismember(allVPIDs,ClusterSubpopIDs));                       
 %                         nonClusterIdx = find(~ismember(lastVPIDs,clusterVPIDs));
 
                         [~,idx] = sort(newVPop.pws(nonClusterIdx),'ascend');
-                        nonClusterDiscardIDs = lastVPIDs(nonClusterIdx(idx(1:nVPover)));
-                        keepVPIDs = lastVPIDs(~ismember(lastVPIDs,nonClusterDiscardIDs));
+                        nonClusterDiscardIDs = allVPIDs(nonClusterIdx(idx(1:nVPover)));
+                        keepVPIDs = allVPIDs(~ismember(allVPIDs,nonClusterDiscardIDs));
 
-                        [myWorksheet, newVPop] = subsetWorksheetVPop(myWorksheet, newVPop, keepVPIDs, false);
+                         [myWorksheet, newVPop] = subsetWorksheetVPop(myWorksheet, newVPop, keepVPIDs, false);
                         saveWorksheetAutoSplit(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]);
                       %% Evaluate MSE again after removing VPover
                         newVPop.useEffN = true;
@@ -457,7 +458,6 @@ if continueFlag
                     curMSE = oldMSE;
                 end
                 mySaveName = ['vpop_',suffix,'_iter',num2str(wsIterCounter),'_effN',num2str(round(curVPopEffN,0)),'_pvalue',num2str(round(newVPop.gof,4)),'_MSE',num2str(round(curMSE,4)),'_curBest'];
-             %   mySaveName = ['vpop_',suffix,'_iter',num2str(wsIterCounter),'_lambda',num2str(round(newVPop.lambda,2)),'_effN',num2str(round(curVPopEffN,0)),'_pvalue',num2str(round(newVPop.gof,4)),'_MSE',num2str(round(curMSE,4)),'_curBest'];
                 saveVPop(newVPop, mySaveName);
                 bestPVal = newVPop.gof;
                 nVPopsFound = nVPopsFound+1;
@@ -473,15 +473,16 @@ if continueFlag
         bestPVal = oldVPop.gof;
     end
     if linearExpandFlag && ((bestPVal >= minPVallinear && curVPopEffN >= targetEffN) || wsIterCounter >= maxIterlinearExpand)
-        disp(['Start p-value gof pso optimization using the linear expanded VPop as the initial VP cohort ...']);        
+        disp(['Start p-value gof pso optimization using the linear expanded VPop as the initial VP cohort ...']); 
         curEffN = targetEffN; 
-        myMapelOptions.minEffN = curEffN;
-        wsIterCounter = wsIterCounter+1;
-        
+        myMapelOptions.minEffN = curEffN;        
         myMapelOptions.exactFlag = false; % for pso optimization to speed up a bit
-        bestPVal = oldVPop.gof;  % the VPop after removing to nVPMax and LC optimized, reached critiera and returned       
-        intSeedTarget = intSeedTarget+1;
-        myMapelOptions.intSeed=intSeedTarget;
+        bestPVal = oldVPop.gof;  % the VPop after removing to nVPMax and LC optimized, reached critiera and returned  
+        % to initialize the seed properly at the starting iteration
+        if wsIterCounter==wsIterCounter0 % only if we start from the final linear expanded VPop, we need to increase the intSeed
+            intSeedTarget = intSeedTarget+1;
+            myMapelOptions.intSeed=intSeedTarget;
+        end
         
         nVPs = length(oldVPop.pws);  
         if nVPs > nVPMax
@@ -514,7 +515,8 @@ if continueFlag
         else
              newVPop = oldVPop;
         end
-        saveWorksheetAutoSplit(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]); % save the same cohort, to ensure wsIterCounter consistency
+        wsIterCounter = wsIterCounter+1;
+        saveWorksheetAutoSplit(myWorksheet,['myWorksheet_',suffix,'_iter',num2str(wsIterCounter)]); % if no VP reduction, we still save again the same cohort, to ensure wsIterCounter consistency
          
 %         disp(['Final adjustment of labmda to give targetEffN ...']);
 %         tic;
@@ -524,8 +526,14 @@ if continueFlag
 %         curMSE=newVPop.MSE;
 %         mySaveName = ['vpop_',suffix,'_iter',num2str(wsIterCounter),'_lambda',num2str(round(newVPop.lambda,2)),'_effN',num2str(round(curVPopEffN,0)), '_pvalue ',num2str(round(newVPop.gof,4)), '_MSE ',num2str(round(curMSE,4)),'_curBest'];
 %         saveVPop(newVPop, mySaveName);
-            
-         newVPop.exactFlag = false; % for pso to speed up
+         
+         % for reproducibility
+         newVPop.useEffN = myMapelOptions.useEffN;
+         intSeedTarget = intSeedTarget+1;
+         myMapelOptions.intSeed = intSeedTarget;
+         newVPop.intSeed = myMapelOptions.intSeed;
+
+         newVPop.exactFlag = myMapelOptions.exactFlag; % false; % for pso to speed up
          myExtraPWs = []; 
          newVPop.minEffN = myMapelOptions.minEffN;
          if isinf(myExpandVPopEffNOptions.expandRandomStart)
@@ -636,13 +644,14 @@ if continueFlag
             
            % myMapelOptions.minEffN = curEffN;
             intSeedTarget = intSeedTarget+1;
-            myMapelOptions.intSeed=intSeedTarget;
+            myMapelOptions.intSeed = intSeedTarget;
             myTestCounter = myTestCounter+1;            
             
             if (nVPopsFound > 0)
                  myExtraPWs = []; 
                  newVPop = oldVPop;
                  newVPop.minEffN = myMapelOptions.minEffN;
+                 newVPop.intSeed = myMapelOptions.intSeed;
                  if isinf(myExpandVPopEffNOptions.expandRandomStart)
                       if ismember(newVPop.pwStrategy,'direct')
                              newVPop = newVPop.startPWs(myWorksheet,true);
@@ -722,8 +731,11 @@ if continueFlag
                 myTestCounter = myTestCounter + 1;
                 % We check whether to reseed with myTestCounter
                 % for repeatability of the sequence
-                intSeedTarget = intSeedTarget+1;
-                myMapelOptions.intSeed=intSeedTarget;
+                % use myExpandVPopEffNOptions.linearExpandFlag to identify if the starting VPop is from linear workflow or pso workflow
+                if (~(myExpandVPopEffNOptions.linearExpandFlag)) || (myExpandVPopEffNOptions.linearExpandFlag && wsIterCounter>(maxIterlinearExpand+1))
+                    intSeedTarget = intSeedTarget+1;
+                    myMapelOptions.intSeed=intSeedTarget;
+                end
 
                 % We will try to restart with initial probabilities, if
                 % available, and refresh worksheet data if this is the the first
@@ -837,7 +849,6 @@ if continueFlag
                             curEffN = curEffN-1;
                         end
                         mySaveName = ['vpop_',suffix,'_iter',num2str(wsIterCounter),'_effN',num2str(curEffN),'_curBest'];
-                    %    mySaveName = ['vpop_',suffix,'_iter',num2str(wsIterCounter),'_effN',num2str(curEffN), '_pvalue ',num2str(round(newVPop.gof,4)), '_MSE ',num2str(round(newVPop.MSE,4)),'_curBest'];
                         saveVPop(newVPop, mySaveName);
                         bestPVal = newVPop.gof;   
                     end								
@@ -908,7 +919,7 @@ if continueFlag
                             % There should be no -1 intseeds.
                             useScoresForNew = true;
                             rng(newVPop.intSeed, 'twister');
-                            oldVPop = newVPop; % added by Lu 220501. to fix a bug.
+                            oldVPop = newVPop;
                             [myWorksheet, newPassNames] = expandWorksheetVPsFromVPop(myWorksheet,oldVPop, myMapelOptions,suffix,wsIterCounter, maxNewPerIter, myScreenTable, expandCohortSize, myExpandVPopEffNOptions.varyMethod, myExpandVPopEffNOptions.resampleStd, myExpandVPopEffNOptions.maxNewPerOld, myExpandVPopEffNOptions.expandEdgeVPs, myExpandVPopEffNOptions.selectByParent,useScoresForNew, 0.01, myExpandVPopEffNOptions.screenFunctionName, linearExpandFlag);
                             % We force myTestCounter to 0
                             % so we can generate a new

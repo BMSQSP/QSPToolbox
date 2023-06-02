@@ -143,7 +143,7 @@ if continueFlag
         if ~isempty(newVPop.LinearProblemMatrices)
             vpIsInSubgroup=newVPop.LinearProblemMatrices.vpIsInSubgroup;
             [uniqueSubpop,ia,ic]=unique(vpIsInSubgroup,'rows');
-            lowsubpop = find(sum(uniqueSubpop,2)'<= 5); % max(0.001*length(newVPop.pws),2));
+            lowsubpop = find(sum(uniqueSubpop,2)'<= 5 | newVPop.LinearProblemMatricesSubgroupSumWeights(ia)'<=1e-16); % max(0.001*length(newVPop.pws),2)) or subpopulation weights=0;
             %% need to allocate and sample inside each of these subpop, because they might all have very low weights
             subpopvpDat = sum(vpIsInSubgroup(ia(lowsubpop),:),1);
             subpopvpIndices = unique(find(subpopvpDat>0)); % these are the parents
