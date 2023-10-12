@@ -94,11 +94,11 @@ classdef responseTypeElementBounds
         end
 
         function obj = set.modelYVarType(obj, myYVarType)
-            if sum(ismember({'parameter','species','compartment'}, lower(myYVarType))) == 1
+            if sum(ismember({'parameter','species','compartment','observable'}, lower(myYVarType))) == 1
                 % We enforce lowercase for type for simplicity
                 obj.modelYVarType = lower(myYVarType);
             else
-                error(['Unable to assign ',myYVarType,' to the modelYVarType property in ',mfilename,'  Valid strings are: "parameter", "species", and "compartment".'])
+                error(['Unable to assign ',myYVarType,' to the modelYVarType property in ',mfilename,'  Valid strings are: "parameter", "species", "compartment", and "observable".'])
             end
         end
         
@@ -255,6 +255,8 @@ classdef responseTypeElementBounds
                 modelIDs = getModelSpeciesIDs(myWorksheet);
             elseif strcmp(myModelYVarType, 'compartment')
                 modelIDs = getModelCompartmentIDs(myWorksheet);
+            elseif strcmp(myModelYVarType, 'observable')
+                modelIDs = getModelObservableIDs(myWorksheet);
             else
                 % This last else is superfluous as we enforce this at
                 % assignment, but leave it in                
@@ -271,10 +273,6 @@ classdef responseTypeElementBounds
                     passCheck = false;
                 end
             end
-            
-            
-            
-            
         end
      
         function value = get(obj,propName)

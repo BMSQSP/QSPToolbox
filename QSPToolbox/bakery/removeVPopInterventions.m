@@ -34,7 +34,8 @@ for cellCounter = 1:numel(myVPop.subpopTable{:,'interventionID'})
 end
 
 if sum(ismember(myInterventionIDs, subpopInterventions)) > 0
-	warning(['Unable to remove specified interventions in ',mfilename,'.  Removing interventions used to specify subpopulations is not currently supported.  Exiting...'])
+    myInterventionIDs = setdiff(myInterventionIDs,subpopInterventions); % make sure interventions used to specify subpopulations are not removed.
+% 	warning(['Unable to remove specified interventions in ',mfilename,'.  Removing interventions used to specify subpopulations is not currently supported.  Exiting...'])
 end
 
 % Next scan through the VPop 

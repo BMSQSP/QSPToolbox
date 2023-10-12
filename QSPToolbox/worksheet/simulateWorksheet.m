@@ -84,10 +84,10 @@ function myWorksheet = simulateWorksheet(myWorksheet, mySimulateOptions)
         if inputN > 1
             myWorksheet.simProps.saveElementResultIDs = reshape(myWorksheet.simProps.saveElementResultIDs,1, inputN*inputM );
         end
-        missingIndices = find(~ismember(...
-                                       myWorksheet.simProps.saveElementResultIDs,...
-                                       ['time',myWorksheet.compiled.elements(:,1)']...
-                                       ));
+
+        missingIndices = find(~ismember(myWorksheet.simProps.saveElementResultIDs,...
+            ['time',myWorksheet.compiled.elements(:,1)',myWorksheet.compiled.observables]));
+
         if ~isempty(missingIndices)
             if length(missingIndices) >= length(myWorksheet.simProps.saveElementResultIDs)
                 warning(['Unable to identify any specified myWorksheet.simProps.saveElementResultIDs as elements in myWorksheet in call to ',mfilename,'.'])
@@ -121,7 +121,7 @@ function myWorksheet = simulateWorksheet(myWorksheet, mySimulateOptions)
             for checkCounter = 1: nStatesLogged
                 checkCellArray{checkCounter} = testLog(checkCounter).Name;
             end
-            missingIndices = find(~ismember(myWorksheet.simProps.saveElementResultIDs,['time',checkCellArray]));
+            missingIndices = find(~ismember(myWorksheet.simProps.saveElementResultIDs,['time',checkCellArray,myWorksheet.compiled.observables]));
             if ~isempty(missingIndices)
                 if length(missingIndices) >= length(myWorksheet.simProps.saveElementResultIDs)
                     warning(['Unable to verify any specified myWorksheet.simProps.saveElementResultIDs as allowed logged model states in call to ',mfilename,'.'])
@@ -188,7 +188,6 @@ function myWorksheet = simulateWorksheet(myWorksheet, mySimulateOptions)
                 %                 %    flagRunSim = cat(2, flagRunSim, zeros(1, nInterventions));
                 %                 end
                 %             end
-                %  disp('We ARE IN if Condition of flagRunVP'); % commented by Lu 220518: why? delete? change to "Already have results, choose not to rerunexisting ..."
             end
             % This may consume some nontrivial memory with larger
             % runs, so clear it out.

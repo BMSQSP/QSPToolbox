@@ -249,7 +249,7 @@ if continueFlag
                     %PRCC matrix w
                     % weighted linear regression + weighted correlation
                     PRCCMatrixw(k,j)= myPRCCSensitivityOptions.weightedCorr(myParamsOrderedResw, myDataOrderedResw, w, false);
-                    ccvalue=   PRCCMatrix(k,j);
+                    ccvalue=   PRCCMatrixw(k,j);
                     pvaluew(k,j)= myPRCCSensitivityOptions.pvaluePRCC(nSample,dparams, ccvalue, false);
                     
                     

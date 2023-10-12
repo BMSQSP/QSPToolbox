@@ -49,7 +49,7 @@ if (isempty(myVPop) && flagContinue)
 end
 
 if flagContinue
-    myCheckElement = cell(0,5);
+    myCheckElement = cell(0,6);
     if ~isempty(myVPop.mnSDTable)
         % We will only consider mn/sd data for ranges if the variance is
         % included, we will not try to match if we are only calibrating
@@ -57,39 +57,39 @@ if flagContinue
         keepRows = find(myVPop.mnSDTable{:, 'weightSD'} > 0);
         if length(keepRows) > 0
             myVPop.mnSDTable(:, 'weight') = table(max(myVPop.mnSDTable{:, 'weightMean'},myVPop.mnSDTable{:, 'weightSD'}));
-            myCheckElement = [myCheckElement; table2cell(myVPop.mnSDTable(keepRows,{'elementID','elementType','interventionID','time','weight'}))];
+            myCheckElement = [myCheckElement; table2cell(myVPop.mnSDTable(keepRows,{'elementID','elementType','interventionID','time','weight','subpopNo'}))];
         end
     end
     if ~isempty(myVPop.distTable)
         keepRows = find(myVPop.distTable{:, 'weight'} > 0);
         if length(keepRows) > 0        
-            myCheckElement = [myCheckElement; table2cell(myVPop.distTable(keepRows,{'elementID','elementType','interventionID','time','weight'}))];
+            myCheckElement = [myCheckElement; table2cell(myVPop.distTable(keepRows,{'elementID','elementType','interventionID','time','weight','subpopNo'}))];
         end
     end
     if ~isempty(myVPop.binTable)
         keepRows = find(myVPop.binTable{:, 'weight'} > 0);
         if length(keepRows) > 0           
-            myCheckElement = [myCheckElement; table2cell(myVPop.binTable(keepRows,{'elementID','elementType','interventionID','time','weight'}))];
+            myCheckElement = [myCheckElement; table2cell(myVPop.binTable(keepRows,{'elementID','elementType','interventionID','time','weight','subpopNo'}))];
         end
     end    
     if ~isempty(myVPop.distTable2D)
         keepRows = find(myVPop.distTable2D{:, 'weight'} > 0);
         if length(keepRows) > 0            
-            myCheckElement = [myCheckElement; table2cell(myVPop.distTable2D(keepRows,{'elementID1','elementType1','interventionID1','time1','weight'}))];
-            myCheckElement = [myCheckElement; table2cell(myVPop.distTable2D(keepRows,{'elementID2','elementType2','interventionID2','time2','weight'}))];
+            myCheckElement = [myCheckElement; table2cell(myVPop.distTable2D(keepRows,{'elementID1','elementType1','interventionID1','time1','weight','subpopNo'}))];
+            myCheckElement = [myCheckElement; table2cell(myVPop.distTable2D(keepRows,{'elementID2','elementType2','interventionID2','time2','weight','subpopNo'}))];
         end
     end  
     if ~isempty(myVPop.corTable)
         keepRows = find(myVPop.corTable{:, 'weight'} > 0);
         if length(keepRows) > 0         
-            myCheckElement = [myCheckElement; table2cell(myVPop.corTable(keepRows,{'elementID1','elementType1','interventionID1','time1','weight'}))];
-            myCheckElement = [myCheckElement; table2cell(myVPop.corTable(keepRows,{'elementID2','elementType2','interventionID2','time2','weight'}))];
+            myCheckElement = [myCheckElement; table2cell(myVPop.corTable(keepRows,{'elementID1','elementType1','interventionID1','time1','weight','subpopNo'}))];
+            myCheckElement = [myCheckElement; table2cell(myVPop.corTable(keepRows,{'elementID2','elementType2','interventionID2','time2','weight','subpopNo'}))];
         end
     end    
-    [~,idx]=unique(cell2table(myCheckElement),'rows');
+    [~,idx]=unique(cell2table(myCheckElement(:,[1:4,6])),'rows'); % not include weight to the unique row selection
     myCheckElement = myCheckElement(idx,:);
     myCheckElement = myCheckElement(cell2mat(myCheckElement(:,5))>0,:);
-    myCheckElement = myCheckElement(:,1:4);
+    myCheckElement = myCheckElement(:,[1:4,6]);
     [nCheckElements, ~] = size(myCheckElement);
 
      % Find column in ExpDataTable where data starts
@@ -111,8 +111,9 @@ if flagContinue
     simElementIDCol = find(ismember(myVPop.simData.rowInfoNames,'elementID'));
     simExpVarIDCol = find(ismember(myVPop.simData.rowInfoNames,'expVarID'));
     
+    %% TODO: later might want to change myVPop.simData.rowInfo, add subpopNo in. for now use the expRowFinder's
     rowInfoTable = cell2table(myVPop.simData.rowInfo,'VariableNames',myVPop.simData.rowInfoNames);
-    expRowFinder = [myExpDataTable{:,'elementID'},myExpDataTable{:,'elementType'},myExpDataTable{:,'interventionID'},num2cell(myExpDataTable{:,'time'})];
+    expRowFinder = [myExpDataTable{:,'elementID'},myExpDataTable{:,'elementType'},myExpDataTable{:,'interventionID'},num2cell(myExpDataTable{:,'time'}),num2cell(myExpDataTable{:,'subpopNo'})];
     simRowFinder = [rowInfoTable{:,'elementID'},rowInfoTable{:,'elementType'},rowInfoTable{:,'interventionID'},num2cell(rowInfoTable{:,'time'})];
     
      if nCheckElements > 0
@@ -132,14 +133,15 @@ if flagContinue
          vpMaxInd = cell(nCheckElements,1);
          vpIDsMin = cell(nCheckElements,1);
          vpIDsMax = cell(nCheckElements,1);
-         rowInfo = cell(nCheckElements,4);
+         rowInfo = cell(nCheckElements,5);
          for checkCounter = 1 : nCheckElements
              curCheckElements = myCheckElement(checkCounter, :);
              
              match  = strcmp(expRowFinder(:, 1), curCheckElements{1}) & ...
                 strcmp(expRowFinder(:, 2), curCheckElements{2}) & ...
                 strcmp(expRowFinder(:, 3), curCheckElements{3}) & ...
-                cat(1, expRowFinder{:, 4}) == curCheckElements{4};
+                cat(1, expRowFinder{:, 4}) == curCheckElements{4} & ...
+                cat(1, expRowFinder{:, 5}) == curCheckElements{5};
              expRow  = find(match);
              
              match  = strcmp(simRowFinder(:, 1), curCheckElements{1}) & ...
@@ -159,13 +161,15 @@ if flagContinue
                 temp = prctile(myExpDataTable{expRow,firstDataIndex:end},[10 90]);
                 exp10(nFoundElements) = temp(1);
                 exp90(nFoundElements) = temp(2);
-                simMin(nFoundElements) = min((mySimData(simRow,:)));
-                simMax(nFoundElements) = max((mySimData(simRow,:)));
+                subpopIdx = curCheckElements{5};
+                vpIndices = myVPop.subpopTable.vpIndices{subpopIdx};
+                simMin(nFoundElements) = min((mySimData(simRow,vpIndices)));
+                simMax(nFoundElements) = max((mySimData(simRow,vpIndices)));
                 vpMinInd{nFoundElements} = find(mySimData(simRow,:) == simMin(nFoundElements));
                 vpMaxInd{nFoundElements} = find(mySimData(simRow,:) == simMax(nFoundElements));
                 vpIDsMin{nFoundElements} = myVPIDs(vpMinInd{nFoundElements});
                 vpIDsMax{nFoundElements} = myVPIDs(vpMaxInd{nFoundElements}); 
-                rowInfo(nFoundElements,:) = [myExpDataTable{expRow,'elementID'},myExpDataTable{expRow,'elementType'},myExpDataTable{expRow,'interventionID'},myExpDataTable{expRow,'time'}];
+                rowInfo(nFoundElements,:) = [myExpDataTable{expRow,'elementID'},myExpDataTable{expRow,'elementType'},myExpDataTable{expRow,'interventionID'},myExpDataTable{expRow,'time'},myExpDataTable{expRow,'subpopNo'}];
              end
          end
          if nFoundElements > 0
@@ -193,10 +197,11 @@ if flagContinue
              elementType = rowInfo(:,2);
              interventionID = rowInfo(:,3);
              time = rowInfo(:,4);
+             subpopNo = rowInfo(:,5);
              
              [~, sortIndices] = sort(rangeCover,'ascend');
              
-             vpRangeTable = table(elementID,elementType,interventionID,time,expN,vpIDsMin,vpIDsMax,simMin,simMax,expMin,expMax,rangeCover,minRangeMissing,maxRangeMissing,min10PercentileMissing,max90PercentileMissing);
+             vpRangeTable = table(subpopNo,elementID,elementType,interventionID,time,expN,vpIDsMin,vpIDsMax,simMin,simMax,expMin,expMax,rangeCover,minRangeMissing,maxRangeMissing,min10PercentileMissing,max90PercentileMissing);
              vpRangeTable = vpRangeTable(sortIndices,:);
              
          end

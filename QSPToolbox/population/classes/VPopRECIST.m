@@ -1759,8 +1759,8 @@ methods
                   % All variables in the column must be same size
                   assignN(rowCounter) = curN;
 				  assignPWs{rowCounter} = curPWs;
-				  curwtdcorr = weightedcorrs(myCorTable.('predSample'){rowCounter}', curPWs');
-				  curCor(rowCounter) = curwtdcorr(1,2);		   
+                  curwtdcorr = weightedcorrs(myCorTable.('predSample'){rowCounter}', curPWs');
+                  curCor(rowCounter) = curwtdcorr(1,2);	  
               end
               myCorTable.('predN') = (assignN);
 			  myCorTable.('predProbs') = (assignPWs);
@@ -1788,8 +1788,10 @@ methods
 						curPredN(rowCounter) = 1/sum(curPWs.^2);
 				   else
 						curPredN(rowCounter) = length(myPWs);
-				   end
-                   curProbs(rowCounter,:) = wtdBinProb(curSimValues(rowCounter,curIndices), curPWs, binEdgeValues);
+                   end
+                   if ~isempty(curPWs) % catch edge cases when some rows contain no VPs
+                        curProbs(rowCounter,:) = wtdBinProb(curSimValues(rowCounter,curIndices), curPWs, binEdgeValues);
+                   end
               end
               myBRTableRECIST.('predN') = (curPredN);
               myBRTableRECIST.('predCR') = (curProbs(:,1));
@@ -1819,8 +1821,10 @@ methods
 						curPredN(rowCounter) = 1/sum(curPWs.^2);
 				   else
 						curPredN(rowCounter) = length(myPWs);
-				   end
-                   curProbs(rowCounter,:) = wtdBinProb(curSimValues(rowCounter,curIndices), curPWs, binEdgeValues);
+                   end
+                   if ~isempty(curPWs) % catch edge cases when some rows contain no VPs
+                        curProbs(rowCounter,:) = wtdBinProb(curSimValues(rowCounter,curIndices), curPWs, binEdgeValues);
+                   end
               end
               myRTableRECIST.('predN') = (curPredN);
               myRTableRECIST.('predCR') = (curProbs(:,1));

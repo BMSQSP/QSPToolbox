@@ -166,6 +166,9 @@ if continueFlag
            if myClusterPickOptions.intSeed > -1
                 s = RandStream('mlfg6331_64','Seed',myClusterPickOptions.intSeed);  % Random number stream
                 opts = statset('MaxIter',myClusterPickOptions.maxIter,'UseParallel',1,'UseSubstreams',1,'Streams',s);
+           else
+                s = RandStream('mlfg6331_64','Seed',0);  % used in example04
+                opts = statset('MaxIter',myClusterPickOptions.maxIter,'UseParallel',1,'UseSubstreams',1,'Streams',s);
            end
         if sum(ismember(myClusterPickOptions.algorithm,'auto')) > 0
             if nVP <= 3000

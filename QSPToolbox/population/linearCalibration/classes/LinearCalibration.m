@@ -429,7 +429,9 @@ methods
 %         
 %         % Construct new VPop according to the optimal prevalence weights
 %         timerVPopUpdate = tic();
-          Obj = Obj.constructNewVPopPostOptimization();
+          if sum(~isnan(Obj.OptimalPrevalenceWeightsNormalized))
+                Obj = Obj.constructNewVPopPostOptimization();
+          end
 %         Obj.TimeElapsedMinutes.vPopUpdate = toc(timerVPopUpdate)/60;
 %         
 %         Obj.TimeElapsedMinutes.totalTime = toc(timerTotal)/60;
@@ -2141,7 +2143,7 @@ function Obj = constructLinearProblemMatrices(Obj)
             elseif Obj.OptimizationResults.exitFlag >= 1 || Obj.OptimizationResults.exitFlag == -3
                 % Enforce non-negativity for values below options.ConstraintTolerance. because negative values won't pass following checks in the algorithm, e.g. weightedcorrs. sometimes fmincon continue to assign a negaitve value which should be 0. 
                 % Might try to optimize X^2 to get around it. https://comp.soft-sys.matlab.narkive.com/VAgw8dSq/preventing-negative-values-in-fmincon
-                Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization<0 & abs(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization)<=options.ConstraintTolerance) = 0;
+                Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization<=0 & abs(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization)<=options.ConstraintTolerance) = 1e-16;
             end
             % normalize the prevalence weights to sum to 1
             Obj.OptimizationResults.optimalPrevalenceWeightsNormalized = Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization;
@@ -2152,7 +2154,7 @@ function Obj = constructLinearProblemMatrices(Obj)
             elseif Obj.OptimizationResults.exitFlag >= 1 
                 % Enforce non-negativity for values below options.ConstraintTolerance. because negative values won't pass following checks in the algorithm, e.g. weightedcorrs. sometimes fmincon continue to assign a negaitve value which should be 0. 
                 % Might try to optimize X^2 to get around it. https://comp.soft-sys.matlab.narkive.com/VAgw8dSq/preventing-negative-values-in-fmincon
-                Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization<0 & abs(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization)<=options.ConstraintTolerance) = 0;
+                Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization<=0 & abs(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization)<=options.ConstraintTolerance) = 1e-16;
             end
             % normalize the prevalence weights to sum to 1
             Obj.OptimizationResults.optimalPrevalenceWeightsNormalized = Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization;
@@ -2415,7 +2417,7 @@ function Obj = constructLinearProblemMatrices(Obj)
             elseif Obj.OptimizationResults.exitFlag >= 1 || Obj.OptimizationResults.exitFlag == -3
                 % Enforce non-negativity for values below options.ConstraintTolerance. because negative values won't pass following checks in the algorithm, e.g. weightedcorrs. sometimes fmincon continue to assign a negaitve value which should be 0. 
                 % Might try to optimize X^2 to get around it. https://comp.soft-sys.matlab.narkive.com/VAgw8dSq/preventing-negative-values-in-fmincon
-                Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization<0 & abs(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization)<=options.ConstraintTolerance) = 0;
+                Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization<=0 & abs(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization)<=options.ConstraintTolerance) = 1e-16;
             end
             % normalize the prevalence weights to sum to 1
             Obj.OptimizationResults.optimalPrevalenceWeightsNormalized = Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization;
@@ -2426,7 +2428,7 @@ function Obj = constructLinearProblemMatrices(Obj)
             elseif Obj.OptimizationResults.exitFlag >= 1 
                 % Enforce non-negativity for values below options.ConstraintTolerance. because negative values won't pass following checks in the algorithm, e.g. weightedcorrs. sometimes fmincon continue to assign a negaitve value which should be 0. 
                 % Might try to optimize X^2 to get around it. https://comp.soft-sys.matlab.narkive.com/VAgw8dSq/preventing-negative-values-in-fmincon
-                Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization<0 & abs(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization)<=options.ConstraintTolerance) = 0;
+                Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization<=0 & abs(Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization)<=options.ConstraintTolerance) = 1e-16;
             end
             % normalize the prevalence weights to sum to 1
             Obj.OptimizationResults.optimalPrevalenceWeightsNormalized = Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization;
