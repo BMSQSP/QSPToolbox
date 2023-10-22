@@ -55,10 +55,12 @@ if flagContinue
     allModelParameters = get(workingModel, 'Parameters');
     allModelSpecies = get(workingModel, 'Species');
     allModelCompartments = get(workingModel, 'Compartments');
+    allModelObservables = get(workingModel, 'Observables');
     [nParameters, ~] = size(allModelParameters);
     [nSpecies, ~] = size(allModelSpecies);
     [nCompartments, ~] = size(allModelCompartments);
-    nElements = nParameters + nSpecies + nCompartments;
+    [nObservables, ~] = size(allModelObservables);
+    nElements = nParameters + nSpecies + nCompartments + nObservables;
     elementNamesDefaultValues = cell(nElements,3);
     exportElements = [allModelParameters;allModelSpecies;allModelCompartments];
     for theElementCounter = 1 : nElements
@@ -78,12 +80,19 @@ if flagContinue
             elementNamesDefaultValues{theElementCounter,2} = 'species';
             elementNamesDefaultValues{theElementCounter,3} = allModelSpecies(theIndex).('InitialAmount');
             %exportElements = [exportElements, sbioselect(workingModel, 'Name', elementName)];
-        else
+        elseif theElementCounter <= (nParameters + nSpecies + nCompartments)
             theIndex = theElementCounter - nParameters - nSpecies;
             elementName = allModelCompartments(theIndex).('Name');
-            elementNamesDefaultValues{theElementCounter,1} = allModelCompartments(theIndex).('Name');
+            elementNamesDefaultValues{theElementCounter,1} = elementName;
             elementNamesDefaultValues{theElementCounter,2} = 'compartment';
             elementNamesDefaultValues{theElementCounter,3} = allModelCompartments(theIndex).('Capacity');
+            %exportElements = [exportElements, sbioselect(workingModel, 'Name', elementName)];
+        else
+            theIndex = theElementCounter - nParameters - nSpecies - nCompartments;
+            elementName = allModelObservables(theIndex).('Name');
+            elementNamesDefaultValues{theElementCounter,1} = elementName;
+            elementNamesDefaultValues{theElementCounter,2} = 'observable';
+            elementNamesDefaultValues{theElementCounter,3} = allModelObservables(theIndex).('Expression');
             %exportElements = [exportElements, sbioselect(workingModel, 'Name', elementName)];
         end
     end
@@ -125,18 +134,18 @@ if flagContinue
     myWorksheet.compiled.doses = doseNamesObjects;
     myWorksheet.compiled.model = exportedModel;
 
-    % We also record the observables of the model
-    if ismember('Observables',fieldnames(workingModel))
-        allModelObservables = get(workingModel, 'Observables');
-        [nObservables, ~] = size(allModelObservables);
-        observables = cell(1,nObservables);
-        for i=1:nObservables
-            observables{i}=workingModel.Observables(i).Name;
-        end
-    else
-        observables = cell(1,0);
-    end
-    myWorksheet.compiled.observables = observables;
+%     % We also record the observables of the model
+%     if ismember('Observables',fieldnames(workingModel))
+%         allModelObservables = get(workingModel, 'Observables');
+%         [nObservables, ~] = size(allModelObservables);
+%         observables = cell(1,nObservables);
+%         for i=1:nObservables
+%             observables{i}=workingModel.Observables(i).Name;
+%         end
+%     else
+%         observables = cell(1,0);
+%     end
+%     myWorksheet.compiled.observables = observables;
 	
     % We will also refresh the variant information from the model
 	% stored in the worksheet in case this was edited in the model

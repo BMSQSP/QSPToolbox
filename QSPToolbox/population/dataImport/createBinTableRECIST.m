@@ -27,7 +27,7 @@ function myBinTableRECIST = createBinTableRECIST(myWorksheet,myExpDataIDs,Patien
 %  mySimVarTypes:     A cell array, of length N intervention/var combinations
 %                      with values to indicate the type of simulation
 %                      variables, i.e.
-%                      'parameter', 'compartment', 'species'
+%                      'parameter', 'compartment', 'species', 'observable'
 %  timeVar:           ID for the variable with time in the experimental dataset
 %                     NOTE: it is assumed start of therapy is t=startTime.
 %  startTime		  Time to start therapy.

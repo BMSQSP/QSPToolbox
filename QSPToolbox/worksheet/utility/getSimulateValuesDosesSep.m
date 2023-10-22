@@ -54,9 +54,12 @@ end
 
 
 if flagContinue
-    [nModelElements, ~] = size(myWorksheet.compiled.elements);
+    allElements = myWorksheet.compiled.elements;
+    elementIdx = ~ismember(allElements(:,2),'observable');
+    allElements = allElements(elementIdx,:);
+    [nModelElements, ~] = size(allElements);
     updateValues = nan(nInterventions, nVPs, nModelElements);
-    mergedModelElementNames = strcat(myWorksheet.compiled.elements(:,1), {'_'},myWorksheet.compiled.elements(:,2));
+    mergedModelElementNames = strcat(allElements(:,1), {'_'},allElements(:,2));
 
     % The following blocks of code are organized to minimize calling to
     % flattenVariantstoElements
@@ -141,7 +144,7 @@ if flagContinue
     nanSums = sum(sum(isnan(updateValues),1),2);
     allMissingNNan = max(nanSums);
     filterIndices = find(nanSums==allMissingNNan);
-    baseValues = cell2mat(myWorksheet.compiled.elements(:,3));    
+    baseValues = cell2mat(allElements(:,3));    
     % Filter indices and update indices are mutually exclusive 
     updateIndices = find(~ismember([1:nModelElements]',filterIndices));
     % We check to see if some of
@@ -154,9 +157,9 @@ if flagContinue
     % now that we have the updateIndices we can just re-do the
     % base and overwrite
     
-    baseNames = myWorksheet.compiled.elements(:,1);  
+    baseNames = allElements(:,1);  
     updateValues = updateValues(:,:,updateIndices);
-    updateNames = myWorksheet.compiled.elements(updateIndices,1);  
+    updateNames = allElements(updateIndices,1);  
     
     if length(fixIndices) > 0
         disp(['Note: simulation definitions are not all varying the same parameters in call to ', mfilename,'.  This can happen with VPs that have different variant types, or if interventions do not use the same variant types.  There are cases where this is OK, but if defining all model susbystem parameters with VP and intervention variants it generally will not occur.  Proceeding by using the base model values as needed.'])

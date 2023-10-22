@@ -86,7 +86,9 @@ function myWorksheet = simulateWorksheet(myWorksheet, mySimulateOptions)
         end
 
         missingIndices = find(~ismember(myWorksheet.simProps.saveElementResultIDs,...
-            ['time',myWorksheet.compiled.elements(:,1)',myWorksheet.compiled.observables]));
+            ['time',myWorksheet.compiled.elements(:,1)']));
+%                 missingIndices = find(~ismember(myWorksheet.simProps.saveElementResultIDs,...
+%             ['time',myWorksheet.compiled.elements(:,1)',myWorksheet.compiled.observables]));
 
         if ~isempty(missingIndices)
             if length(missingIndices) >= length(myWorksheet.simProps.saveElementResultIDs)
@@ -121,7 +123,9 @@ function myWorksheet = simulateWorksheet(myWorksheet, mySimulateOptions)
             for checkCounter = 1: nStatesLogged
                 checkCellArray{checkCounter} = testLog(checkCounter).Name;
             end
-            missingIndices = find(~ismember(myWorksheet.simProps.saveElementResultIDs,['time',checkCellArray,myWorksheet.compiled.observables]));
+            missingIndices = find(~ismember(myWorksheet.simProps.saveElementResultIDs,['time',checkCellArray,myWorksheet.model.Observables.('Name')]));
+%                         missingIndices = find(~ismember(myWorksheet.simProps.saveElementResultIDs,['time',checkCellArray,myWorksheet.compiled.observables]));
+
             if ~isempty(missingIndices)
                 if length(missingIndices) >= length(myWorksheet.simProps.saveElementResultIDs)
                     warning(['Unable to verify any specified myWorksheet.simProps.saveElementResultIDs as allowed logged model states in call to ',mfilename,'.'])
