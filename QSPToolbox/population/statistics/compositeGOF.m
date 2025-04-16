@@ -92,7 +92,11 @@ if continueFlag
         myVPop.gof = chi2cdf(fisherStat,dof,'upper');
     else
         fisherStat = -2*sum(log(pVals).*allWeights);
-        myVPop.gof = woodF(allWeights,fisherStat);
+%         myVPop.gof = woodF(allWeights,fisherStat);
+        % hbe and woodP assume k df, not 2k.  replicating the entries
+        % 2x corrects for this.
+%         myVPop.gof = woodF(repmat(allWeights',1,2),fisherStat);        
+        myVPop.gof = hbe(repmat(allWeights',1,2),fisherStat);
     end
         
 else

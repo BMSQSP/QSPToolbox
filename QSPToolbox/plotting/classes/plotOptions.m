@@ -30,6 +30,12 @@ classdef plotOptions
 %      xShiftData:      Double, x-value (time) to shift 
 %                       data by. (Optional), leave as 0
 %                       so as not to shift.
+%      xScale:          Double, x-value (time) to scale 
+%                       by. (Optional), leave as 1
+%                       so as not to scale.
+%      yScale:          Double, y-value (time) to scale 
+%                       by. (Optional), leave as 1
+%                       so as not to scale.
 %      xLabelPretty:    String, will be applied to xlabel. Optional,
 %                       if left as '' a default label will be used.
 %      yLabelPretty:    String, will be applied to ylabel. Optional,
@@ -59,6 +65,8 @@ classdef plotOptions
       yLim
       xShiftSim
       xShiftData
+      xScale  
+      yScale
       xLabelPretty
       yLabelPretty
       expDataID
@@ -149,6 +157,20 @@ classdef plotOptions
               obj.xShiftData = xShiftDataVal;
           else
             error('Invalid xShiftData value, expecting a numeric value')
+          end
+      end 
+      function obj = set.xScale(obj,xScaleVal)
+          if (isnumeric(xScaleVal) == true) 
+              obj.xScale = xScaleVal;
+          else
+            error('Invalid xScaleVal value, expecting a numeric value')
+          end
+      end  
+      function obj = set.yScale(obj,yScaleVal)
+          if (isnumeric(yScaleVal) == true) 
+              obj.yScale = yScaleVal;
+          else
+            error('Invalid yScaleVal value, expecting a numeric value')
           end
       end 
       function obj = set.xLabelPretty(obj,xLabelPrettyVal)
@@ -322,6 +344,10 @@ classdef plotOptions
                   value = obj.yLim;
               case 'xShiftSim'
                   value = obj.xShiftSim;
+              case 'xScale'
+                  value = obj.xScale;      
+              case 'yScale'
+                  value = obj.yScale;  
               case 'xLabelPretty'
                   value = obj.xLabelPretty;
               case 'yLabelPretty'
@@ -356,6 +382,8 @@ classdef plotOptions
             obj.yLim = [];
             obj.xShiftSim = 0;
             obj.xShiftData = 0;
+            obj.xScale = 1;   
+            obj.yScale = 1;  
             obj.xLabelPretty = '';
             obj.yLabelPretty = '';   
             obj.expDataID = '';

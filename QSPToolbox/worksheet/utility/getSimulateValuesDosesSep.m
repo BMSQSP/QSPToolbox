@@ -178,7 +178,14 @@ if flagContinue
         interventionDoses = extractInterventionTypeElements(curIntervention, 'DOSE');
         % Get the doses associated with the intervention
         % Select out the doses that are included in the intervention
-        theDoseIndices = find(ismember(doseNamesObjects(:,1),interventionDoses));
+        if ~isempty(interventionDoses)
+            theDoseIndices = find(ismember(doseNamesObjects(:,1),interventionDoses));
+            if isempty(theDoseIndices)
+                error(['Error in intervention: ', curIntervention.ID, '. Check if the dose or variant are defined corretly in the model.']);
+            end
+        else
+            theDoseIndices = [];
+        end
         theDoseArray = [];
         for theIndex = 1: length(theDoseIndices)
             theDoseArray = [theDoseArray, doseNamesObjects{theDoseIndices(theIndex),2}];

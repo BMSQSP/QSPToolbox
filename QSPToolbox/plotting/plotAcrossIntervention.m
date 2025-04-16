@@ -98,7 +98,7 @@ if flagContinue
         timeVal = myWorksheet.results{interventionIndex,vpIndex}.Data(:,timeIndex);
         varVal = myWorksheet.results{interventionIndex,vpIndex}.Data(:,varIndex);
         hold on
-        plotHandleVector(vpCounter) = plot(timeVal-myPlotOptions.xShiftSim, varVal, 'color', randColors(vpCounter,:), 'LineWidth',4); 
+        plotHandleVector(vpCounter) = plot((timeVal-myPlotOptions.xShiftSim)/myPlotOptions.xScale, varVal/myPlotOptions.yScale, 'color', randColors(vpCounter,:), 'LineWidth',4); 
         if (strcmp(myPlotOptions.scale,'xlogylin') || strcmp(myPlotOptions.scale,'xlogylog'))
             set(gca,'xscale','log'); % gca
         end
@@ -107,7 +107,7 @@ if flagContinue
         end        
     end
     if flagExpData
-        plotHandleVector(nVP+1) = plot(expDataTime-myPlotOptions.xShiftData, expDataYVar, 'k.','MarkerSize',20); 
+        plotHandleVector(nVP+1) = plot((expDataTime-myPlotOptions.xShiftData)/myPlotOptions.xScale, expDataYVar/myPlotOptions.yScale, 'k.','MarkerSize',20); 
         if (strcmp(myPlotOptions.scale,'xlogylin') || strcmp(myPlotOptions.scale,'xlogylog'))
             set(gca,'xscale','log'); % gca
         end
@@ -120,12 +120,12 @@ if flagContinue
         ylim(myPlotOptions.yLim);
     end 
     if length(myPlotOptions.xLabelPretty) > 0
-        xlabel(myPlotOptions.xLabelPretty);
+        xlabel(myPlotOptions.xLabelPretty,'interpreter','none');
     else
         xlabel(xVarName,'interpreter','none');
     end
     if length(myPlotOptions.yLabelPretty) > 0
-        ylabel(myPlotOptions.yLabelPretty);
+        ylabel(myPlotOptions.yLabelPretty,'interpreter','none');
     else
         ylabel(varName,'interpreter','none');
     end    
