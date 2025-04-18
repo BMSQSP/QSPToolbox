@@ -1,17 +1,32 @@
 % Here, we illustrate workflow for creating VPops using MAPEL
-%
+
 % Toolbox initialization
 % toolboxPath = 'DRIVE:/DIRs/QSPToolbox';
 % addpath(toolboxPath);
 initQSPToolbox;
 
+%% load in VP cohort: existing worksheet.
 % Load in the worksheet and regenerate results.
-myWorksheetFileName = 'example_cohort_worksheet1';
+myWorksheetFileName = 'example_cohort_worksheet1'; % check this RT?
 myWorksheet = loadWorksheet(myWorksheetFileName);
 mySimulateOptions = simulateOptions();
 mySimulateOptions.rerunExisting = true; 
+
+% add in target time point to ensure we store the simulation results at the correct time points
+myMapelOptions = mapelOptions;
+myMapelOptions.expData = convertResponseTypeToExpDataTable(myWorksheet, 'N87_agx', 'USUBJID');
+myWorksheet.simProps.sampleTimes = sort(unique([0:.025:35,myMapelOptions.expData.time'])','ascend');
+
+% record only target biomarkers to save storage space
+myWorksheet.simProps.saveElementResultIDs={'parrule_payload_fraction_of_initial_bound_intracellular'
+    'parrule_tumor_volume'
+    'parrule_shed_total_plasma_concentration'
+    'parrule_payload_total_apparent_pet_tumor_nanomole_per_gram'};
 myWorksheet = simulateWorksheet(myWorksheet, mySimulateOptions);
 
+saveWorksheetAutoSplit(myWorksheet,'example_cohort_worksheet_SIM');
+
+%% step 2: set up mapelOption, run one mapel, which is prevelance weighting
 % Now we create a mapelOptions structure
 help mapelOptions
 myMapelOptions = mapelOptions;
@@ -56,6 +71,7 @@ myMapelOptions.optimizePopSize = 1000;
 myMapelOptions.optimizeTimeLimit = 10;
 myVPop = mapel(myWorksheet, myMapelOptions);
 
+%% diagnostic plot to identify problematic data points . could the tumor bl be unweighted here?
 % This diagnostic plot for the population doesn't require a VPop solution, 
 % but it does require
 % the VPop have both the experimental and simulation data populated.
@@ -101,6 +117,7 @@ myMapelOptions.mnSDTable{28,'weightSD'}=0;
 myMapelOptions.mnSDTable{28,'weightMean'}=0;
 myMapelOptions.binTable{28,'weight'}=0;
 
+%% re-optimization - do mapel  a few times (in case of random seed)
 % Convergence times may vary between systems
 myMapelOptions.optimizeTimeLimit = 2*60*60;
 % We can iterate through a few times in case we have a bad seed
@@ -117,6 +134,7 @@ for myTestCounter = 1 : 1
         myVPop.gof
 end
 
+%% additional diagnostic plot of expData and Vpop simulation to identify problematic data points. could the tumor bl be unweighted here?
 % This is an additional diagnostic table for the places where we have
 % experimental and simulation data.  Note that these can become
 % rather crowded when we have a lot of distinct
@@ -132,6 +150,7 @@ plotMnSDVPop(myVPop, myPlotOptions);
 % are distributed in the VPop
 plotPWHist(myVPop)
 
+%% restartMapel from a preexisting VPop, add random noise
 % Note that we may find a good VPop and may want to use this as a seed for
 % additional VPops, or we may want to pick up with a VPop fitting
 % run that was stopped early.
@@ -152,6 +171,10 @@ for myTestCounter = 1 : 1
     newVPop.gof
 end
 
+%% above ones are all run on 'bin' mapel strategy ...
+%% from this one on it is 'direct'
+
+%% restartMapel 'direct' on the existing vpop
 % These additional sections were not in the AAPS 2017 publication but
 % highlight additional algorithms implemented since then.  For the first
 % example, we run "MAPEL" without imposing the binned axis
@@ -165,62 +188,81 @@ newVPop = evaluateGOF(newVPop);
 newVPop.mnSDTable{1,'predN'}
 newVPop.gof
 
+
+%% linearCalibration module
 % This is a sample run with the linearCalibration module
 % Set up the optimization options, which will automatically spit back a set
 % of default values
-optimOptions = LinearCalibrationOptions();
+
+myOptimOptions = LinearCalibrationOptions();
 % Define the probabilities of the cumulative
 % distribution functions (CDF) to fit. The default is to fit all points on
 % the CDF. We will only fit certain probabilities
 % along the CDF in order to make the fit faster. These probabilities are
 % defined here:
-optimOptions.cdfProbsToFit = 0.05:0.05:0.95;
-% Other options:
-optimOptions.optimizationAlgorithm = "nnls";
-optimOptions.optimizationAlgorithmOptions.Accy = 0;
-optimOptions.method = "bagging";
-optimOptions.fractionVPsPerBaggingIteration = 0.1;
-
-% update the VPop, add expDataID to check for the calibration target, for use in linearCalibration and expandVPopEffN
-myVPop=getSimData(myVPop,myWorksheet)
-myVPop=myVPop.addTableSimVals
-myVPop=myVPop.addPredTableVals
+myOptimOptions.cdfProbsToFit = 0.05:0.05:0.95;
+myOptimOptions.pdf2DProbsToFitN = 5;
+myOptimOptions.responseValTransformation='none';
+% multiple algorithms are implemented, we chose 'quadproEffN' for demonstration
+% this is also the algorithm we use in the iterative vpop development workflow
+myOptimOptions.optimizationAlgorithm = "quadprogEffN";				
+myOptimOptions.priorPrevalenceWeightAssumption = 'specified';
+myOptimOptions.oldVPop = myVPop;  
 
 % Initialize a 'LinearCalibration' object:
-linearCalibrationObject = LinearCalibration(myVPop,'optimOptions',optimOptions);
+linearCalibrationObject = LinearCalibration(myVPop,'optimOptions',myOptimOptions);
 % Run the optimization:
 linearCalibrationObject = linearCalibrationObject.run();
 % Update VPop:
-newVPop = linearCalibrationObject.OptimizedVPop;
+myInitialPWs = linearCalibrationObject.OptimizationResults.optimalPrevalenceWeightsNormalized';
+myVPop.pws = myInitialPWs(1,:);
+
+% Update table values.  Not strictly necessary but a nice
+% step to diagnose and does have much computational cost            
+newVPop = myVPop.addPredTableVals();  
+% Next update the individual GOF statistics
 newVPop.useEffN = true;
 newVPop = evaluateGOF(newVPop);
 newVPop.mnSDTable{1,'predN'}
 newVPop.gof
 
-% This is a sample run with expandVPopEffN
+
+%% Here, we demonstrate our original VPop developement workflow with expandVPopEffN with particle swarm optimization
+% A automatic VPop resampling and reweighting workflow to generate 
+% a well calibrated VPop (p-value>0.9) using wrapper function expandVPopEffN
 myVPop = loadVPop('example_vpop');
+
+% We had identified several time/experiment datapoints that would be 
+% difficult to match and set the influence of these on the optimization to 0.
+myMapelOptions.mnSDTable{9,'weightSD'}=0;
+myMapelOptions.mnSDTable{9,'weightMean'}=0;
+myMapelOptions.binTable{9,'weight'}=0;
+
+myMapelOptions.mnSDTable{20,'weightSD'}=0;
+myMapelOptions.mnSDTable{20,'weightMean'}=0;
+myMapelOptions.binTable{20,'weight'}=0;
 
 % update the VPop, add expDataID to check for the calibration target, for use in linearCalibration and expandVPopEffN
 myVPop=getSimData(myVPop,myWorksheet)
 myVPop=myVPop.addTableSimVals
 myVPop=myVPop.addPredTableVals
-
 
 myVPop.pwStrategy = 'direct';
 myVPop.optimizeType = 'gapso';
 myMapelOptions = initializeVPopPropertiesToOption(myVPop);
 myExpandVPopEffNOptions = expandVPopEffNOptions;
 % An identifying suffix
-myExpandVPopEffNOptions.suffix = 'example06Test';
+myExpandVPopEffNOptions.suffix = 'example06OriginalWf';
 myExpandVPopEffNOptions.wsIterCounter = 0;
 % Normally target 150 and often pause at 50
 % in initial run.  We'll stop here too in order to
 % adjust expansion sized
 myExpandVPopEffNOptions.targetEffN = 40;
+myMapelOptions.minEffN = 0;
 myExpandVPopEffNOptions.maxNewPerIter= 10;
 myExpandVPopEffNOptions.expandCohortSize = 5000;
 myExpandVPopEffNOptions.effNDelta = 2;
-myExpandVPopEffNOptions.minPVal = 0.2;
+myExpandVPopEffNOptions.minPVal = 0.9;
 myExpandVPopEffNOptions.nTries = 1;
 myExpandVPopEffNOptions.nRetries = 1;
 myExpandVPopEffNOptions.verbose = true;
@@ -233,6 +275,83 @@ myExpandVPopEffNOptions.maxNewPerOld = 3;
 % Here, we enforce any checks on sampled VPs,
 % before simulation and adjust VPs if needed.
 myExpandVPopEffNOptions.screenFunctionName = '';
+myExpandVPopEffNOptions.nCluster = 400;
+
+% To run the original workflow: make sure set linearExpandFlag=false
+myExpandVPopEffNOptions.linearExpandFlag = false;
+myExpandVPopEffNOptions.minEffNlinearflag = false;
+
+
+% This takes a while to run.  Every iteration will
+% write to file when a better VPop is found
+% and a new worksheet will write to file
+% when new VPs are added.
+% You can delete intermediate iterations between your start file and
+% stopping point.  They are included to allow you to more easily
+% track progress.
+[newWorksheet, newVPop] = expandVPopEffN(myWorksheet,myExpandVPopEffNOptions,myMapelOptions,myVPop);
+
+%% We also demonstrate our new surrogate VPop developement workflow with expandVPopEffN with linearCalibration
+% A automatic VPop resampling and reweighting workflow to generate 
+% a well calibrated VPop (p-value>0.9) using wrapper function expandVPopEffN
+myVPop = loadVPop('example_vpop');
+
+% We had identified several time/experiment datapoints that would be 
+% difficult to match and set the influence of these on the optimization to 0.
+myMapelOptions.mnSDTable{9,'weightSD'}=0;
+myMapelOptions.mnSDTable{9,'weightMean'}=0;
+myMapelOptions.binTable{9,'weight'}=0;
+
+myMapelOptions.mnSDTable{20,'weightSD'}=0;
+myMapelOptions.mnSDTable{20,'weightMean'}=0;
+myMapelOptions.binTable{20,'weight'}=0;
+
+% update the VPop, add expDataID to check for the calibration target, for use in linearCalibration and expandVPopEffN
+myVPop=getSimData(myVPop,myWorksheet)
+myVPop=myVPop.addTableSimVals
+myVPop=myVPop.addPredTableVals
+
+myVPop.pwStrategy = 'direct';
+myVPop.optimizeType = 'gapso';
+myMapelOptions = initializeVPopPropertiesToOption(myVPop);
+myExpandVPopEffNOptions = expandVPopEffNOptions;
+% An identifying suffix
+myExpandVPopEffNOptions.suffix = 'example06SurrogateWf';
+myExpandVPopEffNOptions.wsIterCounter = 0;
+% Normally target 150 and often pause at 50
+% in initial run.  We'll stop here too in order to
+% adjust expansion sized
+myExpandVPopEffNOptions.targetEffN = 40;
+myMapelOptions.minEffN = 0;
+myExpandVPopEffNOptions.maxNewPerIter= 10;
+myExpandVPopEffNOptions.expandCohortSize = 5000;
+myExpandVPopEffNOptions.effNDelta = 2;
+myExpandVPopEffNOptions.minPVal = 0.9;
+myExpandVPopEffNOptions.nTries = 1;
+myExpandVPopEffNOptions.nRetries = 1;
+myExpandVPopEffNOptions.verbose = true;
+myExpandVPopEffNOptions.restartPVal = 1E-4;
+myExpandVPopEffNOptions.expandRandomStart = 0;
+myExpandVPopEffNOptions.varyMethod = 'gaussian';
+myExpandVPopEffNOptions.resampleStd = 0.05;
+myExpandVPopEffNOptions.expandEdgeVPs=true;
+myExpandVPopEffNOptions.maxNewPerOld = 3;
+% Here, we enforce any checks on sampled VPs,
+% before simulation and adjust VPs if needed.
+myExpandVPopEffNOptions.screenFunctionName = '';
+myExpandVPopEffNOptions.nCluster = 400;
+
+% all above seetings are the same as the original workflow 
+% Different settings to run the surrogate workflow: make sure set linearExpandFlag=true
+myExpandVPopEffNOptions.linearExpandFlag = true;
+myExpandVPopEffNOptions.minEffNlinearflag = true;
+% also set cohortSize and maxIter if running this workflow
+myExpandVPopEffNOptions.linearExpandCohortSize = 5000;
+myExpandVPopEffNOptions.maxIterlinearExpand = 20;
+myExpandVPopEffNOptions.nVPMax = 1000;
+myExpandVPopEffNOptions.minPVallinear = 0.1;
+
+
 % This takes a while to run.  Every iteration will
 % write to file when a better VPop is found
 % and a new worksheet will write to file
