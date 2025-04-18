@@ -1407,7 +1407,7 @@ function Obj = constructLinearProblemMatrices(Obj)
                     if STDmean == 0
                         STDmean = 1e-6;
                     end
-                    % we don't top variance for mn and sd, because this is not bernouli distribution, some fracton values are ~1e-6. 
+                    % we don't top variance for mn and sd, because this is not Bernoulli distribution, some fracton values are ~1e-6. 
                     dataParticular.expWeight(1) = sqrt(Obj.InputVPop.mnSDTable.expN(iSumStatRow))/STDmean;
                else
                     dataParticular.expWeight(1) = Obj.OptimOptions.expWeightFuncHandle(Obj.InputVPop.mnSDTable.expN(iSumStatRow),Obj.InputVPop.mnSDTable.expSD(iSumStatRow),dataParticular.observationDescriptions{1});
@@ -1910,6 +1910,7 @@ function Obj = constructLinearProblemMatrices(Obj)
             % Constraint that sum of prevalence weights should be 1:
             [subgroup ia ic]= unique(Obj.LinearProblemMatricesParticular.vpIsInSubgroup,'rows');
             subweights = Obj.LinearProblemMatricesParticular.SubgroupSumWeights;
+
             Aeq = subgroup;
             beq = subweights(ia);
 
@@ -2027,6 +2028,9 @@ function Obj = constructLinearProblemMatrices(Obj)
             % Constraint that sum of prevalence weights should be 1:
             [subgroup ia ic]= unique(Obj.LinearProblemMatricesParticular.vpIsInSubgroup,'rows');
             subweights = Obj.LinearProblemMatricesParticular.SubgroupSumWeights;
+            if size(subweights,1) ~= size(Obj.LinearProblemMatricesParticular.vpIsInSubgroup,1) % added to ensure starting from a previous subsetVPop with sometimes different dimensions
+                 subweights = Obj.LinearProblemMatricesParticular.vpIsInSubgroup*x0;
+            end
             Aeq = subgroup;
             beq = subweights(ia);
 
@@ -2036,7 +2040,7 @@ function Obj = constructLinearProblemMatrices(Obj)
             F = (C-d).*Obj.LinearProblemMatricesParticular.vpIsInSubgroup;
             ind=find(vecnorm(F,2,2)<1e-6);
             F(ind,:)=[];
-             subweights = Obj.LinearProblemMatricesParticular.SubgroupSumWeights;
+%              subweights = Obj.LinearProblemMatricesParticular.SubgroupSumWeights;
              subweights(ind,:) = [];
             indexsubweight0=find(subweights<1e-6);
             if isempty(indexsubweight0)
@@ -2332,9 +2336,10 @@ function Obj = constructLinearProblemMatrices(Obj)
                  
            options.ConvexCheck = 'on'; 
              warning('off','optim:quadprog:NullHessian');
-       %    tic;
+%              diary('linearOut');
+%            tic;
            [Obj.OptimizationResults.optimalPrevalenceWeightsPriorToNormalization,fval,Obj.OptimizationResults.exitFlag] = quadprog(H,f,A,b,Aeq,beq,lb,ub,x0,options);
-       %    toc;
+%            toc;
            
            if Obj.OptimizationResults.exitFlag == -6  
                % quadprog sometimes cannot continue if it is numerically not strictly convex, but actually often it can still reach an feasible solution. 
