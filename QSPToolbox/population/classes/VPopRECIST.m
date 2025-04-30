@@ -1104,6 +1104,7 @@ methods
                                         interpolateValue = curVar(rowIndex);
                                     else
                                         interpolateValue = interp1(curTime,curVar,expTime,'linear');
+                                        warning([num2str(expTime),' not found in the worksheet result, interpolation implemented ...']);
                                     end
                                 else
                                     interpolateValue = curVar(rowIndex);

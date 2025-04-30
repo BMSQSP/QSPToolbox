@@ -31,11 +31,11 @@ end
 curVP_Indices_ind = ismember(1:nOriginalVPs, curVP_Indices);
 
 if nargin > 2
-    if isa(myVPop,'VPopRECIST')
+    if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPop')
         curVPop = myVPop;
         curVPop.pws = myVPop.pws(curVP_Indices_ind);
     else
-        warning(['3rd argument is not a VPopRECIST object.'])
+        warning(['3rd argument is not a VPopRECIST or VPop object.'])
     end
 end
 
@@ -68,10 +68,10 @@ if sum(curVP_Indices_ind) > 0
                             % update weight vector with weights of multiple
                             % VPs
                             if nargin > 2
-                                if isa(myVPop,'VPopRECIST')
+                                if isa(myVPop,'VPopRECIST') || isa(myVPop,'VPop')
                                     curVPop.pws = [curVPop.pws, myVPop.pws(multipleVPIDs(j))];
                                 else
-                                    warning(['3rd argument is not a VPopRECIST object.'])
+                                    warning(['3rd argument is not a VPopRECIST or VPop object.'])
                                 end
                             end
                         end

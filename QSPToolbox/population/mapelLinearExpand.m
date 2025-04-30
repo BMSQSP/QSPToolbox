@@ -230,14 +230,17 @@ if continueFlag
     % Next update the individual GOF statistics
     myVPop = evaluateGOF(myVPop);
 
-    myVPop.LinearProblemMatrices = linearCalibrationObject.LinearProblemMatrices;
-    myVPop.MSE = linearCalibrationObject.MSE; % will this change when I have findFit?
-  %  myVPop.lambda = linearCalibrationObject.lambda; % output lambda from fmincon
-    myVPop.LinearProblemMatricesSubgroupSumWeights = linearCalibrationObject.LinearProblemMatrices.vpIsInSubgroup*linearCalibrationObject.OptimizationResults.optimalPrevalenceWeightsNormalized;
-    myVPop.LinearProblemMatricesobservationDescriptions = linearCalibrationObject.LinearProblemMatrices.observationDescriptions;
+    if ~any(isnan(linearCalibrationObject.OptimizationResults.optimalPrevalenceWeightsNormalized))
+        myVPop.LinearProblemMatrices = linearCalibrationObject.LinearProblemMatrices;
+        myVPop.MSE = linearCalibrationObject.MSE; % will this change when I have findFit?
+      %  myVPop.lambda = linearCalibrationObject.lambda; % output lambda from fmincon
+        myVPop.LinearProblemMatricesSubgroupSumWeights = linearCalibrationObject.LinearProblemMatrices.vpIsInSubgroup*linearCalibrationObject.OptimizationResults.optimalPrevalenceWeightsNormalized;
+        myVPop.LinearProblemMatricesobservationDescriptions = linearCalibrationObject.LinearProblemMatrices.observationDescriptions;
+        
         minSubWeight = min(myVPop.LinearProblemMatricesSubgroupSumWeights);
         minSubWIndex = find(myVPop.LinearProblemMatricesSubgroupSumWeights==minSubWeight);
         disp(['minSubWeight =' num2str(round(minSubWeight,4)), ' at rowIndex = ' num2str(minSubWIndex(1))]);
+    end
     myVPop.lambda = linearCalibrationObject.lambda;
 	% Clean up the pool, if needed
 	if myVPop.poolClose

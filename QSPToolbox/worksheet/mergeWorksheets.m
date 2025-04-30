@@ -68,7 +68,7 @@ if flagContinue
         % This should not impact the instance of myWorksheet2
         % in the memory space of the calling function.
         vpsToDelete = vpIDs2(vpIndices);
-        if length(vpsToDelete) < length(vpIDs2)
+        if length(vpsToDelete) <= length(vpIDs2)
             warning(['Unique VP IDs required in each worksheet in ',mfilename,'. Proceeding by ignoring VPs with duplicate IDs in the second worksheet.'])
             myWorksheet2 = removeVPs(myWorksheet2, vpsToDelete);
             vpIDs2 = getVPIDs(myWorksheet2);
