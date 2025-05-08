@@ -1,0 +1,14 @@
+axisID	elementNames	elementTypes	bounds1_1	bounds1_2	scale1
+axisShedding	par_ag_shed_rate_t	parameter	0	10	linear
+axisInternalization	par_ag_endocytosis	parameter	0	3.5	linear
+axisWallPoreA	par_fraction_capillary_pore_area_per_unit_thickness_a	parameter	5	50	linear
+axisWallPoreB	par_fraction_capillary_pore_area_per_unit_thickness_b	parameter	0.2	1.95	linear
+axisShedClearance	par_shed_antigen_clearance_p1	parameter	5	300	linear
+axisLabelExport	par_payload_secretion_rate	parameter	0	24	linear
+axisICFFraction	par_tumor_extravascular_volume_fraction_icf	parameter	0.5	0.8	linear
+axisVascularFraction	par_tumor_volume_fraction_vascular	parameter	0.005	0.05	linear
+axisRCapRange	par_capillary_radius_max	parameter	8	15	linear
+axisVCapRange	par_capillary_radius_exponent	parameter	2.43e-05	0.000219	linear
+axisLesionLinGrowth	par_tumor_grow_rate_linear	parameter	8.3	74.7	linear
+axisLesionExpGrowth	par_tumor_grow_rate_exp	parameter	0.0244	0.219	linear
+axisInitialTumorMass	par_initial_tumor_mass	parameter	0.0763	0.24	linear
