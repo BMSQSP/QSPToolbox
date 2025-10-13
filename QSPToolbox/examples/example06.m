@@ -189,6 +189,7 @@ newVPop.mnSDTable{1,'predN'}
 newVPop.gof
 
 
+
 %% linearCalibration module
 % This is a sample run with the linearCalibration module
 % Set up the optimization options, which will automatically spit back a set
@@ -291,7 +292,7 @@ myExpandVPopEffNOptions.minEffNlinearflag = false;
 % track progress.
 [newWorksheet, newVPop] = expandVPopEffN(myWorksheet,myExpandVPopEffNOptions,myMapelOptions,myVPop);
 
-%% We also demonstrate our new surrogate VPop developement workflow with expandVPopEffN with linearCalibration
+%% We also demonstrate our new proxy-guided VPop developement workflow with expandVPopEffN with linearCalibration
 % A automatic VPop resampling and reweighting workflow to generate 
 % a well calibrated VPop (p-value>0.9) using wrapper function expandVPopEffN
 myVPop = loadVPop('example_vpop');
@@ -316,7 +317,7 @@ myVPop.optimizeType = 'gapso';
 myMapelOptions = initializeVPopPropertiesToOption(myVPop);
 myExpandVPopEffNOptions = expandVPopEffNOptions;
 % An identifying suffix
-myExpandVPopEffNOptions.suffix = 'example06SurrogateWf';
+myExpandVPopEffNOptions.suffix = 'example06ProxyGuidedWf';
 myExpandVPopEffNOptions.wsIterCounter = 0;
 % Normally target 150 and often pause at 50
 % in initial run.  We'll stop here too in order to
@@ -342,7 +343,7 @@ myExpandVPopEffNOptions.screenFunctionName = '';
 myExpandVPopEffNOptions.nCluster = 400;
 
 % all above seetings are the same as the original workflow 
-% Different settings to run the surrogate workflow: make sure set linearExpandFlag=true
+% Different settings to run the proxy-guided workflow: make sure set linearExpandFlag=true
 myExpandVPopEffNOptions.linearExpandFlag = true;
 myExpandVPopEffNOptions.minEffNlinearflag = true;
 % also set cohortSize and maxIter if running this workflow

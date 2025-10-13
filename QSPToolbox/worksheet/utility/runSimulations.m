@@ -48,7 +48,7 @@ function simResults = runSimulations(exportedModel, updateValues, updateIndices,
     % trying some of the global optimization methods
     % You may want this on for some applications,
     % but it is disabled here.
-    %% ADDED BY AMIR
+    %% ADDED BY AMIR G
     if (~isdeployed)
         parfevalOnAll(gcp(), @warning, 0, 'off', 'SimBiology:Simulation:NonFiniteRHS');
     end
@@ -59,6 +59,7 @@ function simResults = runSimulations(exportedModel, updateValues, updateIndices,
     simResults = cell(1,nSimulations);
     
     if (~isdeployed)
+        parfevalOnAll(@()feature('SimBioCheckZeroStepSize', mySimulateOptions.simBioCheckZeroStepSize), 0);
         parfor simulationCounter = 1:nSimulations
             % for simulationCounter = 1 : nSimulations
             if flagRunSim(simulationCounter) > 0

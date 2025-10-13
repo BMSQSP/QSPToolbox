@@ -12,7 +12,7 @@ function simResult = runSingleSimulation(exportedModel, currentModelValues, curD
 % RETURNS
 %  simResult:             a simulation result structure
 %
-        
+
 try
     simData = simulate(exportedModel, currentModelValues, curDoses);
     simData = convertSimData(simData);
