@@ -194,7 +194,7 @@ classdef axisDef
                         passCheck = false;
                     end
                 elseif strcmp(curType, 'compartment')
-                    if sum(ismember(modelSpeciesNames, curName)) < 1
+                    if sum(ismember(modelCompartmentNames, curName)) < 1
                         warning(['Warning: ',curName,' specified as a compartment, but not found in model compartments.'])
                         passCheck = false;
                     end
