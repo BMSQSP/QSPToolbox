@@ -39,6 +39,9 @@ classdef simulateOptions
 %                       This only plays a role in a few cases,
 %                       for example when randomly generating initial
 %                       guesses for optimization.
+% simBioCheckZeroStepSize:  boolean (true/false). Flag to enable/diable
+%                           checking the zero step size in simbiology
+%                           simulations
 
    properties
       responseTypeID     
@@ -55,6 +58,7 @@ classdef simulateOptions
       clusterID
       nWorkers
       intSeed
+      simBioCheckZeroStepSize
       
    end
    methods
@@ -169,7 +173,15 @@ classdef simulateOptions
           else
               error(['Invalid intSeed specified for ',mfilename,', a non-negative integer should be specified, or -1 to ignore.'])
           end
-      end            
+      end  
+
+      function obj = set.simBioCheckZeroStepSize(obj,myInput)
+          if islogical(myInput)
+               obj.simBioCheckZeroStepSize = myInput;
+          else
+               error(['Property simBioCheckZeroStepSize in ',mfilename,' must be a boolian.'])
+          end
+      end 	
       
       function value = get(obj,propName)
           switch propName
@@ -200,7 +212,9 @@ classdef simulateOptions
               case 'nWorkers'
                   value = obj.nWorkers;                   
               case 'intSeed'
-                  value = obj.intSeed;                   
+                  value = obj.intSeed;  
+              case 'simBioCheckZeroStepSize'
+                  value = obj.simBioCheckZeroStepSize;  
               otherwise
                   error(['Error: ',propName ,' is not a valid ',mfilename,' property.'])
           end
@@ -361,7 +375,8 @@ classdef simulateOptions
 		  obj.poolRestart = true;		  
           obj.clusterID = parallel.defaultClusterProfile;
           obj.nWorkers = nan;
-          obj.intSeed = -1;          
+          obj.intSeed = -1;
+          obj.simBioCheckZeroStepSize = false;
       end
    end
 end
